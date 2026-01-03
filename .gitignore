@@ -1,0 +1,27 @@
+# Pythonのコンパイル済みファイル
+__pycache__/
+*.py[cod]
+
+# 仮想環境
+venv/
+env/
+.venv/
+
+# PyInstallerなどのビルド生成物
+build/
+dist/
+*.spec
+
+# 環境変数や設定（機密情報）
+.env
+config.json
+*.log
+
+# Windows/Macのゴミ
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# 手動バックアップ
+old/
+.secret.key
