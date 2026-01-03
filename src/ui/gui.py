@@ -47,7 +47,7 @@ class QMTroubleshootingApp(tk.Tk):
         Initializes the application, loads configuration, and sets up the UI.
         """
         super().__init__()
-        self.title(f"Service Robot Investigation Support ({AppConfig.APP_VERSION}) - QM")
+        self.title(f"SYUKATSU Support ({AppConfig.APP_VERSION}) - 合同会社ぼっち")
         self.geometry(WINDOW_SIZE)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
@@ -181,7 +181,7 @@ class QMTroubleshootingApp(tk.Tk):
         Returns:
             The configured left panel frame.
         """
-        frame = ttk.LabelFrame(parent, text=" 診断設定 (Diagnostic Strategy) ", padding=10)
+        frame = ttk.LabelFrame(parent, text=" 企業分析設定", padding=10)
 
         # --- API Key Section ---
         ttk.Label(frame, text="OpenAI APIキー:", style="Bold.TLabel").pack(anchor="w")
@@ -254,7 +254,7 @@ class QMTroubleshootingApp(tk.Tk):
         ttk.Separator(frame, orient="horizontal").pack(fill="x", pady=10)
 
         # --- Prompt Mode Section ---
-        ttk.Label(frame, text="診断モード (指示書):", style="Bold.TLabel").pack(anchor="w")
+        ttk.Label(frame, text="モード選択:", style="Bold.TLabel").pack(anchor="w")
 
         cb_prompt = ttk.Combobox(
             frame,
@@ -292,7 +292,7 @@ class QMTroubleshootingApp(tk.Tk):
         # Header Info
         info_frame = ttk.Frame(frame)
         info_frame.pack(fill="x", pady=5, padx=5)
-        ttk.Label(info_frame, text="調査ログ (応答履歴)", style="Title.TLabel").pack(
+        ttk.Label(info_frame, text="レポート (応答履歴)", style="Title.TLabel").pack(
             side="left"
         )
 
@@ -320,7 +320,7 @@ class QMTroubleshootingApp(tk.Tk):
 
         # Input Area
         input_frame = ttk.LabelFrame(
-            frame, text=" 症状 / エンジニア入力 (Ctrl+Enterで送信) ", padding=5
+            frame, text=" リクエスト入力 (Ctrl+Enterで送信) ", padding=5
         )
         input_frame.pack(fill="x", padx=5, pady=5)
 
@@ -674,7 +674,7 @@ class QMTroubleshootingApp(tk.Tk):
             return
 
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
-        default_filename = f"QM_Log_{timestamp}.txt"
+        default_filename = f"分析レポート_{timestamp}.txt"
 
         path_str = filedialog.asksaveasfilename(
             defaultextension=".txt",

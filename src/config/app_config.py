@@ -43,7 +43,7 @@ class AppConfig:
         API_MAX_RETRIES (int): Number of retries for failed API calls.
     """
 
-    APP_VERSION: str = "v1.1.0-rag"
+    APP_VERSION: str = "v1.0.0"
 
     # Default settings to enforce on startup (Safety & Cost management)
     DEFAULT_MODEL: str = "gpt-5.2"
@@ -74,7 +74,7 @@ class UserConfig(BaseModel):
         description="The reasoning effort level for the model.",
     )
     system_prompt_mode: str = Field(
-        default="Root Cause Analysis",
+        default="有価証券報告書-財務分析-",
         description="The currently selected diagnostic strategy mode.",
     )
     last_response_id: Optional[str] = Field(
@@ -231,7 +231,7 @@ class ConfigManager:
         config_data["reasoning_effort"] = AppConfig.DEFAULT_REASONING
 
         # Reset prompt mode and context for a fresh start
-        config_data["system_prompt_mode"] = "Root Cause Analysis"
+        config_data["system_prompt_mode"] = "有価証券報告書-財務分析-"
         config_data["last_response_id"] = None
 
         # RAG settings (use_file_search, current_vector_store_id) are preserved if loaded
