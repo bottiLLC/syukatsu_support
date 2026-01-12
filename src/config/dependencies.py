@@ -28,11 +28,12 @@ REQUIRED_PACKAGES = [
 def check_dependencies() -> None:
     """
     Verifies that all required third-party packages are installed.
-
-    Iterates through the `REQUIRED_PACKAGES` list and attempts to import each.
-    If any dependency is missing, it logs a critical error, displays a
-    GUI error message to the user in Japanese, and terminates the application.
     """
+    # 【追加】PyInstallerでビルド済み(Frozen)の場合はチェックをスキップする
+    if getattr(sys, 'frozen', False):
+        logger.info("Running in frozen mode (PyInstaller). Skipping dependency check.")
+        return
+
     missing_packages: List[str] = []
 
     for package in REQUIRED_PACKAGES:
