@@ -1,0 +1,7 @@
+{
+  "tests/test_gui.py::TestSyukatsuSupportApp::test_startup_initialization": true,
+  "tests/test_gui.py::TestSyukatsuSupportApp::test_start_generation_flow": true,
+  "tests/test_gui.py::TestSyukatsuSupportApp::test_process_queue_ui_updates": true,
+  "tests/test_gui.py::TestSyukatsuSupportApp::test_rag_tool_configuration": true,
+  "tests/test_gui.py::TestSyukatsuSupportApp::test_api_key_update": true
+}

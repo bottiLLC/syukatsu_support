@@ -1,10 +1,10 @@
 """
-RAG Management Window module.
+RAG Management Window module for the Job Hunting Support Application.
 
 This module provides a dedicated interface for managing Vector Stores and
 their associated files. It serves as a central hub for:
 - Creating, renaming, and deleting Vector Stores.
-- Uploading and indexing files into specific stores.
+- Uploading and indexing files (e.g. Annual Reports, Corporate Guides) into specific stores.
 - Viewing and deleting files within stores.
 """
 

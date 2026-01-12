@@ -1,5 +1,5 @@
 """
-Configuration module for the Service Robot Investigation Support Application.
+Configuration module for the Job Hunting Support Application.
 
 This module handles:
 1. Secure management of API keys using local encryption (Fernet).
@@ -73,9 +73,10 @@ class UserConfig(BaseModel):
         default=AppConfig.DEFAULT_REASONING,
         description="The reasoning effort level for the model.",
     )
+    # FIX: Corrected string to match src/core/prompts.py (Added space)
     system_prompt_mode: str = Field(
-        default="有価証券報告書-財務分析-",
-        description="The currently selected diagnostic strategy mode.",
+        default="有価証券報告書 -財務分析-",
+        description="The currently selected analysis strategy mode.",
     )
     last_response_id: Optional[str] = Field(
         default=None,
@@ -190,7 +191,7 @@ class ConfigManager:
 
         Safety:
             Model and Reasoning Effort are ALWAYS reset to defaults on load
-            to prevent accidental usage of high-cost models from previous sessions.
+            to prevent expensive model usage across sessions.
 
         Returns:
             UserConfig: The loaded configuration object.
@@ -231,7 +232,8 @@ class ConfigManager:
         config_data["reasoning_effort"] = AppConfig.DEFAULT_REASONING
 
         # Reset prompt mode and context for a fresh start
-        config_data["system_prompt_mode"] = "有価証券報告書-財務分析-"
+        # FIX: Ensure consistency with prompts.py
+        config_data["system_prompt_mode"] = "有価証券報告書 -財務分析-"
         config_data["last_response_id"] = None
 
         # RAG settings (use_file_search, current_vector_store_id) are preserved if loaded

@@ -21,6 +21,7 @@ REQUIRED_PACKAGES = [
     "httpx",
     "cryptography",
     "dotenv",
+    "tenacity",  # Added for retry logic resilience
 ]
 
 
@@ -80,10 +81,23 @@ def _show_error_dialog(title: str, message: str) -> None:
     """
     # Initialize a temporary root window to show the messagebox
     # since the main application window hasn't been created yet.
-    root = tk.Tk()
-    root.withdraw()  # Hide the main window
+    try:
+        # Check if root already exists to avoid TclError
+        if not tk._default_root:
+            root = tk.Tk()
+            root.withdraw()  # Hide the main window
+            should_destroy = True
+        else:
+            root = tk._default_root
+            should_destroy = False
+    except Exception:
+        # Fallback
+        root = tk.Tk()
+        root.withdraw()
+        should_destroy = True
 
     messagebox.showerror(title, message)
 
     # Ensure the root window is destroyed after the message box is closed
-    root.destroy()
+    if should_destroy:
+        root.destroy()

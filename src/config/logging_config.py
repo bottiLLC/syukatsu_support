@@ -1,5 +1,5 @@
 """
-Logging configuration module.
+Logging configuration module for the Job Hunting Support Application.
 
 This module handles the setup of the application-wide logging configuration.
 Separating this allows for easier modifications to log formats or handlers

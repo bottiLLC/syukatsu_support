@@ -7,7 +7,7 @@ and normalization of request payloads and response stream events.
 """
 
 from typing import List, Literal, Optional, Union, Any
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator
 
 # --- Input Message Models (Strict Schema) ---
 
@@ -25,9 +25,10 @@ class InputTextContent(BaseModel):
 class InputMessage(BaseModel):
     """
     Represents a message in the conversation history.
-    Schema: {"role": "user" | "assistant", "content": [...]}
+    Schema: {"type": "message", "role": "user" | "assistant", "content": [...]}
     """
 
+    type: Literal["message"] = "message"
     role: Literal["user", "assistant"]
     content: List[InputTextContent]
 
@@ -94,7 +95,7 @@ class ResponseRequestPayload(BaseModel):
         if isinstance(v, str):
             return [
                 {
-                    "type": "message",  # implicit in object structure, but handled by parsing
+                    "type": "message",  # Explicitly set type
                     "role": "user",
                     "content": [{"type": "input_text", "text": v}],
                 }

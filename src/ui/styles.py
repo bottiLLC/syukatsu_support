@@ -1,5 +1,5 @@
 """
-UI Styles configuration module.
+UI Styles configuration module for the Job Hunting Support Application.
 
 This module defines constants for fonts, colors, and window settings
 used across the GUI application to maintain consistent styling.

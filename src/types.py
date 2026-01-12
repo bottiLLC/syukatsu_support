@@ -12,6 +12,6 @@ from typing import Literal
 # Note: 'none' is supported by gpt-5.1, 'xhigh' by gpt-5.1-codex-max onwards.
 ReasoningEffort = Literal["none", "minimal", "low", "medium", "high", "xhigh"]
 
-# Output formats for diagnosis logs used in the UI.
+# Output formats for analysis logs used in the UI.
 # Used to determine the color and formatting of log entries.
 LogTag = Literal["user", "ai", "error", "info"]

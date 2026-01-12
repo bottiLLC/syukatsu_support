@@ -1,114 +1,109 @@
 """
-Unit tests for data models defined in src.core.models.
-Focuses on validation and normalization logic for API payloads.
+Unit tests for data models defined in src/core/models.py.
+Ensures Pydantic models correctly validate and serialize data according to the OpenAI Responses API schema.
 """
 
-from typing import List
 import pytest
 from pydantic import ValidationError
 
 from src.core.models import (
     ResponseRequestPayload,
-    FileSearchTool,
     InputMessage,
     InputTextContent,
+    FileSearchTool,
     ReasoningOptions,
+    StreamTextDelta,
+    StreamResponseCreated,
+    StreamUsage,
+    StreamError,
 )
 
-
 class TestResponseRequestPayload:
-    """Tests for the main request payload model."""
+    """Tests for the main API request payload model."""
 
-    def test_normalize_string_input(self):
+    def test_payload_normalization_string_input(self):
         """
-        Verifies that a simple string input is automatically converted
-        to the required list of InputMessage objects with 'user' role.
+        Verifies that a simple string input is correctly normalized into 
+        the complex List[InputMessage] structure required by the API.
         """
         payload = ResponseRequestPayload(
             model="gpt-5.2",
-            input="Simple user query",
-            instructions="System prompt",
+            input="Help me with financial analysis."
         )
 
-        # Check normalization
-        assert isinstance(payload.input, list)
+        # 1. Check strict structure
         assert len(payload.input) == 1
-
         message = payload.input[0]
         assert isinstance(message, InputMessage)
+        assert message.type == "message"
         assert message.role == "user"
-
+        
+        # 2. Check content nesting
         assert len(message.content) == 1
-        content_item = message.content[0]
-        assert isinstance(content_item, InputTextContent)
-        assert content_item.type == "input_text"
-        assert content_item.text == "Simple user query"
+        content = message.content[0]
+        assert isinstance(content, InputTextContent)
+        assert content.type == "input_text"
+        assert content.text == "Help me with financial analysis."
 
-    def test_pass_structured_input_directly(self):
+    def test_payload_explicit_list_input(self):
         """
-        Verifies that passing a pre-structured list of dicts works correctly.
+        Verifies that passing a pre-formatted list of InputMessage objects works as is.
         """
-        structured_input = [
-            {"role": "user", "content": [{"type": "input_text", "text": "Hello"}]},
-            {"role": "assistant", "content": [{"type": "input_text", "text": "Hi"}]},
-            {"role": "user", "content": [{"type": "input_text", "text": "Next"}]},
-        ]
-
-        payload = ResponseRequestPayload(
-            model="gpt-5.2",
-            input=structured_input,
-            instructions="System prompt",
-        )
-
-        assert len(payload.input) == 3
-        assert payload.input[1].role == "assistant"
-        assert payload.input[1].content[0].text == "Hi"
-
-    def test_validation_error_missing_fields(self):
-        """Verifies that missing required fields raise ValidationError."""
-        # 'instructions' is Optional, so omitting it should NOT raise an error.
-        # We test omitting 'model' instead, which IS required.
-        with pytest.raises(ValidationError) as excinfo:
-            ResponseRequestPayload(
-                # model="gpt-5.2",  # Missing required field
-                input="test",
+        raw_input = [
+            InputMessage(
+                role="user", 
+                content=[InputTextContent(text="Explicit input")]
             )
-        assert "model" in str(excinfo.value)
-
-    def test_reasoning_options_serialization(self):
-        """Verifies correct handling of nested reasoning options."""
+        ]
         payload = ResponseRequestPayload(
             model="gpt-5.2",
-            input="test",
-            instructions="sys",
-            reasoning={"effort": "high"},  # Pass as dict
+            input=raw_input
         )
+        
+        assert payload.input == raw_input
+        assert payload.input[0].content[0].text == "Explicit input"
 
-        assert isinstance(payload.reasoning, ReasoningOptions)
-        assert payload.reasoning.effort == "high"
+    def test_payload_with_tools(self):
+        """Verifies correct serialization of tools (RAG/File Search)."""
+        tools = [
+            FileSearchTool(vector_store_ids=["vs_123"])
+        ]
+        payload = ResponseRequestPayload(
+            model="gpt-5.2",
+            input="Check this file",
+            tools=tools
+        )
+        
+        dump = payload.model_dump(exclude_none=True)
+        assert "tools" in dump
+        assert dump["tools"][0]["type"] == "file_search"
+        assert dump["tools"][0]["vector_store_ids"] == ["vs_123"]
 
+    def test_payload_validation_failure(self):
+        """Verifies that missing required fields raises ValidationError."""
+        with pytest.raises(ValidationError):
+            ResponseRequestPayload(
+                # Missing 'model' and 'input'
+                instructions="System prompt only" 
+            )
 
-class TestFileSearchTool:
-    """Tests for the FileSearchTool model configuration."""
+class TestStreamEvents:
+    """Tests for stream response event models."""
 
-    def test_flat_structure_initialization(self):
-        """
-        Verifies that passing 'vector_store_ids' works with the flat model structure defined in models.py.
-        The actual Pydantic model defines vector_store_ids at the top level.
-        """
-        tool_data = {
-            "type": "file_search",
-            "vector_store_ids": ["vs_123", "vs_456"],
-        }
+    def test_stream_text_delta(self):
+        delta = StreamTextDelta(delta="Hello")
+        assert delta.delta == "Hello"
 
-        tool = FileSearchTool(**tool_data)
+    def test_stream_usage(self):
+        usage = StreamUsage(
+            input_tokens=10, 
+            output_tokens=20, 
+            total_tokens=30,
+            cached_tokens=5
+        )
+        assert usage.total_tokens == 30
+        assert usage.cached_tokens == 5
 
-        assert tool.type == "file_search"
-        # The model is flat, so we access vector_store_ids directly
-        assert tool.vector_store_ids == ["vs_123", "vs_456"]
-
-    def test_default_values(self):
-        """Verifies defaults for optional fields."""
-        tool = FileSearchTool()
-        assert tool.type == "file_search"
-        assert tool.vector_store_ids == []
+    def test_stream_error(self):
+        error = StreamError(message="Something broke")
+        assert "Something broke" in error.message

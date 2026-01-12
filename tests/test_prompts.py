@@ -1,5 +1,10 @@
 import pytest
-from src.core.prompts import SYSTEM_PROMPTS
+from src.core.prompts import (
+    SYSTEM_PROMPTS,
+    MODE_FINANCIAL,
+    MODE_HUMAN_CAPITAL,
+    MODE_ENTRY_SHEET
+)
 from src.config.app_config import UserConfig
 
 def test_prompts_structure():
@@ -10,20 +15,20 @@ def test_prompts_structure():
     assert len(SYSTEM_PROMPTS) > 0, "SYSTEM_PROMPTS cannot be empty"
 
 @pytest.mark.parametrize("required_key", [
-    "Root Cause Analysis",
-    "Fact Finding",
-    "Brainstorming (Wall-E)"
+    MODE_FINANCIAL,
+    MODE_HUMAN_CAPITAL,
+    MODE_ENTRY_SHEET
 ])
 def test_prompts_keys_exist(required_key):
     """
-    [Integrity] Verify that essential diagnostic modes exist as keys.
+    [Integrity] Verify that essential analysis modes exist as keys.
     """
     assert required_key in SYSTEM_PROMPTS, f"Missing required key: {required_key}"
 
 @pytest.mark.parametrize("mode, expected_keywords", [
-    ("Root Cause Analysis", ["4M分析", "安全第一"]),
-    ("Fact Finding", ["5W1H", "事実調査"]),
-    ("Brainstorming (Wall-E)", ["悪魔の代弁者", "確証バイアス"]),
+    (MODE_FINANCIAL, ["表の顔", "裏の顔", "投資対効果"]),
+    (MODE_HUMAN_CAPITAL, ["男女の賃金の差異", "育児休業取得率", "離職率"]),
+    (MODE_ENTRY_SHEET, ["志望動機", "解決したい悩み", "キラーワード"]),
 ])
 def test_prompts_content_integrity(mode, expected_keywords):
     """
@@ -37,8 +42,8 @@ def test_prompts_content_integrity(mode, expected_keywords):
     # 2. Not empty
     assert prompt_text.strip() != "", f"Prompt for {mode} is empty"
 
-    # 3. Reasonable length check (sanity check against accidental deletion)
-    assert len(prompt_text) > 50, f"Prompt for {mode} seems suspiciously short."
+    # 3. Reasonable length check
+    assert len(prompt_text) > 100, f"Prompt for {mode} seems suspiciously short."
     
     # 4. Keyword check
     for keyword in expected_keywords:
@@ -46,21 +51,14 @@ def test_prompts_content_integrity(mode, expected_keywords):
             f"Prompt for {mode} is missing expected keyword: '{keyword}'"
         )
 
-def test_root_cause_analysis_safety_tags():
+def test_prompts_contain_required_sections():
     """
-    [Safety] Root Cause Analysis prompt must contain safety protocol tags.
-    This is critical for AI safety behaviors.
+    [Structure] Prompts must contain critical structural headers for the AI.
     """
-    prompt_text = SYSTEM_PROMPTS.get("Root Cause Analysis", "")
-    
-    required_tags = [
-        "<safety_protocol", 
-        "</safety_protocol>", 
-        "<diagnostic_framework>"
-    ]
-    
-    for tag in required_tags:
-        assert tag in prompt_text, f"Missing safety tag '{tag}' in Root Cause Analysis prompt."
+    for mode, prompt_text in SYSTEM_PROMPTS.items():
+        assert "### ROLE" in prompt_text, f"{mode} missing ROLE section"
+        assert "### OBJECTIVE" in prompt_text, f"{mode} missing OBJECTIVE section"
+        assert "### OUTPUT CONSTRAINTS" in prompt_text, f"{mode} missing OUTPUT CONSTRAINTS section"
 
 def test_default_config_key_exists_in_prompts():
     """

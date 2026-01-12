@@ -1,7 +1,7 @@
 """
-Service Robot Diagnosis Support Application Entry Point.
+Job Hunting Support Application Entry Point.
 
-This module serves as the bootstrap script for the QMTroubleshootingApp.
+This module serves as the bootstrap script for the SyukatsuSupportApp.
 It orchestrates logging setup, dependency verification, and GUI initialization.
 """
 
@@ -39,10 +39,10 @@ def main() -> None:
         # 3. Launch GUI
         # Import inside main/try block to capture import errors if dependencies fail
         # pylint: disable=import-outside-toplevel
-        from src.ui.gui import QMTroubleshootingApp
+        from src.ui.gui import SyukatsuSupportApp
 
         logger.info("Initializing GUI...")
-        app = QMTroubleshootingApp()
+        app = SyukatsuSupportApp()
         app.mainloop()
 
     except Exception as e:

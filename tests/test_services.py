@@ -37,7 +37,7 @@ class TestCostCalculator:
         )
         
         # We need to ensure we use a model that exists in PRICING_TABLE
-        model_name = "gpt-4o" # or any key present in PRICING_TABLE
+        model_name = "gpt-5.2" # Using default model from PRICING_TABLE
         if model_name not in PRICING_TABLE:
             # Fallback to any key available if the specific one is missing in test env
             model_name = list(PRICING_TABLE.keys())[0]
@@ -114,7 +114,7 @@ class TestLLMService:
             setattr(event, k, v)
         return event
 
-    def test_stream_diagnosis_success(self, service, mock_client, valid_payload):
+    def test_stream_analysis_success(self, service, mock_client, valid_payload):
         """
         Verifies a successful streaming session with text deltas and usage stats.
         """
@@ -149,7 +149,7 @@ class TestLLMService:
         mock_client.responses.create.return_value = iter(mock_events)
 
         # Execute
-        results = list(service.stream_diagnosis(valid_payload))
+        results = list(service.stream_analysis(valid_payload))
 
         # Assertions
         assert len(results) == 4
@@ -177,27 +177,36 @@ class TestLLMService:
         assert isinstance(call_kwargs["input"], list)
         assert call_kwargs["input"][0]["role"] == "user"
 
-    def test_stream_diagnosis_api_connection_error(self, service, mock_client, valid_payload):
+    def test_stream_analysis_api_connection_error(self, service, mock_client, valid_payload):
         """Verifies handling of API connection errors."""
+        # Tenacity retry logic will catch this, retry, and eventually raise.
+        # However, the service layer catches the raised exception and yields a StreamError.
+        # We need to simulate the failure persisting across retries.
         mock_client.responses.create.side_effect = APIConnectionError(message="Connection failed", request=MagicMock())
 
-        results = list(service.stream_diagnosis(valid_payload))
+        results = list(service.stream_analysis(valid_payload))
 
+        # Expect one StreamError after retries are exhausted
         assert len(results) == 1
         assert isinstance(results[0], StreamError)
         assert "[Connection Error]" in results[0].message
+        
+        # Verify retries occurred (Tenacity stop_after_attempt is 3 in services.py)
+        assert mock_client.responses.create.call_count == 3
 
-    def test_stream_diagnosis_rate_limit_error(self, service, mock_client, valid_payload):
+    def test_stream_analysis_rate_limit_error(self, service, mock_client, valid_payload):
         """Verifies handling of Rate Limit errors."""
         mock_client.responses.create.side_effect = RateLimitError(message="Rate limit", response=MagicMock(), body=None)
 
-        results = list(service.stream_diagnosis(valid_payload))
+        results = list(service.stream_analysis(valid_payload))
 
         assert len(results) == 1
         assert isinstance(results[0], StreamError)
         assert "[Rate Limit]" in results[0].message
+        # Verify retries
+        assert mock_client.responses.create.call_count == 3
 
-    def test_stream_diagnosis_stream_error_event(self, service, mock_client, valid_payload):
+    def test_stream_analysis_stream_error_event(self, service, mock_client, valid_payload):
         """Verifies handling of an 'error' event emitted during the stream."""
         mock_events = [
             self._create_mock_event(
@@ -207,20 +216,20 @@ class TestLLMService:
         ]
         mock_client.responses.create.return_value = iter(mock_events)
 
-        results = list(service.stream_diagnosis(valid_payload))
+        results = list(service.stream_analysis(valid_payload))
 
         assert len(results) == 1
         assert isinstance(results[0], StreamError)
         assert "Something went wrong" in results[0].message
 
-    def test_stream_diagnosis_ignore_unknown_events(self, service, mock_client, valid_payload):
+    def test_stream_analysis_ignore_unknown_events(self, service, mock_client, valid_payload):
         """Verifies that unknown event types are ignored."""
         mock_events = [
             self._create_mock_event("response.unknown_event_type")
         ]
         mock_client.responses.create.return_value = iter(mock_events)
 
-        results = list(service.stream_diagnosis(valid_payload))
+        results = list(service.stream_analysis(valid_payload))
 
         # Should produce no results, but strictly not raise an error
         assert len(results) == 0

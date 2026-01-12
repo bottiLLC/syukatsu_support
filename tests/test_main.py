@@ -32,8 +32,8 @@ class TestMainApplication:
         Logging -> Dependencies -> GUI -> Mainloop
         """
         # Mock the GUI class imported *inside* main()
-        # We patch 'src.ui.gui.QMTroubleshootingApp' because main.py imports it from there
-        with patch("src.ui.gui.QMTroubleshootingApp") as MockApp:
+        # We patch 'src.ui.gui.SyukatsuSupportApp' because main.py imports it from there
+        with patch("src.ui.gui.SyukatsuSupportApp") as MockApp:
             mock_app_instance = MockApp.return_value
             
             main.main()
@@ -60,7 +60,7 @@ class TestMainApplication:
         """
         # Simulate an error during GUI initialization
         error_msg = "Simulated Startup Crash"
-        with patch("src.ui.gui.QMTroubleshootingApp", side_effect=RuntimeError(error_msg)):
+        with patch("src.ui.gui.SyukatsuSupportApp", side_effect=RuntimeError(error_msg)):
             
             # Mock Tkinter components used in the exception block
             with patch("tkinter.Tk") as MockTk, \
@@ -96,7 +96,7 @@ class TestMainApplication:
         Should NOT create a new Tk instance, but still show error.
         """
         # Simulate error
-        with patch("src.ui.gui.QMTroubleshootingApp", side_effect=ValueError("Config Error")):
+        with patch("src.ui.gui.SyukatsuSupportApp", side_effect=ValueError("Config Error")):
              
              # Simulate existing root
              mock_existing_root = MagicMock()

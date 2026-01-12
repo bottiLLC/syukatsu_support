@@ -1,11 +1,8 @@
 """
 RAG (Retrieval-Augmented Generation) services module.
 
-This module handles file uploads and Vector Store management for the RAG feature.
-It adheres to the OpenAI API specifications.
-
-Note: Based on runtime environment feedback, 'vector_stores' is accessed via
-the root client namespace (client.vector_stores) rather than client.beta.
+This module handles file uploads and Vector Store management for the RAG feature
+in the Job Hunting Support Application. It adheres to the OpenAI API specifications.
 """
 
 import logging
@@ -15,9 +12,6 @@ from typing import Any, List, Optional
 
 from openai import NotFoundError
 from openai.types import FileObject
-
-# Using Any for VectorStore types to prevent import errors across SDK versions
-# where the location of these types might vary (e.g. types.beta vs types.vector_stores).
 
 from src.core.base import BaseOpenAIService
 
@@ -113,7 +107,6 @@ class VectorStoreService(BaseOpenAIService):
             List[Any]: A list of vector store objects.
         """
         try:
-            # Accessing via root namespace based on runtime error feedback
             response = self._client.vector_stores.list(limit=limit)
             return list(response.data)
         except Exception as e:

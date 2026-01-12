@@ -1,5 +1,5 @@
 """
-Service Robot Diagnosis Support GUI Application.
+Job Hunting Support GUI Application.
 
 This module provides the main graphical user interface for the application,
 orchestrating user inputs, LLM interactions via the Responses API, and
@@ -35,9 +35,9 @@ from src.ui.styles import UI_COLORS, UI_FONTS, WINDOW_SIZE
 logger = logging.getLogger(__name__)
 
 
-class QMTroubleshootingApp(tk.Tk):
+class SyukatsuSupportApp(tk.Tk):
     """
-    Main GUI application class for Service Robot Investigation Support.
+    Main GUI application class for Job Hunting Support.
 
     Inherits from tk.Tk and manages the main application window lifecycle.
     """
@@ -540,7 +540,7 @@ class QMTroubleshootingApp(tk.Tk):
         self._stop_btn.config(state="normal")
         model = self._model_var.get()
         effort = self._reasoning_var.get()
-        self._status_var.set(f"{model} ({effort}) で推論中...")
+        self._status_var.set(f"{model} ({effort}) で分析中...")
         self._cancel_event.clear()
 
         # Log User Input
@@ -598,10 +598,11 @@ class QMTroubleshootingApp(tk.Tk):
                 return
 
             service = LLMService(api_key)
-            start_msg = f"\n[AI ({payload.model})] thinking...\n"
+            start_msg = f"\n[AI ({payload.model})] analyzing...\n"
             self._message_queue.put(StreamTextDelta(delta=start_msg))
 
-            stream = service.stream_diagnosis(payload)
+            # Updated to call the renamed method stream_analysis
+            stream = service.stream_analysis(payload)
             for event in stream:
                 if self._cancel_event.is_set():
                     break

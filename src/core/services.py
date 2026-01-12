@@ -3,7 +3,7 @@ Service layer for OpenAI API interactions and cost calculation.
 
 This module provides the `LLMService` for communicating with the OpenAI Responses API
 and the `CostCalculator` for estimating usage costs. It handles streaming responses,
-event processing, and error management.
+event processing, and error management for the Job Hunting Support application.
 """
 
 import logging
@@ -17,6 +17,13 @@ from openai import (
     RateLimitError,
 )
 from pydantic import ValidationError
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_random_exponential,
+    before_sleep_log,
+)
 
 from src.core.base import BaseOpenAIService
 from src.core.models import (
@@ -110,11 +117,11 @@ class LLMService(BaseOpenAIService):
     """
     Service for interacting with the OpenAI Responses API.
 
-    Handles the streaming of diagnosis responses and converts API events
+    Handles the streaming of analysis responses and converts API events
     into application-specific domain objects.
     """
 
-    def stream_diagnosis(
+    def stream_analysis(
         self, payload: ResponseRequestPayload
     ) -> Generator[StreamResult, None, None]:
         """
@@ -131,11 +138,44 @@ class LLMService(BaseOpenAIService):
             # Convert Pydantic model to dict, excluding None to respect API defaults
             request_params = payload.model_dump(exclude_none=True)
 
-            logger.info(f"Starting stream diagnosis with model: {payload.model}")
+            logger.info(f"Starting stream analysis with model: {payload.model}")
 
-            # Call the Responses API (POST /v1/responses)
-            # STRICTLY using client.responses.create per requirements
-            stream = self._client.responses.create(**request_params)
+            # Call the internal generator which includes the API call
+            yield from self._execute_api_call(request_params)
+
+        except Exception as e:
+            # Catch-all for any unhandled exceptions during the generator setup
+            logger.exception("Unexpected error in stream_analysis")
+            yield StreamError(
+                message=f"\n[Unexpected Error] 予期せぬエラーが発生しました: {e}"
+            )
+
+    @retry(
+        retry=retry_if_exception_type(
+            (APIConnectionError, APITimeoutError, RateLimitError)
+        ),
+        wait=wait_random_exponential(multiplier=1, max=60),
+        stop=stop_after_attempt(3),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        reraise=True,
+    )
+    def _create_stream(self, request_params: dict) -> Any:
+        """
+        Helper method to initiate the API stream with retry logic.
+        This only retries the *connection* establishment, not the stream iteration.
+        """
+        # STRICTLY using client.responses.create per requirements
+        return self._client.responses.create(**request_params)
+
+    def _execute_api_call(
+        self, request_params: dict
+    ) -> Generator[StreamResult, None, None]:
+        """
+        Executes the API call and yields results.
+        Handles specific API exceptions and converts them to StreamError events.
+        """
+        try:
+            stream = self._create_stream(request_params)
 
             for event in stream:
                 result = self._process_event(event)
@@ -167,9 +207,9 @@ class LLMService(BaseOpenAIService):
                 message=f"\n[Validation Error] リクエストデータの形式が不正です: {e}"
             )
         except Exception as e:
-            logger.exception("Unexpected error in stream_diagnosis")
+            logger.exception("Error during stream iteration")
             yield StreamError(
-                message=f"\n[Unexpected Error] 予期せぬエラーが発生しました: {e}"
+                message=f"\n[Stream Error] ストリーム処理中にエラーが発生しました: {e}"
             )
 
     def _process_event(self, event: Any) -> Optional[StreamResult]:

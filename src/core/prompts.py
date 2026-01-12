@@ -2,20 +2,20 @@
 System prompts definition module.
 
 This module contains the static system instructions used by the AI model
-for different diagnostic modes. It defines the specific prompts for
-Root Cause Analysis, Fact Finding, and Brainstorming scenarios.
+for different analysis modes. It defines the specific prompts for
+Financial Analysis, Human Capital Analysis, and Entry Sheet (ES) Strategy scenarios.
 """
 
 from typing import Dict, Final
 
-# --- Diagnostic Mode Constants ---
-MODE_1: Final[str] = "有価証券報告書-財務分析-"
-MODE_2: Final[str] = "有価証券報告書 -人的資本分析-"
-MODE_3: Final[str] = "志望動機検討"
+# --- Analysis Mode Constants ---
+MODE_FINANCIAL: Final[str] = "有価証券報告書 -財務分析-"
+MODE_HUMAN_CAPITAL: Final[str] = "有価証券報告書 -人的資本分析-"
+MODE_ENTRY_SHEET: Final[str] = "志望動機検討"
 
 # --- Prompt Content Definitions ---
 
-_PROMPT_MODE_1: Final[str] = """### ROLE
+_PROMPT_FINANCIAL: Final[str] = """### ROLE
 You are a "Critical Financial Analyst" and "Strategic Career Mentor" for university students.
 Your mission is not just to summarize the "Annual Securities Report" (有価証券報告書), but to **expose the reality behind the numbers** with evidence and clarity.
 
@@ -78,7 +78,7 @@ Analyze the uploaded Annual Securities Report focusing on **Business Overview**,
        「最後に『何か質問はありますか？』と聞かれた際、**『[ここに学生の謙虚な発言例を入れる]』** という形で **[ここに話題のテーマを入れる]** について話題にできると、有報を読み込んだ『理解が深い人』になります。」
      - *Phrasing Strategy:* Even for negative points (e.g., low investment efficiency), frame it positively: "I see you are investing heavily in X. I am curious about the future vision for monetizing this..." (Show interest in the *solution*, not just the problem)."""
 
-_PROMPT_MODE_2: Final[str] = """### ROLE
+_PROMPT_HUMAN_CAPITAL: Final[str] = """### ROLE
     You are an expert HR Consultant and Career Advisor for university students. Your goal is to analyze the "Annual Securities Report" (有価証券報告書) — specifically focusing on Human Capital and Sustainability data — to generate a "Human Capital Analysis Report."
 
     ### OBJECTIVE
@@ -138,7 +138,7 @@ _PROMPT_MODE_2: Final[str] = """### ROLE
     - Suggest 1-2 questions to ask in an OB/OG visit or interview to dig deeper into the "undisclosed" areas (e.g., "The report didn't mention overtime. It might be good to ask about the actual work style.").
     """
 
-_PROMPT_MODE_3: Final[str] = """### ROLE
+_PROMPT_ENTRY_SHEET: Final[str] = """### ROLE
     You are a Strategic Career Coach specializing in Entry Sheets (ES) and Interview preparation. Your goal is to extract specific "hooks" from the Annual Securities Report (有価証券報告書) that a student can use to construct a compelling "Statement of Purpose" (志望動機).
 
     ### OBJECTIVE
@@ -182,7 +182,7 @@ _PROMPT_MODE_3: Final[str] = """### ROLE
 # --- Exported Configuration ---
 
 SYSTEM_PROMPTS: Final[Dict[str, str]] = {
-    MODE_1: _PROMPT_MODE_1,
-    MODE_2: _PROMPT_MODE_2,
-    MODE_3: _PROMPT_MODE_3,
+    MODE_FINANCIAL: _PROMPT_FINANCIAL,
+    MODE_HUMAN_CAPITAL: _PROMPT_HUMAN_CAPITAL,
+    MODE_ENTRY_SHEET: _PROMPT_ENTRY_SHEET,
 }
