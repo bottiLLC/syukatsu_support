@@ -25,10 +25,9 @@ class InputTextContent(BaseModel):
 class InputMessage(BaseModel):
     """
     Represents a message in the conversation history.
-    Schema: {"type": "message", "role": "user" | "assistant", "content": [...]}
+    Schema: {"role": "user" | "assistant", "content": [...]}
     """
 
-    type: Literal["message"] = "message"
     role: Literal["user", "assistant"]
     content: List[InputTextContent]
 
@@ -95,7 +94,6 @@ class ResponseRequestPayload(BaseModel):
         if isinstance(v, str):
             return [
                 {
-                    "type": "message",  # Explicitly set type
                     "role": "user",
                     "content": [{"type": "input_text", "text": v}],
                 }

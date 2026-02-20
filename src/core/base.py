@@ -2,13 +2,14 @@
 Base service module for OpenAI API interactions.
 
 This module provides the abstract base class for all services that require
-access to the OpenAI API, ensuring consistent client initialization,
-configuration, and error handling patterns.
+access to the OpenAI API, ensuring consistent configuration management.
 """
 
 import logging
 
-from openai import OpenAI
+from openai import AsyncOpenAI
+from typing import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from src.config.app_config import AppConfig
 
@@ -20,11 +21,11 @@ class BaseOpenAIService:
     """
     Base class for services interacting with the OpenAI API.
 
-    This class encapsulates the initialization of the synchronous OpenAI client,
-    enforcing global configuration settings such as timeouts and retry limits.
+    Enforces the use of AsyncOpenAI within an async context manager
+    to prevent resource leaks, per the application's global rules.
 
     Attributes:
-        _client (OpenAI): The configured OpenAI client instance.
+        _api_key (str): The decrypted OpenAI API key.
     """
 
     def __init__(self, api_key: str) -> None:
@@ -41,8 +42,23 @@ class BaseOpenAIService:
             logger.error("Attempted to initialize BaseOpenAIService without an API key.")
             raise ValueError("API Key is required to initialize the OpenAI service.")
 
-        self._client: OpenAI = OpenAI(
-            api_key=api_key,
+        self._api_key = api_key
+
+    @asynccontextmanager
+    async def get_async_client(self) -> AsyncGenerator[AsyncOpenAI, None]:
+        """
+        Context manager that yields an AsyncOpenAI client.
+        Ensures proper creation and cleanup of the async HTTP session.
+
+        Yields:
+            AsyncOpenAI: A configured asynchronous OpenAI client.
+        """
+        client = AsyncOpenAI(
+            api_key=self._api_key,
             timeout=AppConfig.API_TIMEOUT,
             max_retries=AppConfig.API_MAX_RETRIES,
         )
+        try:
+            yield client
+        finally:
+            await client.close()

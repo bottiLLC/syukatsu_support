@@ -2,12 +2,12 @@
 Service layer for OpenAI API interactions and cost calculation.
 
 This module provides the `LLMService` for communicating with the OpenAI Responses API
-and the `CostCalculator` for estimating usage costs. It handles streaming responses,
+and the `CostCalculator` for estimating usage costs. It handles asynchronous streaming responses,
 event processing, and error management for the Job Hunting Support application.
 """
 
 import logging
-from typing import Any, Generator, Optional
+from typing import Any, AsyncGenerator, Optional
 
 from openai import (
     APIConnectionError,
@@ -15,6 +15,7 @@ from openai import (
     AuthenticationError,
     OpenAIError,
     RateLimitError,
+    AsyncOpenAI
 )
 from pydantic import ValidationError
 from tenacity import (
@@ -117,15 +118,15 @@ class LLMService(BaseOpenAIService):
     """
     Service for interacting with the OpenAI Responses API.
 
-    Handles the streaming of analysis responses and converts API events
-    into application-specific domain objects.
+    Handles the streaming of analysis responses using AsyncOpenAI context managers
+    and converts API events into application-specific domain objects.
     """
 
-    def stream_analysis(
+    async def stream_analysis(
         self, payload: ResponseRequestPayload
-    ) -> Generator[StreamResult, None, None]:
+    ) -> AsyncGenerator[StreamResult, None]:
         """
-        Executes a streaming request to the Responses API.
+        Executes an asynchronous streaming request to the Responses API.
 
         Args:
             payload: The request payload containing model, input, and other parameters.
@@ -138,10 +139,11 @@ class LLMService(BaseOpenAIService):
             # Convert Pydantic model to dict, excluding None to respect API defaults
             request_params = payload.model_dump(exclude_none=True)
 
-            logger.info(f"Starting stream analysis with model: {payload.model}")
+            logger.info(f"Starting async stream analysis with model: {payload.model}")
 
-            # Call the internal generator which includes the API call
-            yield from self._execute_api_call(request_params)
+            # Yield from async generator
+            async for result in self._execute_api_call(request_params):
+                yield result
 
         except Exception as e:
             # Catch-all for any unhandled exceptions during the generator setup
@@ -159,28 +161,29 @@ class LLMService(BaseOpenAIService):
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
-    def _create_stream(self, request_params: dict) -> Any:
+    async def _create_stream(self, client: AsyncOpenAI, request_params: dict) -> Any:
         """
         Helper method to initiate the API stream with retry logic.
         This only retries the *connection* establishment, not the stream iteration.
         """
         # STRICTLY using client.responses.create per requirements
-        return self._client.responses.create(**request_params)
+        return await client.responses.create(**request_params)
 
-    def _execute_api_call(
+    async def _execute_api_call(
         self, request_params: dict
-    ) -> Generator[StreamResult, None, None]:
+    ) -> AsyncGenerator[StreamResult, None]:
         """
-        Executes the API call and yields results.
+        Executes the API call within an async context manager and yields results.
         Handles specific API exceptions and converts them to StreamError events.
         """
         try:
-            stream = self._create_stream(request_params)
+            async with self.get_async_client() as client:
+                stream = await self._create_stream(client, request_params)
 
-            for event in stream:
-                result = self._process_event(event)
-                if result:
-                    yield result
+                async for event in stream:
+                    result = self._process_event(event)
+                    if result:
+                        yield result
 
         except APITimeoutError as e:
             logger.error(f"Timeout error: {e}")
@@ -200,7 +203,9 @@ class LLMService(BaseOpenAIService):
             yield StreamError(message="\n[Rate Limit] リクエスト頻度制限を超過しました。")
         except OpenAIError as e:
             logger.error(f"OpenAI API error: {e}")
-            yield StreamError(message=f"\n[API Error] APIエラーが発生しました: {e}")
+            # Ensure proper schema-based parsing if available
+            message = getattr(e, "message", str(e))
+            yield StreamError(message=f"\n[API Error] APIエラーが発生しました: {message}")
         except ValidationError as e:
             logger.error(f"Validation error: {e}")
             yield StreamError(
