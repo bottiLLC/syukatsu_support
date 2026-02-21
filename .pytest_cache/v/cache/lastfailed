@@ -8,5 +8,9 @@
   "tests/test_services.py::TestLLMService::test_stream_analysis_ignore_unknown_events": true,
   "test_repro.py::test_repro": true,
   "tests/test_pricing.py::TestPricingTable::test_essential_models_exist[gemini-3.1-pro]": true,
-  "tests/test_pricing.py::TestPricingTable::test_price_accuracy[gemini-3.1-pro-1.25-5.0-0.3125]": true
+  "tests/test_pricing.py::TestPricingTable::test_price_accuracy[gemini-3.1-pro-1.25-5.0-0.3125]": true,
+  "tests/test_base.py": true,
+  "tests/test_mvp_presenters.py": true,
+  "tests/test_prompts.py": true,
+  "tests/test_rag_services.py": true
 }
