@@ -256,7 +256,7 @@ class MainPresenter:
                         effort = self.view.reasoning_var.get()
                         msg = f"{model_name} では思考レベル「{effort}」は使用できません。"
                         self.view.show_error("設定エラー", msg)
-                        self.view.append_log(f"\\n[エラー] {msg}\\n", "error")
+                        self.view.append_log(f"\n[エラー] {msg}\n", "error")
                     else:
                         self.view.append_log(event.message, "error")
 

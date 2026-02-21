@@ -211,7 +211,8 @@ class LLMService(BaseGeminiService):
                         )
 
         except genai_errors.APIError as e:
-             if e.code == 400 and ("thinking level" in e.message.lower() or "thinking_level" in e.message.lower()):
+             err_str = str(e).lower()
+             if (getattr(e, "code", None) == 400 or "400" in err_str) and ("thinking level" in err_str or "thinking_level" in err_str):
                  logger.warning(f"Thinking level unsupported for model {payload.model}. Sending error token to UI.")
                  yield StreamError(message="THINKING_LEVEL_ERROR")
                  return
