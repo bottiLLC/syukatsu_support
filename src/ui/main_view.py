@@ -349,10 +349,6 @@ class MainView(tk.Tk):
         if self.on_close_callback:
             self.on_close_callback()
         self.destroy()
-        try:
-            self.quit()
-        except Exception:
-            pass
 
     def _toggle_key_visibility(self) -> None:
         if self.show_key_var.get():
