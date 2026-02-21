@@ -209,7 +209,10 @@ class MainPresenter:
                     return
 
                 service = LLMService(api_key)
-                start_msg = f"\n[AI ({payload.model})] analyzing...\n"
+                start_msg = (
+                    f"\n[AI ({payload.model})] analyzing...\n"
+                    "（数分から10分程度の時間を要する場合があります。）\n\n"
+                )
                 self.model.message_queue.put(StreamTextDelta(delta=start_msg))
 
                 stream = service.stream_analysis(payload)
