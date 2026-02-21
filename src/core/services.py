@@ -180,18 +180,12 @@ class LLMService(BaseGeminiService):
                 config=config,
             )
         except genai_errors.APIError as e:
-            # Fallback if the user's selected model rejects the thinking configuration (e.g. gemini-3-pro-preview with MEDIUM)
+            # If the user's selected model rejects the thinking configuration (e.g. gemini-3-pro-preview with MEDIUM)
             if e.code == 400 and ("thinking level" in e.message.lower() or "thinking_level" in e.message.lower()):
-                logger.warning(f"Model {payload.model} rejected thinking config. Retrying without it. Error: {e.message}")
-                if "thinking_config" in config_args:
-                    del config_args["thinking_config"]
-                    
-                config_fallback = genai_types.GenerateContentConfig(**config_args)
-                return await client.aio.models.generate_content_stream(
-                    model=payload.model,
-                    contents=contents,
-                    config=config_fallback,
-                )
+                thinking_level_str = payload.thinking.level if payload.thinking else "unknown"
+                error_msg = f"{payload.model}では思考レベル{thinking_level_str}は使用できません。"
+                logger.warning(error_msg)
+                raise ValueError(error_msg) from e
             raise
 
     async def _execute_api_call(
@@ -235,6 +229,9 @@ class LLMService(BaseGeminiService):
             yield StreamError(
                 message=f"\n[Validation Error] リクエストデータの形式が不正です: {e}"
             )
+        except ValueError as e:
+            logger.error(f"ValueError: {e}")
+            yield StreamError(message=f"\n[エラー] {str(e)}")
         except Exception as e:
             logger.exception("Error during stream iteration")
             yield StreamError(
