@@ -5,7 +5,7 @@ Unit tests for dependency verification module (src/config/dependencies.py).
 import sys
 from unittest.mock import patch, MagicMock
 import pytest
-from src.config.dependencies import check_dependencies, REQUIRED_PACKAGES
+from src.config import dependencies
 
 class TestDependencyCheck:
     """
@@ -22,17 +22,17 @@ class TestDependencyCheck:
             return MagicMock()
 
         # Patch only the specific GUI call and exit to prevent real dialogs/exits
-        with patch("src.config.dependencies.importlib.import_module", side_effect=mock_import_module_side_effect):
-            with patch("src.config.dependencies._show_error_dialog") as mock_show_error:
-                with patch("src.config.dependencies.logger.critical") as mock_logger_critical:
+        with patch.object(dependencies.importlib, "import_module", side_effect=mock_import_module_side_effect):
+            with patch.object(dependencies, "_show_error_dialog") as mock_show_error:
+                with patch.object(dependencies, "logger") as mock_logger:
                     
                     with pytest.raises(SystemExit) as excinfo:
-                        check_dependencies()
+                        dependencies.check_dependencies()
                         
                     assert excinfo.value.code == 1
                     
                     # 1. Logged critical error
-                    mock_logger_critical.assert_called()
+                    mock_logger.critical.assert_called()
                     
                     # 2. Showed GUI alert
                     mock_show_error.assert_called_once()
@@ -45,6 +45,6 @@ class TestDependencyCheck:
         """
         Ensure key libraries for the refactored app are in the required list.
         """
-        assert "tenacity" in REQUIRED_PACKAGES
-        assert "google.genai" in REQUIRED_PACKAGES
-        assert "pydantic" in REQUIRED_PACKAGES
+        assert "tenacity" in dependencies.REQUIRED_PACKAGES
+        assert "google.genai" in dependencies.REQUIRED_PACKAGES
+        assert "pydantic" in dependencies.REQUIRED_PACKAGES

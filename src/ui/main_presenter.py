@@ -6,6 +6,7 @@ import threading
 from pathlib import Path
 from typing import Any, List, Optional
 
+from src.core.models import (
     FileSearchTool,
     ThinkingOptions,
     ResponseRequestPayload,

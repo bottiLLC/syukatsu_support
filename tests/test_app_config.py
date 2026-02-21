@@ -56,7 +56,7 @@ class TestUserConfig:
         config = UserConfig()
         assert config.api_key is None
         assert config.model == "gemini-3.1-pro"
-        assert config.reasoning_effort == "high"
+        assert config.thinking_level == "medium"
         # Updated to match the Job Hunting Support context (FIX: Added space)
         assert config.system_prompt_mode == "有価証券報告書 -財務分析-"
         assert config.use_file_search is False
@@ -110,7 +110,7 @@ class TestConfigManager:
         # Save a config with non-default expensive settings
         risky_config = UserConfig(
             model="gemini-3-flash-preview", 
-            reasoning_effort="xhigh"
+            thinking_level="high"
         )
         ConfigManager.save(risky_config)
         
@@ -119,4 +119,4 @@ class TestConfigManager:
         
         # Should be reset to defaults
         assert safe_config.model == AppConfig.DEFAULT_MODEL
-        assert safe_config.reasoning_effort == AppConfig.DEFAULT_REASONING
+        assert safe_config.thinking_level == AppConfig.DEFAULT_THINKING_LEVEL
