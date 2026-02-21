@@ -14,6 +14,7 @@ MODE_FINANCIAL: Final[str] = "有価証券報告書 -財務分析-"
 MODE_HUMAN_CAPITAL: Final[str] = "有価証券報告書 -人的資本分析-"
 MODE_ENTRY_SHEET: Final[str] = "志望動機検討"
 MODE_COMPETITOR_ANALYSIS: Final[str] = "有価証券報告書 -企業・経年比較分析-"
+MODE_NO_PROMPT: Final[str] = "システムプロンプトなし"
 
 # --- Prompt Content Definitions ---
 
@@ -223,4 +224,5 @@ SYSTEM_PROMPTS: Final[Dict[str, str]] = {
     MODE_HUMAN_CAPITAL: _PROMPT_HUMAN_CAPITAL,
     MODE_COMPETITOR_ANALYSIS: _PROMPT_COMPETITOR_ANALYSIS,
     MODE_ENTRY_SHEET: _PROMPT_ENTRY_SHEET,
+    MODE_NO_PROMPT: "",
 }
