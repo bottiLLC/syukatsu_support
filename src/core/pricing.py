@@ -32,12 +32,6 @@ class ModelPricing:
 # Prices are in USD per 1 Million Tokens.
 # Note: These values should be updated to match the latest OpenAI pricing page.
 PRICING_TABLE: Dict[str, ModelPricing] = {
-    # Reasoning Models
-    "o3-pro": ModelPricing(
-        input_price=20.00,
-        output_price=80.00,
-        cached_input_price=0.0
-    ),
     # GPT-5 Series
     "gpt-5.2-pro": ModelPricing(
         input_price=21.00,
