@@ -166,6 +166,8 @@ class MainView(tk.Tk):
         cb_prompt.pack(fill="x", pady=(2, 5))
         cb_prompt.bind("<<ComboboxSelected>>", self._handle_apply_prompt_mode)
 
+        ttk.Label(frame, text="システムプロンプト:", style="Bold.TLabel").pack(anchor="w", pady=(5, 0))
+
         self._sys_prompt_view = scrolledtext.ScrolledText(
             frame, height=10, width=30, font=UI_FONTS["MONO"], wrap=tk.WORD
         )
