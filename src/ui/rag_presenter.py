@@ -35,7 +35,7 @@ class RagPresenter:
         self.view.on_file_select_callback = self.handle_file_select
 
     def refresh_stores_async(self) -> None:
-        self.view.set_status("Loading Vector Stores...", busy=True)
+        self.view.set_status("Loading FileSearch Stores...", busy=True)
         self.view.clear_stores()
 
         self.model.current_store_id = None
@@ -69,7 +69,7 @@ class RagPresenter:
 
             self.view.add_store(name, s.id, s.status, files_count, usage)
 
-        self.view.set_status(f"Loaded {len(stores)} Vector Stores.")
+        self.view.set_status(f"Loaded {len(stores)} FileSearch Stores.")
 
     def handle_store_select(self, store_id: Optional[str], file_count: int) -> None:
         self.model.current_store_id = store_id
@@ -128,7 +128,7 @@ class RagPresenter:
 
         confirm = self.view.ask_yes_no(
             "削除確認",
-            f"Vector Store '{store_id}' を削除してもよろしいですか？",
+            f"FileSearch Store '{store_id}' を削除してもよろしいですか？",
         )
         if not confirm:
             return
@@ -158,7 +158,7 @@ class RagPresenter:
                 self._set_status_threadsafe("Uploading file to OpenAI...")
                 file_obj = await self.model.file_service.upload_file(file_path)
 
-                self._set_status_threadsafe("Indexing file in Vector Store...")
+                self._set_status_threadsafe("Indexing file in FileSearch Store...")
                 batch = await self.model.rag_service.create_file_batch(store_id, [file_obj.id])
 
                 await self.model.rag_service.poll_batch_status(store_id, batch.id)
@@ -244,7 +244,7 @@ class RagPresenter:
         confirm = self.view.ask_yes_no(
             "削除確認",
             f"以下のファイルを削除してもよろしいですか？\n\n{filename}\n({file_id})\n\n"
-            "警告: この操作は Vector Store からの削除だけでなく、ファイル実体も完全に削除します。",
+            "警告: この操作は FileSearch Store からの削除だけでなく、ファイル実体も完全に削除します。",
         )
         if not confirm:
             return

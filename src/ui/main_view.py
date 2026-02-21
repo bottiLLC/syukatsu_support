@@ -136,7 +136,7 @@ class MainView(tk.Tk):
         rag_frame = ttk.Frame(frame)
         rag_frame.pack(fill="x", pady=5)
 
-        ttk.Label(rag_frame, text="Vector Stores:").pack(anchor="w")
+        ttk.Label(rag_frame, text="FileSearch Stores:").pack(anchor="w")
         self._vs_combo = ttk.Combobox(
             rag_frame, textvariable=self.vs_id_var, state="readonly"
         )

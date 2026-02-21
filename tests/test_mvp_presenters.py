@@ -101,6 +101,6 @@ async def test_rag_presenter_refresh(mock_rag_view, mock_rag_model):
     
     presenter.refresh_stores_async()
     
-    mock_rag_view.set_status.assert_called_with("Loading Vector Stores...", busy=True)
+    mock_rag_view.set_status.assert_called_with("Loading FileSearch Stores...", busy=True)
     mock_rag_view.clear_stores.assert_called()
     assert mock_rag_model.current_store_id is None

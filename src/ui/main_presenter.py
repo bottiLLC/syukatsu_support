@@ -153,7 +153,7 @@ class MainPresenter:
         if self.view.use_file_search_var.get():
             vs_val = self.view.vs_id_var.get()
             if not vs_val:
-                self.view.show_warning("RAGエラー", "ファイル検索が有効ですが、Vector Storeが選択されていません。")
+                self.view.show_warning("RAGエラー", "ファイル検索が有効ですが、FileSearch Storeが選択されていません。")
                 return
             vs_id = vs_val.split("(")[-1].strip(")") if "(" in vs_val else vs_val
             tools = [FileSearchTool(type="file_search", vector_store_ids=[vs_id])]

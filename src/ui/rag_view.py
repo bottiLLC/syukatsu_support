@@ -53,8 +53,8 @@ class RagView(tk.Toplevel):
         )
         paned.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        # Left Panel: Vector Stores
-        left_frame = ttk.LabelFrame(paned, text=" Vector Stores ", padding=5)
+        # Left Panel: FileSearch Stores
+        left_frame = ttk.LabelFrame(paned, text=" FileSearch Stores ", padding=5)
         paned.add(left_frame, width=450, stretch="never")
 
         self._store_tree = ttk.Treeview(
@@ -141,7 +141,7 @@ class RagView(tk.Toplevel):
             btn_frame_right,
             text="📂 ファイルアップロード",
             command=self._handle_upload_file,
-            state="disabled",
+            state="normal",
         )
         self._upload_btn.pack(side=tk.LEFT, padx=(0, 5))
 
@@ -194,7 +194,6 @@ class RagView(tk.Toplevel):
         state = "normal" if has_selection else "disabled"
         self._rename_btn.config(state=state)
         self._del_store_btn.config(state=state)
-        self._upload_btn.config(state=state)
         if not has_selection:
             self.clear_files()
 
@@ -248,7 +247,7 @@ class RagView(tk.Toplevel):
             self.on_store_select_callback(store_id, file_count)
 
     def _handle_create_store(self) -> None:
-        name = simpledialog.askstring("新規作成", "Vector Storeの名前を入力してください:")
+        name = simpledialog.askstring("新規作成", "FileSearch Storeの名前を入力してください:")
         if name and self.on_create_store_callback:
             self.on_create_store_callback(name)
 
@@ -275,6 +274,7 @@ class RagView(tk.Toplevel):
 
     def _handle_upload_file(self) -> None:
         if not self._current_store_id:
+            self.show_warning("ストア未選択", "FileSearchStoresを選択してください。")
             return
 
         file_path = filedialog.askopenfilename(
