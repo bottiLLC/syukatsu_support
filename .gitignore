@@ -142,3 +142,4 @@ config.json
 *.log
 # Old/Backup folders
 old/
+.web/
