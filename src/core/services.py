@@ -173,20 +173,11 @@ class LLMService(BaseGeminiService):
             
         config = genai_types.GenerateContentConfig(**config_args)
 
-        try:
-            return await client.aio.models.generate_content_stream(
-                model=payload.model,
-                contents=contents,
-                config=config,
-            )
-        except genai_errors.APIError as e:
-            # If the user's selected model rejects the thinking configuration (e.g. gemini-3-pro-preview with MEDIUM)
-            if e.code == 400 and ("thinking level" in e.message.lower() or "thinking_level" in e.message.lower()):
-                thinking_level_str = payload.thinking.level if payload.thinking else "unknown"
-                error_msg = f"{payload.model}では思考レベル{thinking_level_str}は使用できません。"
-                logger.warning(error_msg)
-                raise ValueError(error_msg) from e
-            raise
+        return await client.aio.models.generate_content_stream(
+            model=payload.model,
+            contents=contents,
+            config=config,
+        )
 
     async def _execute_api_call(
         self, payload: ResponseRequestPayload
@@ -220,6 +211,11 @@ class LLMService(BaseGeminiService):
                         )
 
         except genai_errors.APIError as e:
+             if e.code == 400 and ("thinking level" in e.message.lower() or "thinking_level" in e.message.lower()):
+                 logger.warning(f"Thinking level unsupported for model {payload.model}. Sending error token to UI.")
+                 yield StreamError(message="THINKING_LEVEL_ERROR")
+                 return
+
              logger.error(f"Gemini API error: {e}")
              from src.core.errors import translate_api_error
              msg = translate_api_error(e)
