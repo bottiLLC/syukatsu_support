@@ -21,23 +21,25 @@ OpenAIの最新API (`/responses` エンドポイント) と連携し、履歴書
 
 ```text
 src/
-├── config/           # 環境変数、ユーザー設定 (app_config.py, dependencies.py 等)
-├── core/             # ビジネスロジック、データモデル
-│   ├── models.py     # Pydantic v2 スキーマ (ユーザー入力/APIレスポンスの厳密な型定義)
-│   ├── pricing.py    # トークン単価テーブル
-│   ├── prompts.py    # システムプロンプト定義
-│   ├── services.py   # OpenAI API 通信 (`/responses`エンドポイント), コスト計算
+├── config/             # 環境変数、ユーザー設定 (app_config.py, dependencies.py 等)
+├── core/               # ビジネスロジック、データモデル
+│   ├── base.py         # AsyncOpenAI通信の基盤クラス
+│   ├── errors.py       # API例外処理とエラーメッセージの日本語化定義（UI例外検知）
+│   ├── models.py       # Pydantic V2 スキーマ (ユーザー入力/APIストリームレスポンスの厳密な型定義)
+│   ├── pricing.py      # トークン単価テーブル
+│   ├── prompts.py      # システムプロンプト定義
+│   ├── services.py     # OpenAI API 通信 (`/responses`エンドポイント API), コスト計算
 │   └── rag_services.py # Vector Store と File API の操作
-├── ui/               # コアUIコンポーネント (MVPパターン)
-│   ├── main_model.py # アプリ全体のステータス・設定の保持
-│   ├── main_view.py  # Tkinter メインウィンドウ構築 (純粋なView)
+├── ui/                 # コアUIコンポーネント (MVPパターン)
+│   ├── main_model.py   # アプリ全体のステータス・設定の保持
+│   ├── main_view.py    # Tkinter メインウィンドウ構築 (純粋なView)
 │   ├── main_presenter.py # ViewとModelを繋ぎ、バックグラウンド処理を管理
-│   ├── gui.py        # 上記3つを結合するメインファクトリ (エントリーポイント)
-│   ├── rag_model.py  # RAG管理画面のステータス保持
-│   ├── rag_view.py   # RAG管理画面 (tk.Toplevel) の構築
-│   ├── rag_presenter.py # RAG UIの非同期処理とAPI呼び出しを仲介
-│   └── styles.py     # アプリケーション全体のUIスタイリング
-└── tests/            # pytest によるユニットテスト/統合テスト
+│   ├── gui.py          # 上記3つを結合するメインファクトリ (エントリーポイント)
+│   ├── rag_model.py    # RAG管理画面のステータス保持
+│   ├── rag_view.py     # RAG管理画面 (tk.Toplevel) の構築
+│   ├── rag_presenter.py  # RAG UIの非同期処理とAPI呼び出しを仲介
+│   └── styles.py       # アプリケーション全体のUIスタイリング
+└── tests/              # pytest / pytest-asyncio による非同期ユニットテスト/統合テスト
 ```
 
 ## 必要要件
