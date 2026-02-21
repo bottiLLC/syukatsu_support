@@ -36,7 +36,7 @@ class TestCostCalculator:
             cached_tokens=0,
         )
         
-        model_name = "gemini-3.1-pro"
+        model_name = "gemini-3-pro-preview"
         if model_name not in PRICING_TABLE:
             model_name = list(PRICING_TABLE.keys())[0]
 
@@ -44,7 +44,7 @@ class TestCostCalculator:
         assert "Cost: $" in cost_str
 
     def test_calculate_unknown_model_fallback(self):
-        """Verifies that an unknown model falls back to default pricing (gemini-3.1-pro)."""
+        """Verifies that an unknown model falls back to default pricing (gemini-3-pro-preview)."""
         usage = StreamUsage(
             input_tokens=1000,
             output_tokens=1000,
@@ -64,7 +64,7 @@ class TestCostCalculator:
             total_tokens=1000,
             cached_tokens=500
         )
-        cost_str = CostCalculator.calculate("gemini-3.1-pro", usage)
+        cost_str = CostCalculator.calculate("gemini-3-pro-preview", usage)
         assert "In:1000/Cache:500/Out:0" in cost_str
 
 
@@ -94,7 +94,7 @@ class TestLLMService:
     def valid_payload(self):
         """Returns a valid ResponseRequestPayload."""
         return ResponseRequestPayload(
-            model="gemini-3.1-pro",
+            model="gemini-3-pro-preview",
             input="Test input",
             instructions="System prompt"
         )

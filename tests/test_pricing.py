@@ -41,7 +41,6 @@ class TestPricingTable:
             assert isinstance(pricing, ModelPricing)
 
     @pytest.mark.parametrize("model_key", [
-        "gemini-3.1-pro",
         "gemini-3-pro-preview",
         "gemini-3-flash-preview"
     ])
@@ -51,7 +50,6 @@ class TestPricingTable:
 
     @pytest.mark.parametrize("model, expected_input, expected_output, expected_cached", [
         # Based on Pricing.txt (Source of Truth)
-        ("gemini-3.1-pro", 1.25, 5.00, 0.3125),
         ("gemini-3-pro-preview", 1.25, 5.00, 0.3125),
         ("gemini-3-flash-preview", 0.075, 0.30, 0.01875),
     ])

@@ -46,7 +46,7 @@ class AppConfig:
     APP_VERSION: str = "v1.0.0"
 
     # Default settings to enforce on startup (Safety & Cost management)
-    DEFAULT_MODEL: str = "gemini-3.1-pro"
+    DEFAULT_MODEL: str = "gemini-3-pro-preview"
     DEFAULT_THINKING_LEVEL: ThinkingLevel = "medium"
 
     API_TIMEOUT: float = 1200.0
@@ -227,7 +227,7 @@ class ConfigManager:
         if env_key:
             config_data["api_key"] = env_key
 
-        # 3. Enforce Safety Defaults (Ignore saved model/reasoning settings)
+        # 3. Enforce Safety Defaults (Ignore saved model/thinking settings)
         config_data["model"] = AppConfig.DEFAULT_MODEL
         config_data["thinking_level"] = AppConfig.DEFAULT_THINKING_LEVEL
 

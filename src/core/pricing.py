@@ -32,11 +32,6 @@ class ModelPricing:
 # Prices are in USD per 1 Million Tokens.
 PRICING_TABLE: Dict[str, ModelPricing] = {
     # Gemini Series
-    "gemini-3.1-pro": ModelPricing(
-        input_price=1.25,
-        output_price=5.00,
-        cached_input_price=0.3125
-    ),
     "gemini-3-pro-preview": ModelPricing(
         input_price=1.25,
         output_price=5.00,

@@ -51,7 +51,7 @@ class CostCalculator:
         is_estimate = False
 
         if not pricing:
-            pricing = PRICING_TABLE.get("gemini-3.1-pro")
+            pricing = PRICING_TABLE.get("gemini-3-pro-preview")
             is_estimate = True
 
         if not pricing:

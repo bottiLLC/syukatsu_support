@@ -27,7 +27,7 @@ class TestResponseRequestPayload:
         the complex List[InputMessage] structure required by the API.
         """
         payload = ResponseRequestPayload(
-            model="gemini-3.1-pro",
+            model="gemini-3-pro-preview",
             input="Help me with financial analysis."
         )
 
@@ -55,7 +55,7 @@ class TestResponseRequestPayload:
             )
         ]
         payload = ResponseRequestPayload(
-            model="gemini-3.1-pro",
+            model="gemini-3-pro-preview",
             input=raw_input
         )
         
@@ -68,7 +68,7 @@ class TestResponseRequestPayload:
             FileSearchTool(vector_store_ids=["vs_123"])
         ]
         payload = ResponseRequestPayload(
-            model="gemini-3.1-pro",
+            model="gemini-3-pro-preview",
             input="Check this file",
             tools=tools
         )
