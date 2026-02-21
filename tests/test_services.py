@@ -81,6 +81,7 @@ class TestLLMService:
             # client.aio must be a MagicMock where .close() is an AsyncMock
             mock_aio = MagicMock()
             mock_aio.close = AsyncMock()
+            mock_aio.aclose = AsyncMock()
             mock_instance.aio = mock_aio
             mock_client_cls.return_value = mock_instance
             yield mock_instance

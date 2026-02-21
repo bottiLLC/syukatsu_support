@@ -1,263 +1,401 @@
-============================= test session starts =============================
-platform win32 -- Python 3.13.12, pytest-9.0.2, pluggy-1.6.0 -- E:\Python\syukatsu_Support\.venv\Scripts\python.exe
-cachedir: .pytest_cache
-rootdir: E:\Python\syukatsu_Support
-plugins: anyio-4.12.1, asyncio-1.3.0
-asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
-collecting ... collected 64 items
-
-test_repro.py::test_repro FAILED                                         [  1%]
-tests/test_app_config.py::TestSecurityManager::test_encrypt_decrypt_cycle PASSED [  3%]
-tests/test_app_config.py::TestSecurityManager::test_decrypt_invalid_token PASSED [  4%]
-tests/test_app_config.py::TestUserConfig::test_defaults FAILED           [  6%]
-tests/test_app_config.py::TestConfigManager::test_load_defaults_if_no_file PASSED [  7%]
-tests/test_app_config.py::TestConfigManager::test_load_env_var_priority PASSED [  9%]
-tests/test_app_config.py::TestConfigManager::test_save_and_load_encrypted PASSED [ 10%]
-tests/test_app_config.py::TestConfigManager::test_safety_defaults_enforced_on_load FAILED [ 12%]
-tests/test_base.py::TestBaseGeminiService::test_init_success PASSED      [ 14%]
-tests/test_base.py::TestBaseGeminiService::test_init_missing_key PASSED  [ 15%]
-tests/test_dependencies.py::TestDependencyCheck::test_missing_package_exits_app FAILED [ 17%]
-tests/test_dependencies.py::TestDependencyCheck::test_required_packages_list_integrity PASSED [ 18%]
-tests/test_logging_config.py::test_setup_logging_calls_basic_config PASSED [ 20%]
-tests/test_logging_config.py::test_logger_retrieval PASSED               [ 21%]
-tests/test_main.py::TestMainApplication::test_main_success_path PASSED   [ 23%]
-tests/test_main.py::TestMainApplication::test_main_startup_crash_handling PASSED [ 25%]
-tests/test_main.py::TestMainApplication::test_main_crash_with_existing_root PASSED [ 26%]
-tests/test_models.py::TestResponseRequestPayload::test_payload_normalization_string_input PASSED [ 28%]
-tests/test_models.py::TestResponseRequestPayload::test_payload_explicit_list_input PASSED [ 29%]
-tests/test_models.py::TestResponseRequestPayload::test_payload_with_tools PASSED [ 31%]
-tests/test_models.py::TestResponseRequestPayload::test_payload_validation_failure PASSED [ 32%]
-tests/test_models.py::TestStreamEvents::test_stream_text_delta PASSED    [ 34%]
-tests/test_models.py::TestStreamEvents::test_stream_usage PASSED         [ 35%]
-tests/test_models.py::TestStreamEvents::test_stream_error PASSED         [ 37%]
-tests/test_mvp_presenters.py::test_main_presenter_initialization PASSED  [ 39%]
-tests/test_mvp_presenters.py::test_main_presenter_start_generation PASSED [ 40%]
-tests/test_mvp_presenters.py::test_rag_presenter_refresh PASSED          [ 42%]
-tests/test_pricing.py::TestModelPricing::test_model_pricing_structure PASSED [ 43%]
-tests/test_pricing.py::TestModelPricing::test_model_pricing_immutability PASSED [ 45%]
-tests/test_pricing.py::TestModelPricing::test_default_cached_price PASSED [ 46%]
-tests/test_pricing.py::TestPricingTable::test_table_integrity PASSED     [ 48%]
-tests/test_pricing.py::TestPricingTable::test_essential_models_exist[gemini-3.1-pro] PASSED [ 50%]
-tests/test_pricing.py::TestPricingTable::test_essential_models_exist[gemini-3-pro-preview] PASSED [ 51%]
-tests/test_pricing.py::TestPricingTable::test_essential_models_exist[gemini-3-flash-preview] PASSED [ 53%]
-tests/test_pricing.py::TestPricingTable::test_price_accuracy[gemini-3.1-pro-1.25-5.0-0.3125] PASSED [ 54%]
-tests/test_pricing.py::TestPricingTable::test_price_accuracy[gemini-3-pro-preview-1.25-5.0-0.3125] PASSED [ 56%]
-tests/test_pricing.py::TestPricingTable::test_price_accuracy[gemini-3-flash-preview-0.075-0.3-0.01875] PASSED [ 57%]
-tests/test_pricing.py::TestPricingTable::test_pricing_sanity PASSED      [ 59%]
-tests/test_prompts.py::test_prompts_structure PASSED                     [ 60%]
-tests/test_prompts.py::test_prompts_keys_exist[\u6709\u4fa1\u8a3c\u5238\u5831\u544a\u66f8 -\u8ca1\u52d9\u5206\u6790-] PASSED [ 62%]
-tests/test_prompts.py::test_prompts_keys_exist[\u6709\u4fa1\u8a3c\u5238\u5831\u544a\u66f8 -\u4eba\u7684\u8cc7\u672c\u5206\u6790-] PASSED [ 64%]
-tests/test_prompts.py::test_prompts_keys_exist[\u5fd7\u671b\u52d5\u6a5f\u691c\u8a0e] PASSED [ 65%]
-tests/test_prompts.py::test_prompts_content_integrity[\u6709\u4fa1\u8a3c\u5238\u5831\u544a\u66f8 -\u8ca1\u52d9\u5206\u6790--expected_keywords0] PASSED [ 67%]
-tests/test_prompts.py::test_prompts_content_integrity[\u6709\u4fa1\u8a3c\u5238\u5831\u544a\u66f8 -\u4eba\u7684\u8cc7\u672c\u5206\u6790--expected_keywords1] PASSED [ 68%]
-tests/test_prompts.py::test_prompts_content_integrity[\u5fd7\u671b\u52d5\u6a5f\u691c\u8a0e-expected_keywords2] PASSED [ 70%]
-tests/test_prompts.py::test_prompts_contain_required_sections PASSED     [ 71%]
-tests/test_prompts.py::test_default_config_key_exists_in_prompts PASSED  [ 73%]
-tests/test_rag_services.py::TestFileService::test_upload_file_success PASSED [ 75%]
-tests/test_rag_services.py::TestFileService::test_upload_file_not_found PASSED [ 76%]
-tests/test_rag_services.py::TestFileService::test_delete_file PASSED     [ 78%]
-tests/test_rag_services.py::TestVectorStoreService::test_create_vector_store PASSED [ 79%]
-tests/test_rag_services.py::TestVectorStoreService::test_poll_batch_status_success PASSED [ 81%]
-tests/test_services.py::TestCostCalculator::test_calculate_cost_with_valid_model PASSED [ 82%]
-tests/test_services.py::TestCostCalculator::test_calculate_unknown_model_fallback PASSED [ 84%]
-tests/test_services.py::TestCostCalculator::test_calculate_with_caching PASSED [ 85%]
-tests/test_services.py::TestLLMService::test_stream_analysis_success PASSED [ 87%]
-tests/test_services.py::TestLLMService::test_stream_analysis_api_connection_error PASSED [ 89%]
-tests/test_services.py::TestLLMService::test_stream_analysis_rate_limit_error PASSED [ 90%]
-tests/test_services.py::TestLLMService::test_stream_analysis_stream_error_event PASSED [ 92%]
-tests/test_styles.py::test_window_size_format PASSED                     [ 93%]
-tests/test_styles.py::test_ui_fonts_integrity PASSED                     [ 95%]
-tests/test_styles.py::test_ui_colors_integrity PASSED                    [ 96%]
-tests/test_types.py::test_thinking_level_values PASSED                   [ 98%]
-tests/test_types.py::test_log_tag_values PASSED                          [100%]
-
+...FFFF                                                                  [100%]
 ================================== FAILURES ===================================
-_________________________________ test_repro __________________________________
+_________________ TestLLMService.test_stream_analysis_success _________________
 
-    def test_repro():
-        def mock_import_module_side_effect(name, *args, **kwargs):
-            if name == "tenacity":
-                raise ImportError("No module named 'tenacity'")
-            return MagicMock()
-    
-        with patch("src.config.dependencies.importlib.import_module", side_effect=mock_import_module_side_effect):
-            with patch("src.config.dependencies._show_error_dialog") as mock_show_error:
-                with patch("src.config.dependencies.logger.critical") as mock_logger_critical:
-                    with pytest.raises(SystemExit) as excinfo:
-                        check_dependencies()
-                    print("Mock was called:", mock_show_error.called)
->                   assert mock_show_error.call_count == 1
-E                   AssertionError: assert 0 == 1
-E                    +  where 0 = <MagicMock name='_show_error_dialog' id='1863830850256'>.call_count
+self = <test_services.TestLLMService object at 0x000001C8175F9950>
+service = <src.core.services.LLMService object at 0x000001C81761F8C0>
+mock_client = <MagicMock name='Client()' id='1958897382608'>
+valid_payload = ResponseRequestPayload(model='gemini-3-pro-preview', input=[InputMessage(role='user', content=[InputTextContent(type='...text='Test input')])], instructions='System prompt', thinking=None, tools=None, previous_response_id=None, stream=True)
 
-test_repro.py:17: AssertionError
----------------------------- Captured stdout call -----------------------------
-Mock was called: False
------------------------------- Captured log call ------------------------------
-CRITICAL src.config.dependencies:dependencies.py:60 Missing dependencies: tenacity
-________________________ TestUserConfig.test_defaults _________________________
-
-self = <test_app_config.TestUserConfig object at 0x000001B1F24DC550>
-
-    def test_defaults(self):
-        """Verify default values for a fresh configuration."""
-        config = UserConfig()
-        assert config.api_key is None
-        assert config.model == "gemini-3.1-pro"
->       assert config.reasoning_effort == "high"
-               ^^^^^^^^^^^^^^^^^^^^^^^
-
-tests\test_app_config.py:59: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-
-self = UserConfig(api_key=None, model='gemini-3.1-pro', thinking_level='medium', system_prompt_mode='有価証券報告書 -財務分析-', last_response_id=None, current_vector_store_id=None, use_file_search=False)
-item = 'reasoning_effort'
-
-    def __getattr__(self, item: str) -> Any:
-        private_attributes = object.__getattribute__(self, '__private_attributes__')
-        if item in private_attributes:
-            attribute = private_attributes[item]
-            if hasattr(attribute, '__get__'):
-                return attribute.__get__(self, type(self))  # type: ignore
-    
-            try:
-                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
-                return self.__pydantic_private__[item]  # type: ignore
-            except KeyError as exc:
-                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
-        else:
-            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
-            # See `BaseModel.__repr_args__` for more details
-            try:
-                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
-            except AttributeError:
-                pydantic_extra = None
-    
-            if pydantic_extra and item in pydantic_extra:
-                return pydantic_extra[item]
-            else:
-                if hasattr(self.__class__, item):
-                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
-                else:
-                    # this is the current error
->                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
-E                   AttributeError: 'UserConfig' object has no attribute 'reasoning_effort'
-
-.venv\Lib\site-packages\pydantic\main.py:1026: AttributeError
-___________ TestConfigManager.test_safety_defaults_enforced_on_load ___________
-
-self = <test_app_config.TestConfigManager object at 0x000001B1F2545BA0>
-mock_fs = None
-
-    def test_safety_defaults_enforced_on_load(self, mock_fs):
+    @pytest.mark.asyncio
+    async def test_stream_analysis_success(self, service, mock_client, valid_payload):
         """
-        Verify that expensive settings (model, reasoning) are reset to defaults
-        on load, ignoring what was saved.
+        Verifies a successful streaming session with text deltas and usage stats.
         """
-        # Save a config with non-default expensive settings
-        risky_config = UserConfig(
-            model="gemini-3-flash-preview",
-            reasoning_effort="xhigh"
+        usage_mock = MagicMock()
+        usage_mock.prompt_token_count = 10
+        usage_mock.candidates_token_count = 5
+        usage_mock.total_token_count = 15
+        usage_mock.cached_content_token_count = 2
+    
+        mock_events = [
+            self._create_mock_chunk(text="Hello "),
+            self._create_mock_chunk(text="World", usage=usage_mock)
+        ]
+    
+        mock_client.aio.models.generate_content_stream = AsyncMock(
+            return_value=self._mock_async_generator(mock_events)
         )
-        ConfigManager.save(risky_config)
     
-        # Load it back
-        safe_config = ConfigManager.load()
+        results = [res async for res in service.stream_analysis(valid_payload)]
     
-        # Should be reset to defaults
-        assert safe_config.model == AppConfig.DEFAULT_MODEL
->       assert safe_config.reasoning_effort == AppConfig.DEFAULT_REASONING
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        # 1 ResponseCreated, 2 TextDelta, 1 StreamUsage = 4 total events
+>       assert len(results) == 4
+E       assert 5 == 4
+E        +  where 5 = len([StreamResponseCreated(response_id='gemini-stream'), StreamTextDelta(delta='Hello '), StreamTextDelta(delta='World'), ...=2), StreamError(message="\n[Stream Error] ストリーム処理中にエラーが発生しました: object MagicMock can't be used in 'await' expression")])
 
-tests\test_app_config.py:122: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-
-self = UserConfig(api_key=None, model='gemini-3.1-pro', thinking_level='medium', system_prompt_mode='有価証券報告書 -財務分析-', last_response_id=None, current_vector_store_id=None, use_file_search=False)
-item = 'reasoning_effort'
-
-    def __getattr__(self, item: str) -> Any:
-        private_attributes = object.__getattribute__(self, '__private_attributes__')
-        if item in private_attributes:
-            attribute = private_attributes[item]
-            if hasattr(attribute, '__get__'):
-                return attribute.__get__(self, type(self))  # type: ignore
-    
-            try:
-                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
-                return self.__pydantic_private__[item]  # type: ignore
-            except KeyError as exc:
-                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
-        else:
-            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
-            # See `BaseModel.__repr_args__` for more details
-            try:
-                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
-            except AttributeError:
-                pydantic_extra = None
-    
-            if pydantic_extra and item in pydantic_extra:
-                return pydantic_extra[item]
-            else:
-                if hasattr(self.__class__, item):
-                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
-                else:
-                    # this is the current error
->                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
-E                   AttributeError: 'UserConfig' object has no attribute 'reasoning_effort'
-
-.venv\Lib\site-packages\pydantic\main.py:1026: AttributeError
-_____________ TestDependencyCheck.test_missing_package_exits_app ______________
-
-self = <test_dependencies.TestDependencyCheck object at 0x000001B1F2757250>
-
-    def test_missing_package_exits_app(self):
-        """
-        Verify that a missing package triggers an error dialog and sys.exit(1).
-        """
-        def mock_import_module_side_effect(name, *args, **kwargs):
-            if name == "tenacity":
-                raise ImportError("No module named 'tenacity'")
-            return MagicMock()
-    
-        # Patch only the specific GUI call and exit to prevent real dialogs/exits
-        with patch("src.config.dependencies.importlib.import_module", side_effect=mock_import_module_side_effect):
-            with patch("src.config.dependencies._show_error_dialog") as mock_show_error:
-                with patch("src.config.dependencies.logger.critical") as mock_logger_critical:
-    
-                    with pytest.raises(SystemExit) as excinfo:
-                        check_dependencies()
-    
-                    assert excinfo.value.code == 1
-    
-                    # 1. Logged critical error
->                   mock_logger_critical.assert_called()
-
-tests\test_dependencies.py:35: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-
-self = <MagicMock name='critical' id='1863830858320'>
-
-    def assert_called(self):
-        """assert that the mock was called at least once
-        """
-        if self.call_count == 0:
-            msg = ("Expected '%s' to have been called." %
-                   (self._mock_name or 'mock'))
->           raise AssertionError(msg)
-E           AssertionError: Expected 'critical' to have been called.
-
-C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py:948: AssertionError
+tests\test_services.py:136: AssertionError
 ------------------------------ Captured log call ------------------------------
-CRITICAL src.config.dependencies:dependencies.py:60 Missing dependencies: tenacity
-============================== warnings summary ===============================
-tests/test_services.py::TestLLMService::test_stream_analysis_api_connection_error
-  E:\Python\syukatsu_Support\.venv\Lib\site-packages\google\genai\_api_client.py:765: DeprecationWarning: Inheritance class AiohttpClientSession from ClientSession is discouraged
-    class AiohttpClientSession(aiohttp.ClientSession):  # type: ignore[misc]
+ERROR    src.core.services:services.py:232 Error during stream iteration
+Traceback (most recent call last):
+  File "E:\Python\syukatsu_Support\src\core\services.py", line 190, in _execute_api_call
+    async with self.get_async_client() as client:
+               ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 221, in __aexit__
+    await anext(self.gen)
+  File "E:\Python\syukatsu_Support\src\core\base.py", line 61, in get_async_client
+    await client.aio.aclose()
+TypeError: object MagicMock can't be used in 'await' expression
+__________ TestLLMService.test_stream_analysis_api_connection_error ___________
 
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+self = <test_services.TestLLMService object at 0x000001C8175F9BD0>
+service = <src.core.services.LLMService object at 0x000001C8175F9F90>
+mock_client = <MagicMock name='Client()' id='1958898176016'>
+valid_payload = ResponseRequestPayload(model='gemini-3-pro-preview', input=[InputMessage(role='user', content=[InputTextContent(type='...text='Test input')])], instructions='System prompt', thinking=None, tools=None, previous_response_id=None, stream=True)
+
+    @pytest.mark.asyncio
+    async def test_stream_analysis_api_connection_error(self, service, mock_client, valid_payload):
+        """Verifies handling of API errors."""
+        mock_client.aio.models.generate_content_stream.side_effect = genai_errors.APIError(500, {"message": "Connection failed"})
+    
+        results = [res async for res in service.stream_analysis(valid_payload)]
+    
+        assert len(results) == 1
+        assert isinstance(results[0], StreamError)
+>       assert "Connection failed" in results[0].message
+E       assert 'Connection failed' in "\n[Stream Error] ストリーム処理中にエラーが発生しました: object MagicMock can't be used in 'await' expression"
+E        +  where "\n[Stream Error] ストリーム処理中にエラーが発生しました: object MagicMock can't be used in 'await' expression" = StreamError(message="\n[Stream Error] ストリーム処理中にエラーが発生しました: object MagicMock can't be used in 'await' expression").message
+
+tests\test_services.py:160: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  src.core.services:before_sleep.py:64 Retrying src.core.services.LLMService._create_stream in 0.772 seconds as it raised APIError: 500 None. {'message': 'Connection failed'}.
+WARNING  src.core.services:before_sleep.py:64 Retrying src.core.services.LLMService._create_stream in 0.754 seconds as it raised APIError: 500 None. {'message': 'Connection failed'}.
+ERROR    src.core.services:services.py:232 Error during stream iteration
+Traceback (most recent call last):
+  File "E:\Python\syukatsu_Support\src\core\base.py", line 58, in get_async_client
+    yield client
+  File "E:\Python\syukatsu_Support\src\core\services.py", line 191, in _execute_api_call
+    stream = await self._create_stream(client, payload)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 193, in async_wrapped
+    return await copy(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 112, in __call__
+    do = await self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 157, in iter
+    result = await action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\_utils.py", line 111, in inner
+    return call(*args, **kwargs)
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\concurrent\futures\_base.py", line 449, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 116, in __call__
+    result = await fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\src\core\services.py", line 176, in _create_stream
+    return await client.aio.models.generate_content_stream(
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model=payload.model,
+        ^^^^^^^^^^^^^^^^^^^^
+        contents=contents,
+        ^^^^^^^^^^^^^^^^^^
+        config=config,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1169, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1173, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1228, in _execute_mock_call
+    raise effect
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 116, in __call__
+    result = await fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\src\core\services.py", line 176, in _create_stream
+    return await client.aio.models.generate_content_stream(
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model=payload.model,
+        ^^^^^^^^^^^^^^^^^^^^
+        contents=contents,
+        ^^^^^^^^^^^^^^^^^^
+        config=config,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1169, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1173, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1228, in _execute_mock_call
+    raise effect
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 116, in __call__
+    result = await fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\src\core\services.py", line 176, in _create_stream
+    return await client.aio.models.generate_content_stream(
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model=payload.model,
+        ^^^^^^^^^^^^^^^^^^^^
+        contents=contents,
+        ^^^^^^^^^^^^^^^^^^
+        config=config,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1169, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1173, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1228, in _execute_mock_call
+    raise effect
+google.genai.errors.APIError: 500 None. {'message': 'Connection failed'}
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\Python\syukatsu_Support\src\core\services.py", line 190, in _execute_api_call
+    async with self.get_async_client() as client:
+               ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 235, in __aexit__
+    await self.gen.athrow(value)
+  File "E:\Python\syukatsu_Support\src\core\base.py", line 61, in get_async_client
+    await client.aio.aclose()
+TypeError: object MagicMock can't be used in 'await' expression
+____________ TestLLMService.test_stream_analysis_rate_limit_error _____________
+
+self = <test_services.TestLLMService object at 0x000001C8176028B0>
+service = <src.core.services.LLMService object at 0x000001C8175FAFD0>
+mock_client = <MagicMock name='Client()' id='1958898182064'>
+valid_payload = ResponseRequestPayload(model='gemini-3-pro-preview', input=[InputMessage(role='user', content=[InputTextContent(type='...text='Test input')])], instructions='System prompt', thinking=None, tools=None, previous_response_id=None, stream=True)
+
+    @pytest.mark.asyncio
+    async def test_stream_analysis_rate_limit_error(self, service, mock_client, valid_payload):
+        """Verifies handling of Rate Limit errors."""
+        mock_client.aio.models.generate_content_stream.side_effect = genai_errors.APIError(429, {"message": "Rate limit"})
+    
+        results = [res async for res in service.stream_analysis(valid_payload)]
+    
+        assert len(results) == 1
+        assert isinstance(results[0], StreamError)
+>       assert "利用制限エラー" in results[0].message
+E       assert '利用制限エラー' in "\n[Stream Error] ストリーム処理中にエラーが発生しました: object MagicMock can't be used in 'await' expression"
+E        +  where "\n[Stream Error] ストリーム処理中にエラーが発生しました: object MagicMock can't be used in 'await' expression" = StreamError(message="\n[Stream Error] ストリーム処理中にエラーが発生しました: object MagicMock can't be used in 'await' expression").message
+
+tests\test_services.py:171: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  src.core.services:before_sleep.py:64 Retrying src.core.services.LLMService._create_stream in 0.53 seconds as it raised APIError: 429 None. {'message': 'Rate limit'}.
+WARNING  src.core.services:before_sleep.py:64 Retrying src.core.services.LLMService._create_stream in 1.49 seconds as it raised APIError: 429 None. {'message': 'Rate limit'}.
+ERROR    src.core.services:services.py:232 Error during stream iteration
+Traceback (most recent call last):
+  File "E:\Python\syukatsu_Support\src\core\base.py", line 58, in get_async_client
+    yield client
+  File "E:\Python\syukatsu_Support\src\core\services.py", line 191, in _execute_api_call
+    stream = await self._create_stream(client, payload)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 193, in async_wrapped
+    return await copy(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 112, in __call__
+    do = await self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 157, in iter
+    result = await action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\_utils.py", line 111, in inner
+    return call(*args, **kwargs)
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\concurrent\futures\_base.py", line 449, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 116, in __call__
+    result = await fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\src\core\services.py", line 176, in _create_stream
+    return await client.aio.models.generate_content_stream(
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model=payload.model,
+        ^^^^^^^^^^^^^^^^^^^^
+        contents=contents,
+        ^^^^^^^^^^^^^^^^^^
+        config=config,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1169, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1173, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1228, in _execute_mock_call
+    raise effect
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 116, in __call__
+    result = await fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\src\core\services.py", line 176, in _create_stream
+    return await client.aio.models.generate_content_stream(
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model=payload.model,
+        ^^^^^^^^^^^^^^^^^^^^
+        contents=contents,
+        ^^^^^^^^^^^^^^^^^^
+        config=config,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1169, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1173, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1228, in _execute_mock_call
+    raise effect
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 116, in __call__
+    result = await fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\src\core\services.py", line 176, in _create_stream
+    return await client.aio.models.generate_content_stream(
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model=payload.model,
+        ^^^^^^^^^^^^^^^^^^^^
+        contents=contents,
+        ^^^^^^^^^^^^^^^^^^
+        config=config,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1169, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1173, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1228, in _execute_mock_call
+    raise effect
+google.genai.errors.APIError: 429 None. {'message': 'Rate limit'}
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\Python\syukatsu_Support\src\core\services.py", line 190, in _execute_api_call
+    async with self.get_async_client() as client:
+               ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 235, in __aexit__
+    await self.gen.athrow(value)
+  File "E:\Python\syukatsu_Support\src\core\base.py", line 61, in get_async_client
+    await client.aio.aclose()
+TypeError: object MagicMock can't be used in 'await' expression
+___________ TestLLMService.test_stream_analysis_stream_error_event ____________
+
+self = <test_services.TestLLMService object at 0x000001C817602780>
+service = <src.core.services.LLMService object at 0x000001C817603950>
+mock_client = <MagicMock name='Client()' id='1958898186432'>
+valid_payload = ResponseRequestPayload(model='gemini-3-pro-preview', input=[InputMessage(role='user', content=[InputTextContent(type='...text='Test input')])], instructions='System prompt', thinking=None, tools=None, previous_response_id=None, stream=True)
+
+    @pytest.mark.asyncio
+    async def test_stream_analysis_stream_error_event(self, service, mock_client, valid_payload):
+        """Verifies handling of an unexpected exception during the stream."""
+        mock_client.aio.models.generate_content_stream.side_effect = Exception("Something went wrong mid-stream")
+    
+        results = [res async for res in service.stream_analysis(valid_payload)]
+    
+        assert len(results) == 1
+        assert isinstance(results[0], StreamError)
+>       assert "Something went wrong" in results[0].message
+E       assert 'Something went wrong' in "\n[Stream Error] ストリーム処理中にエラーが発生しました: object MagicMock can't be used in 'await' expression"
+E        +  where "\n[Stream Error] ストリーム処理中にエラーが発生しました: object MagicMock can't be used in 'await' expression" = StreamError(message="\n[Stream Error] ストリーム処理中にエラーが発生しました: object MagicMock can't be used in 'await' expression").message
+
+tests\test_services.py:182: AssertionError
+------------------------------ Captured log call ------------------------------
+ERROR    src.core.services:services.py:232 Error during stream iteration
+Traceback (most recent call last):
+  File "E:\Python\syukatsu_Support\src\core\base.py", line 58, in get_async_client
+    yield client
+  File "E:\Python\syukatsu_Support\src\core\services.py", line 191, in _execute_api_call
+    stream = await self._create_stream(client, payload)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 193, in async_wrapped
+    return await copy(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 112, in __call__
+    do = await self.iter(retry_state=retry_state)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 157, in iter
+    result = await action(retry_state)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\_utils.py", line 111, in inner
+    return call(*args, **kwargs)
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\__init__.py", line 393, in <lambda>
+    self._add_action_func(lambda rs: rs.outcome.result())
+                                     ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\concurrent\futures\_base.py", line 449, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "E:\Python\syukatsu_Support\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 116, in __call__
+    result = await fn(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\Python\syukatsu_Support\src\core\services.py", line 176, in _create_stream
+    return await client.aio.models.generate_content_stream(
+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model=payload.model,
+        ^^^^^^^^^^^^^^^^^^^^
+        contents=contents,
+        ^^^^^^^^^^^^^^^^^^
+        config=config,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1169, in __call__
+    return self._mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1173, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\unittest\mock.py", line 1228, in _execute_mock_call
+    raise effect
+Exception: Something went wrong mid-stream
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\Python\syukatsu_Support\src\core\services.py", line 190, in _execute_api_call
+    async with self.get_async_client() as client:
+               ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\yoshi\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 235, in __aexit__
+    await self.gen.athrow(value)
+  File "E:\Python\syukatsu_Support\src\core\base.py", line 61, in get_async_client
+    await client.aio.aclose()
+TypeError: object MagicMock can't be used in 'await' expression
 =========================== short test summary info ===========================
-FAILED test_repro.py::test_repro - AssertionError: assert 0 == 1
-FAILED tests/test_app_config.py::TestUserConfig::test_defaults - AttributeErr...
-FAILED tests/test_app_config.py::TestConfigManager::test_safety_defaults_enforced_on_load
-FAILED tests/test_dependencies.py::TestDependencyCheck::test_missing_package_exits_app
-================== 4 failed, 60 passed, 1 warning in 12.15s ===================
+FAILED tests/test_services.py::TestLLMService::test_stream_analysis_success
+FAILED tests/test_services.py::TestLLMService::test_stream_analysis_api_connection_error
+FAILED tests/test_services.py::TestLLMService::test_stream_analysis_rate_limit_error
+FAILED tests/test_services.py::TestLLMService::test_stream_analysis_stream_error_event
+4 failed, 3 passed in 5.71s

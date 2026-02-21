@@ -198,10 +198,10 @@ class LLMService(BaseGeminiService):
                         
                     if getattr(chunk, "usage_metadata", None):
                         usage = chunk.usage_metadata
-                        in_tokens = getattr(usage, "prompt_token_count", 0)
-                        out_tokens = getattr(usage, "candidates_token_count", 0)
-                        tot_tokens = getattr(usage, "total_token_count", 0)
-                        cached = getattr(usage, "cached_content_token_count", 0)
+                        in_tokens = getattr(usage, "prompt_token_count", 0) or 0
+                        out_tokens = getattr(usage, "candidates_token_count", 0) or 0
+                        tot_tokens = getattr(usage, "total_token_count", 0) or 0
+                        cached = getattr(usage, "cached_content_token_count", 0) or 0
                         
                         yield StreamUsage(
                             input_tokens=in_tokens,
