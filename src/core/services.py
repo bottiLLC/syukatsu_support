@@ -133,7 +133,12 @@ class LLMService(BaseGeminiService):
 
         config_args = {"temperature": 0.7}
         
-        if payload.thinking:
+        # NOTE: Not all models (e.g. some previews) support ThinkingLevel or specific levels like 'medium'
+        # We will apply it, but if it throws a 400 about unsupported thinking we must omit it.
+        # Wait, a better approach is to only pass it if not gemini-3-pro-preview or handle fallback.
+        # Let's pass it by default but we'll add logic to drop it if we hit a 400.
+        if payload.thinking and payload.thinking.level != "none":
+            # Some preview models act out on 'medium' or any setting. Let's send the config.
             config_args["thinking_config"] = {"thinking_level": payload.thinking.level}
         
         # Add RAG files directly to context here
@@ -168,11 +173,26 @@ class LLMService(BaseGeminiService):
             
         config = genai_types.GenerateContentConfig(**config_args)
 
-        return await client.aio.models.generate_content_stream(
-            model=payload.model,
-            contents=contents,
-            config=config,
-        )
+        try:
+            return await client.aio.models.generate_content_stream(
+                model=payload.model,
+                contents=contents,
+                config=config,
+            )
+        except genai_errors.APIError as e:
+            # Fallback if the user's selected model rejects the thinking configuration (e.g. gemini-3-pro-preview with MEDIUM)
+            if e.code == 400 and ("thinking level" in e.message.lower() or "thinking_level" in e.message.lower()):
+                logger.warning(f"Model {payload.model} rejected thinking config. Retrying without it. Error: {e.message}")
+                if "thinking_config" in config_args:
+                    del config_args["thinking_config"]
+                    
+                config_fallback = genai_types.GenerateContentConfig(**config_args)
+                return await client.aio.models.generate_content_stream(
+                    model=payload.model,
+                    contents=contents,
+                    config=config_fallback,
+                )
+            raise
 
     async def _execute_api_call(
         self, payload: ResponseRequestPayload

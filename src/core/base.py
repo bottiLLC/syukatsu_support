@@ -57,5 +57,5 @@ class BaseGeminiService:
         try:
             yield client
         finally:
-            if client:
-                await client.aio.close()
+            if client and hasattr(client, "aio") and hasattr(client.aio, "aclose"):
+                await client.aio.aclose()
