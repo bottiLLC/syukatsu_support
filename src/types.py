@@ -7,10 +7,8 @@ to prevent circular imports and ensure type consistency throughout the applicati
 
 from typing import Literal
 
-# Constrains effort on reasoning. Valid values matching OpenAI API spec.
-# Reference: components/schemas/ReasoningEffort in openapi.documented.yml
-# Note: 'none' is supported by gpt-5.1, 'xhigh' by gpt-5.1-codex-max onwards.
-ReasoningEffort = Literal["none", "minimal", "low", "medium", "high", "xhigh"]
+# Constrains effort on thinking. Valid values matching Gemini API spec.
+ThinkingLevel = Literal["minimal", "low", "medium", "high"]
 
 # Output formats for analysis logs used in the UI.
 # Used to determine the color and formatting of log entries.

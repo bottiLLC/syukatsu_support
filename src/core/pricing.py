@@ -30,22 +30,21 @@ class ModelPricing:
 
 # Pricing Table based on 'Standard' Tier
 # Prices are in USD per 1 Million Tokens.
-# Note: These values should be updated to match the latest OpenAI pricing page.
 PRICING_TABLE: Dict[str, ModelPricing] = {
-    # GPT-5 Series
-    "gpt-5.2-pro": ModelPricing(
-        input_price=21.00,
-        output_price=168.00,
-        cached_input_price=0.0
+    # Gemini Series
+    "gemini-3.1-pro": ModelPricing(
+        input_price=1.25,
+        output_price=5.00,
+        cached_input_price=0.3125
     ),
-    "gpt-5.2": ModelPricing(
-        input_price=1.75,
-        output_price=14.00,
-        cached_input_price=0.175
+    "gemini-3-pro-preview": ModelPricing(
+        input_price=1.25,
+        output_price=5.00,
+        cached_input_price=0.3125
     ),
-    "gpt-5-mini": ModelPricing(
-        input_price=0.25,
-        output_price=2.00,
-        cached_input_price=0.025
+    "gemini-3-flash-preview": ModelPricing(
+        input_price=0.075,
+        output_price=0.30,
+        cached_input_price=0.01875
     ),
 }

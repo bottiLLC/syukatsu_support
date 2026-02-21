@@ -55,7 +55,7 @@ class TestUserConfig:
         """Verify default values for a fresh configuration."""
         config = UserConfig()
         assert config.api_key is None
-        assert config.model == "gpt-5.2"
+        assert config.model == "gemini-3.1-pro"
         assert config.reasoning_effort == "high"
         # Updated to match the Job Hunting Support context (FIX: Added space)
         assert config.system_prompt_mode == "有価証券報告書 -財務分析-"
@@ -81,7 +81,7 @@ class TestConfigManager:
     def test_load_env_var_priority(self, mock_fs):
         """Environment variable should override file settings for API Key."""
         # 1. Setup Env Var
-        with patch.dict(os.environ, {"OPENAI_API_KEY": "env-key-123"}):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "env-key-123"}):
             config = ConfigManager.load()
             assert config.api_key == "env-key-123"
 
@@ -109,7 +109,7 @@ class TestConfigManager:
         """
         # Save a config with non-default expensive settings
         risky_config = UserConfig(
-            model="gpt-5.2-pro", 
+            model="gemini-3-flash-preview", 
             reasoning_effort="xhigh"
         )
         ConfigManager.save(risky_config)

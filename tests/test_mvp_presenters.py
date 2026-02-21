@@ -14,7 +14,7 @@ def mock_main_view():
     view = MagicMock()
     view.prompt_mode_var.get.return_value = "default"
     view.api_key_var.get.return_value = "test_key"
-    view.model_var.get.return_value = "gpt-5.2"
+    view.model_var.get.return_value = "gemini-3.1-pro"
     view.reasoning_var.get.return_value = "medium"
     view.use_file_search_var.get.return_value = False
     return view

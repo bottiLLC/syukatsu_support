@@ -1,0 +1,51 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.12, pytest-9.0.2, pluggy-1.6.0 -- E:\Python\syukatsu_Support\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: E:\Python\syukatsu_Support
+plugins: anyio-4.12.1, asyncio-1.3.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 7 items
+
+tests/test_services.py::TestCostCalculator::test_calculate_cost_with_valid_model PASSED [ 14%]
+tests/test_services.py::TestCostCalculator::test_calculate_unknown_model_fallback PASSED [ 28%]
+tests/test_services.py::TestCostCalculator::test_calculate_with_caching PASSED [ 42%]
+tests/test_services.py::TestLLMService::test_stream_analysis_success PASSED [ 57%]
+tests/test_services.py::TestLLMService::test_stream_analysis_api_connection_error FAILED [ 71%]
+tests/test_services.py::TestLLMService::test_stream_analysis_rate_limit_error FAILED [ 85%]
+tests/test_services.py::TestLLMService::test_stream_analysis_stream_error_event PASSED [100%]
+
+================================== FAILURES ===================================
+__________ TestLLMService.test_stream_analysis_api_connection_error ___________
+
+self = <test_services.TestLLMService object at 0x000001F79F6BCB90>
+service = <src.core.services.LLMService object at 0x000001F79F6BCF50>
+mock_client = <MagicMock name='Client()' id='2163043471712'>
+valid_payload = ResponseRequestPayload(model='gemini-3.1-pro', input=[InputMessage(role='user', content=[InputTextContent(type='input_...ext='Test input')])], instructions='System prompt', reasoning=None, tools=None, previous_response_id=None, stream=True)
+
+    @pytest.mark.asyncio
+    async def test_stream_analysis_api_connection_error(self, service, mock_client, valid_payload):
+        """Verifies handling of API errors."""
+>       mock_client.aio.models.generate_content_stream.side_effect = genai_errors.APIError("Connection failed")
+                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: APIError.__init__() missing 1 required positional argument: 'response_json'
+
+tests\test_services.py:154: TypeError
+____________ TestLLMService.test_stream_analysis_rate_limit_error _____________
+
+self = <test_services.TestLLMService object at 0x000001F79F5C3950>
+service = <src.core.services.LLMService object at 0x000001F79F6BD090>
+mock_client = <MagicMock name='Client()' id='2163043470368'>
+valid_payload = ResponseRequestPayload(model='gemini-3.1-pro', input=[InputMessage(role='user', content=[InputTextContent(type='input_...ext='Test input')])], instructions='System prompt', reasoning=None, tools=None, previous_response_id=None, stream=True)
+
+    @pytest.mark.asyncio
+    async def test_stream_analysis_rate_limit_error(self, service, mock_client, valid_payload):
+        """Verifies handling of Rate Limit errors."""
+>       mock_client.aio.models.generate_content_stream.side_effect = genai_errors.APIError("Rate limit")
+                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: APIError.__init__() missing 1 required positional argument: 'response_json'
+
+tests\test_services.py:165: TypeError
+=========================== short test summary info ===========================
+FAILED tests/test_services.py::TestLLMService::test_stream_analysis_api_connection_error
+FAILED tests/test_services.py::TestLLMService::test_stream_analysis_rate_limit_error
+========================= 2 failed, 5 passed in 2.17s =========================

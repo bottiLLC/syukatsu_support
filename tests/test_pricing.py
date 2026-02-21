@@ -41,10 +41,9 @@ class TestPricingTable:
             assert isinstance(pricing, ModelPricing)
 
     @pytest.mark.parametrize("model_key", [
-        "gpt-5.2",
-        "gpt-5.2-pro",
-        "gpt-5-mini",
-        "o3-pro"
+        "gemini-3.1-pro",
+        "gemini-3-pro-preview",
+        "gemini-3-flash-preview"
     ])
     def test_essential_models_exist(self, model_key):
         """[Content] Ensure critical models defined in specs exist in the table."""
@@ -52,17 +51,9 @@ class TestPricingTable:
 
     @pytest.mark.parametrize("model, expected_input, expected_output, expected_cached", [
         # Based on Pricing.txt (Source of Truth)
-        # gpt-5.2: In $1.75, Out $14.00, Cached $0.175
-        ("gpt-5.2", 1.75, 14.00, 0.175),
-        
-        # gpt-5-mini: In $0.25, Out $2.00, Cached $0.025
-        ("gpt-5-mini", 0.25, 2.00, 0.025),
-        
-        # gpt-5.2-pro: In $21.00, Out $168.00, Cached 0.0 (implied)
-        ("gpt-5.2-pro", 21.00, 168.00, 0.0),
-        
-        # o3-pro: In $20.00, Out $80.00, Cached 0.0
-        ("o3-pro", 20.00, 80.00, 0.0),
+        ("gemini-3.1-pro", 1.25, 5.00, 0.3125),
+        ("gemini-3-pro-preview", 1.25, 5.00, 0.3125),
+        ("gemini-3-flash-preview", 0.075, 0.30, 0.01875),
     ])
     def test_price_accuracy(self, model, expected_input, expected_output, expected_cached):
         """

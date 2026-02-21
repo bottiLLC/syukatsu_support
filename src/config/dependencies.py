@@ -5,6 +5,7 @@ This module performs checks to ensure all required third-party libraries
 are installed before the application attempts to import them.
 """
 
+import importlib
 import logging
 import sys
 import tkinter as tk
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # List of required packages to verify at runtime
 REQUIRED_PACKAGES = [
-    "openai",
+    "google.genai",
     "pydantic",
     "httpx",
     "cryptography",
@@ -38,7 +39,7 @@ def check_dependencies() -> None:
 
     for package in REQUIRED_PACKAGES:
         try:
-            __import__(package)
+            importlib.import_module(package)
         except ImportError:
             missing_packages.append(package)
 

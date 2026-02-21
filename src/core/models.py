@@ -57,13 +57,12 @@ class WebSearchTool(BaseModel):
 # --- Configuration Models ---
 
 
-class ReasoningOptions(BaseModel):
+class ThinkingOptions(BaseModel):
     """
-    Configuration for the model's reasoning effort.
+    Configuration for the model's thinking features.
     """
 
-    # Updated to match 'ReasoningEffort' in openapi.documented.yml
-    effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"] = "medium"
+    level: Literal["minimal", "low", "medium", "high"] = "medium"
 
 
 # --- Request Payload ---
@@ -78,7 +77,7 @@ class ResponseRequestPayload(BaseModel):
     model: str
     input: List[InputMessage]
     instructions: Optional[str] = None
-    reasoning: Optional[ReasoningOptions] = None
+    thinking: Optional[ThinkingOptions] = None
     tools: Optional[List[Union[FileSearchTool, WebSearchTool]]] = None
     previous_response_id: Optional[str] = None
     stream: bool = True

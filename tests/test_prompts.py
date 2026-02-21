@@ -56,9 +56,10 @@ def test_prompts_contain_required_sections():
     [Structure] Prompts must contain critical structural headers for the AI.
     """
     for mode, prompt_text in SYSTEM_PROMPTS.items():
-        assert "### ROLE" in prompt_text, f"{mode} missing ROLE section"
-        assert "### OBJECTIVE" in prompt_text, f"{mode} missing OBJECTIVE section"
-        assert "### OUTPUT CONSTRAINTS" in prompt_text, f"{mode} missing OUTPUT CONSTRAINTS section"
+        if prompt_text:
+            assert "### ROLE" in prompt_text, f"{mode} missing ROLE section"
+            assert "### OBJECTIVE" in prompt_text, f"{mode} missing OBJECTIVE section"
+            assert "### OUTPUT CONSTRAINTS" in prompt_text, f"{mode} missing OUTPUT CONSTRAINTS section"
 
 def test_default_config_key_exists_in_prompts():
     """

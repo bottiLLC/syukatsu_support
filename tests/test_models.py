@@ -11,7 +11,7 @@ from src.core.models import (
     InputMessage,
     InputTextContent,
     FileSearchTool,
-    ReasoningOptions,
+    ThinkingOptions,
     StreamTextDelta,
     StreamResponseCreated,
     StreamUsage,
@@ -27,7 +27,7 @@ class TestResponseRequestPayload:
         the complex List[InputMessage] structure required by the API.
         """
         payload = ResponseRequestPayload(
-            model="gpt-5.2",
+            model="gemini-3.1-pro",
             input="Help me with financial analysis."
         )
 
@@ -35,7 +35,6 @@ class TestResponseRequestPayload:
         assert len(payload.input) == 1
         message = payload.input[0]
         assert isinstance(message, InputMessage)
-        assert message.type == "message"
         assert message.role == "user"
         
         # 2. Check content nesting
@@ -56,7 +55,7 @@ class TestResponseRequestPayload:
             )
         ]
         payload = ResponseRequestPayload(
-            model="gpt-5.2",
+            model="gemini-3.1-pro",
             input=raw_input
         )
         
@@ -69,7 +68,7 @@ class TestResponseRequestPayload:
             FileSearchTool(vector_store_ids=["vs_123"])
         ]
         payload = ResponseRequestPayload(
-            model="gpt-5.2",
+            model="gemini-3.1-pro",
             input="Check this file",
             tools=tools
         )

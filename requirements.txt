@@ -1,5 +1,5 @@
 # Core API and Models
-openai==2.15.0
+google-genai
 pydantic>=2.0.0
 pydantic-settings
 
@@ -8,6 +8,7 @@ python-dotenv
 cryptography
 
 # Utilities
+httpx
 tenacity
 
 # Testing

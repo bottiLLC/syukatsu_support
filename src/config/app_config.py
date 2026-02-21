@@ -17,7 +17,7 @@ from cryptography.fernet import Fernet, InvalidToken
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, ValidationError
 
-from src.types import ReasoningEffort
+from src.types import ThinkingLevel
 
 # Load environment variables from .env file (if present)
 load_dotenv()
@@ -37,7 +37,7 @@ class AppConfig:
 
     Attributes:
         APP_VERSION (str): The current version of the application.
-        DEFAULT_MODEL (str): The default OpenAI model (targeting gpt-5.2).
+        DEFAULT_MODEL (str): The default Gemini model (targeting gemini-3.1-pro).
         DEFAULT_REASONING (ReasoningEffort): Default reasoning effort level.
         API_TIMEOUT (float): Global timeout for API calls in seconds.
         API_MAX_RETRIES (int): Number of retries for failed API calls.
@@ -46,8 +46,8 @@ class AppConfig:
     APP_VERSION: str = "v1.0.0"
 
     # Default settings to enforce on startup (Safety & Cost management)
-    DEFAULT_MODEL: str = "gpt-5.2"
-    DEFAULT_REASONING: ReasoningEffort = "high"
+    DEFAULT_MODEL: str = "gemini-3.1-pro"
+    DEFAULT_THINKING_LEVEL: ThinkingLevel = "medium"
 
     API_TIMEOUT: float = 1200.0
     API_MAX_RETRIES: int = 2
@@ -64,14 +64,14 @@ class UserConfig(BaseModel):
     model_config = {"populate_by_name": True}
 
     api_key: Optional[str] = Field(
-        default=None, description="The decrypted OpenAI API Key."
+        default=None, description="The decrypted Gemini API Key."
     )
     model: str = Field(
-        default=AppConfig.DEFAULT_MODEL, description="The selected OpenAI model ID."
+        default=AppConfig.DEFAULT_MODEL, description="The selected Gemini model ID."
     )
-    reasoning_effort: ReasoningEffort = Field(
-        default=AppConfig.DEFAULT_REASONING,
-        description="The reasoning effort level for the model.",
+    thinking_level: ThinkingLevel = Field(
+        default=AppConfig.DEFAULT_THINKING_LEVEL,
+        description="The thinking level for the model.",
     )
     # FIX: Corrected string to match src/core/prompts.py (Added space)
     system_prompt_mode: str = Field(
@@ -186,7 +186,7 @@ class ConfigManager:
         Loads configuration from disk and environment variables.
 
         Priority:
-        1. Environment Variable (OPENAI_API_KEY) - Highest security priority.
+        1. Environment Variable (GEMINI_API_KEY) - Highest security priority.
         2. Config File (Encrypted API Key) - Persistence for GUI users.
 
         Safety:
@@ -223,13 +223,13 @@ class ConfigManager:
                 logger.error(f"Failed to load config file: {e}")
 
         # 2. Environment override (overwrites file-based key if present)
-        env_key = os.getenv("OPENAI_API_KEY")
+        env_key = os.getenv("GEMINI_API_KEY")
         if env_key:
             config_data["api_key"] = env_key
 
         # 3. Enforce Safety Defaults (Ignore saved model/reasoning settings)
         config_data["model"] = AppConfig.DEFAULT_MODEL
-        config_data["reasoning_effort"] = AppConfig.DEFAULT_REASONING
+        config_data["thinking_level"] = AppConfig.DEFAULT_THINKING_LEVEL
 
         # Reset prompt mode and context for a fresh start
         # FIX: Ensure consistency with prompts.py

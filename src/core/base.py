@@ -1,13 +1,13 @@
 """
-Base service module for OpenAI API interactions.
+Base service module for Gemini API interactions.
 
 This module provides the abstract base class for all services that require
-access to the OpenAI API, ensuring consistent configuration management.
+access to the Gemini API, ensuring consistent configuration management.
 """
 
 import logging
 
-from openai import AsyncOpenAI
+from google import genai
 from typing import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -17,48 +17,45 @@ from src.config.app_config import AppConfig
 logger = logging.getLogger(__name__)
 
 
-class BaseOpenAIService:
+class BaseGeminiService:
     """
-    Base class for services interacting with the OpenAI API.
+    Base class for services interacting with the Gemini API.
 
-    Enforces the use of AsyncOpenAI within an async context manager
+    Enforces the use of genai.Client within an async context manager
     to prevent resource leaks, per the application's global rules.
 
     Attributes:
-        _api_key (str): The decrypted OpenAI API key.
+        _api_key (str): The decrypted Gemini API key.
     """
 
     def __init__(self, api_key: str) -> None:
         """
-        Initializes the OpenAI service with the provided API key.
+        Initializes the Gemini service with the provided API key.
 
         Args:
-            api_key (str): The decrypted OpenAI API key.
+            api_key (str): The decrypted Gemini API key.
 
         Raises:
             ValueError: If the provided API key is empty or None.
         """
         if not api_key:
-            logger.error("Attempted to initialize BaseOpenAIService without an API key.")
-            raise ValueError("API Key is required to initialize the OpenAI service.")
+            logger.error("Attempted to initialize BaseGeminiService without an API key.")
+            raise ValueError("API Key is required to initialize the Gemini service.")
 
         self._api_key = api_key
 
     @asynccontextmanager
-    async def get_async_client(self) -> AsyncGenerator[AsyncOpenAI, None]:
+    async def get_async_client(self) -> AsyncGenerator[genai.Client, None]:
         """
-        Context manager that yields an AsyncOpenAI client.
+        Context manager that yields a genai.Client.
         Ensures proper creation and cleanup of the async HTTP session.
 
         Yields:
-            AsyncOpenAI: A configured asynchronous OpenAI client.
+            genai.Client: A configured asynchronous Gemini client.
         """
-        client = AsyncOpenAI(
-            api_key=self._api_key,
-            timeout=AppConfig.API_TIMEOUT,
-            max_retries=AppConfig.API_MAX_RETRIES,
-        )
+        client = genai.Client(api_key=self._api_key)
         try:
             yield client
         finally:
-            await client.close()
+            if client:
+                await client.aio.close()

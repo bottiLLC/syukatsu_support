@@ -5,20 +5,20 @@ of these types matches our expectations for valid values.
 """
 
 from typing import get_args
-from src.types import ReasoningEffort, LogTag
+from src.types import ThinkingLevel, LogTag
 
-def test_reasoning_effort_values():
+def test_thinking_level_values():
     """
-    Verify that ReasoningEffort literal contains all values defined in the OpenAPI spec.
-    Schema: none, minimal, low, medium, high, xhigh
+    Verify that ThinkingLevel literal contains all values defined in the Gemini API spec.
+    Schema: minimal, low, medium, high
     """
-    valid_values = get_args(ReasoningEffort)
+    valid_values = get_args(ThinkingLevel)
     
-    expected = {"none", "minimal", "low", "medium", "high", "xhigh"}
+    expected = {"minimal", "low", "medium", "high"}
     
     # Check that all expected values are present in the type definition
     for val in expected:
-        assert val in valid_values, f"Missing expected reasoning effort: {val}"
+        assert val in valid_values, f"Missing expected thinking level: {val}"
 
 def test_log_tag_values():
     """

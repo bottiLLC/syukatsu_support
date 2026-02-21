@@ -6,9 +6,8 @@ import threading
 from pathlib import Path
 from typing import Any, List, Optional
 
-from src.core.models import (
     FileSearchTool,
-    ReasoningOptions,
+    ThinkingOptions,
     ResponseRequestPayload,
     StreamError,
     StreamResponseCreated,
@@ -179,7 +178,7 @@ class MainPresenter:
                 model=model_name,
                 input=user_input_text,
                 instructions=sys_instructions,
-                reasoning=ReasoningOptions(effort=effort),  # type: ignore
+                thinking=ThinkingOptions(level=effort),  # type: ignore
                 previous_response_id=prev_id,
                 tools=tools,
                 stream=True,
@@ -251,10 +250,10 @@ class MainPresenter:
                     self.view.cost_info_var.set(cost_str)
 
                 elif isinstance(event, StreamError):
-                    if "_REASONING_EFFORT_ERROR_" in event.message:
+                    if "THINKING_LEVEL" in event.message or "_REASONING_EFFORT_ERROR_" in event.message:
                         model_name = self.view.model_var.get()
                         effort = self.view.reasoning_var.get()
-                        msg = f"{model_name} では推論強度「{effort}」は使用できません。"
+                        msg = f"{model_name} では思考レベル「{effort}」は使用できません。"
                         self.view.show_error("設定エラー", msg)
                         self.view.append_log(f"\\n[エラー] {msg}\\n", "error")
                     else:
@@ -301,7 +300,7 @@ class MainPresenter:
     def handle_close(self) -> None:
         self.model.user_config.api_key = self.view.api_key_var.get()
         self.model.user_config.model = self.view.model_var.get()
-        self.model.user_config.reasoning_effort = self.view.reasoning_var.get()  # type: ignore
+        self.model.user_config.thinking_level = self.view.reasoning_var.get()  # type: ignore
         self.model.user_config.system_prompt_mode = self.view.prompt_mode_var.get()
 
         raw_vs = self.view.vs_id_var.get()

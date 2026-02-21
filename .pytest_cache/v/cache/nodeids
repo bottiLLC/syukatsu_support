@@ -1,4 +1,5 @@
 [
+  "test_repro.py::test_repro",
   "tests/test_app_config.py::TestConfigManager::test_load_defaults_if_no_file",
   "tests/test_app_config.py::TestConfigManager::test_load_env_var_priority",
   "tests/test_app_config.py::TestConfigManager::test_safety_defaults_enforced_on_load",
@@ -6,6 +7,8 @@
   "tests/test_app_config.py::TestSecurityManager::test_decrypt_invalid_token",
   "tests/test_app_config.py::TestSecurityManager::test_encrypt_decrypt_cycle",
   "tests/test_app_config.py::TestUserConfig::test_defaults",
+  "tests/test_base.py::TestBaseGeminiService::test_init_missing_key",
+  "tests/test_base.py::TestBaseGeminiService::test_init_success",
   "tests/test_base.py::TestBaseOpenAIService::test_init_missing_api_key[None]",
   "tests/test_base.py::TestBaseOpenAIService::test_init_missing_api_key[]",
   "tests/test_base.py::TestBaseOpenAIService::test_init_missing_key",
@@ -47,10 +50,16 @@
   "tests/test_pricing.py::TestModelPricing::test_default_cached_price",
   "tests/test_pricing.py::TestModelPricing::test_model_pricing_immutability",
   "tests/test_pricing.py::TestModelPricing::test_model_pricing_structure",
+  "tests/test_pricing.py::TestPricingTable::test_essential_models_exist[gemini-3-flash-preview]",
+  "tests/test_pricing.py::TestPricingTable::test_essential_models_exist[gemini-3-pro-preview]",
+  "tests/test_pricing.py::TestPricingTable::test_essential_models_exist[gemini-3.1-pro]",
   "tests/test_pricing.py::TestPricingTable::test_essential_models_exist[gpt-5-mini]",
   "tests/test_pricing.py::TestPricingTable::test_essential_models_exist[gpt-5.2-pro]",
   "tests/test_pricing.py::TestPricingTable::test_essential_models_exist[gpt-5.2]",
   "tests/test_pricing.py::TestPricingTable::test_essential_models_exist[o3-pro]",
+  "tests/test_pricing.py::TestPricingTable::test_price_accuracy[gemini-3-flash-preview-0.075-0.3-0.01875]",
+  "tests/test_pricing.py::TestPricingTable::test_price_accuracy[gemini-3-pro-preview-1.25-5.0-0.3125]",
+  "tests/test_pricing.py::TestPricingTable::test_price_accuracy[gemini-3.1-pro-1.25-5.0-0.3125]",
   "tests/test_pricing.py::TestPricingTable::test_price_accuracy[gpt-5-mini-0.25-2.0-0.025]",
   "tests/test_pricing.py::TestPricingTable::test_price_accuracy[gpt-5.2-1.75-14.0-0.175]",
   "tests/test_pricing.py::TestPricingTable::test_price_accuracy[gpt-5.2-pro-21.0-168.0-0.0]",
@@ -74,6 +83,7 @@
   "tests/test_rag_window.py::TestRAGManagementWindow::test_delete_store_safety_check",
   "tests/test_rag_window.py::TestRAGManagementWindow::test_initial_load",
   "tests/test_rag_window.py::TestRAGManagementWindow::test_selection_update_button_state",
+  "tests/test_services.py::TestCostCalculator::test_calculate_cost_with_valid_model",
   "tests/test_services.py::TestCostCalculator::test_calculate_known_model",
   "tests/test_services.py::TestCostCalculator::test_calculate_unknown_model_fallback",
   "tests/test_services.py::TestCostCalculator::test_calculate_with_caching",
@@ -86,5 +96,6 @@
   "tests/test_styles.py::test_ui_fonts_integrity",
   "tests/test_styles.py::test_window_size_format",
   "tests/test_types.py::test_log_tag_values",
-  "tests/test_types.py::test_reasoning_effort_values"
+  "tests/test_types.py::test_reasoning_effort_values",
+  "tests/test_types.py::test_thinking_level_values"
 ]

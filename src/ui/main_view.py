@@ -35,7 +35,7 @@ class MainView(tk.Tk):
         self.api_key_var = tk.StringVar(value=initial_config.api_key or "")
         self.show_key_var = tk.BooleanVar(value=False)
         self.model_var = tk.StringVar(value=initial_config.model)
-        self.reasoning_var = tk.StringVar(value=initial_config.reasoning_effort)
+        self.reasoning_var = tk.StringVar(value=initial_config.thinking_level)
         self.prompt_mode_var = tk.StringVar(value=initial_config.system_prompt_mode)
         self.status_var = tk.StringVar(value="待機中")
         self.cost_info_var = tk.StringVar(value="Cost: $0.00000")
@@ -93,7 +93,7 @@ class MainView(tk.Tk):
         frame = ttk.LabelFrame(parent, text=" 企業分析設定", padding=10)
 
         # API Key Section
-        ttk.Label(frame, text="OpenAI APIキー:", style="Bold.TLabel").pack(anchor="w")
+        ttk.Label(frame, text="Gemini APIキー:", style="Bold.TLabel").pack(anchor="w")
         self._entry_key = ttk.Entry(frame, textvariable=self.api_key_var, show="*")
         self._entry_key.pack(fill="x", pady=(2, 0))
         self._entry_key.bind("<FocusOut>", self._handle_key_update)
@@ -120,11 +120,11 @@ class MainView(tk.Tk):
             state="readonly",
         ).grid(row=0, column=1, sticky="ew", padx=5)
 
-        ttk.Label(grid_frame, text="推論強度:").grid(row=1, column=0, sticky="w", pady=5)
+        ttk.Label(grid_frame, text="思考レベル:").grid(row=1, column=0, sticky="w", pady=5)
         ttk.Combobox(
             grid_frame,
             textvariable=self.reasoning_var,
-            values=["none", "minimal", "low", "medium", "high", "xhigh"],
+            values=["minimal", "low", "medium", "high"],
             state="readonly",
         ).grid(row=1, column=1, sticky="ew", padx=5, pady=5)
 
