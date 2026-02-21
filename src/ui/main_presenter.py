@@ -248,7 +248,14 @@ class MainPresenter:
                     self.view.cost_info_var.set(cost_str)
 
                 elif isinstance(event, StreamError):
-                    self.view.append_log(event.message, "error")
+                    if "_REASONING_EFFORT_ERROR_" in event.message:
+                        model_name = self.view.model_var.get()
+                        effort = self.view.reasoning_var.get()
+                        msg = f"{model_name} では推論強度「{effort}」は使用できません。"
+                        self.view.show_error("設定エラー", msg)
+                        self.view.append_log(f"\\n[エラー] {msg}\\n", "error")
+                    else:
+                        self.view.append_log(event.message, "error")
 
                 self.model.message_queue.task_done()
         except queue.Empty:

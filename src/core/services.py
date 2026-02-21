@@ -10,11 +10,7 @@ import logging
 from typing import Any, AsyncGenerator, Optional
 
 from openai import (
-    APIConnectionError,
-    APITimeoutError,
-    AuthenticationError,
     OpenAIError,
-    RateLimitError,
     AsyncOpenAI
 )
 from pydantic import ValidationError
@@ -153,9 +149,7 @@ class LLMService(BaseOpenAIService):
             )
 
     @retry(
-        retry=retry_if_exception_type(
-            (APIConnectionError, APITimeoutError, RateLimitError)
-        ),
+        retry=retry_if_exception_type(OpenAIError),
         wait=wait_random_exponential(multiplier=1, max=60),
         stop=stop_after_attempt(3),
         before_sleep=before_sleep_log(logger, logging.WARNING),
@@ -185,27 +179,11 @@ class LLMService(BaseOpenAIService):
                     if result:
                         yield result
 
-        except APITimeoutError as e:
-            logger.error(f"Timeout error: {e}")
-            yield StreamError(message="\n[Timeout Error] 応答時間が制限を超えました。")
-        except APIConnectionError as e:
-            logger.error(f"Connection error: {e}")
-            yield StreamError(
-                message=f"\n[Connection Error] サーバーへの接続に失敗しました: {e}"
-            )
-        except AuthenticationError as e:
-            logger.error(f"Authentication error: {e}")
-            yield StreamError(
-                message="\n[Auth Error] APIキーが無効か、アクセス権限がありません。"
-            )
-        except RateLimitError as e:
-            logger.error(f"Rate limit exceeded: {e}")
-            yield StreamError(message="\n[Rate Limit] リクエスト頻度制限を超過しました。")
         except OpenAIError as e:
             logger.error(f"OpenAI API error: {e}")
-            # Ensure proper schema-based parsing if available
-            message = getattr(e, "message", str(e))
-            yield StreamError(message=f"\n[API Error] APIエラーが発生しました: {message}")
+            from src.core.errors import translate_api_error
+            msg = translate_api_error(e)
+            yield StreamError(message=f"\n[API Error] {msg}")
         except ValidationError as e:
             logger.error(f"Validation error: {e}")
             yield StreamError(
