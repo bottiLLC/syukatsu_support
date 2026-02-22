@@ -191,18 +191,22 @@ class MainView(tk.Tk):
 
         id_display = ttk.Frame(info_frame)
         id_display.pack(side="right")
+        
+        # Format the label directly to "前回レスポンスID: <ID>"
+        # Using a single label for cleaner display since we just want to show the ID next to the text
+        ttk.Label(
+            id_display,
+            text="前回レスポンスID:",
+            font=UI_FONTS["SMALL_MONO"],
+            foreground=UI_COLORS["LABEL_FG"],
+        ).pack(side="left", padx=(0, 5))
+        
         ttk.Label(
             id_display,
             textvariable=self.response_id_var,
             font=UI_FONTS["SMALL_BOLD"],
             foreground=UI_COLORS["ID_FG"],
-        ).pack(side="right")
-        ttk.Label(
-            id_display,
-            text="前回レスポンスID: ",
-            font=UI_FONTS["SMALL_MONO"],
-            foreground=UI_COLORS["LABEL_FG"],
-        ).pack(side="right")
+        ).pack(side="left")
 
         self._log_view = scrolledtext.ScrolledText(
             frame, state="disabled", font=UI_FONTS["NORMAL"], wrap=tk.WORD

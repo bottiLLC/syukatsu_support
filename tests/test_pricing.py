@@ -8,11 +8,19 @@ class TestModelPricing:
 
     def test_model_pricing_structure(self):
         """[Structure] Verify ModelPricing attributes."""
-        pricing = ModelPricing(input_price=1.0, output_price=2.0, cached_input_price=0.5)
+        pricing = ModelPricing(
+            input_price=1.0,
+            output_price=2.0,
+            cached_input_price=0.5,
+            input_price_over_200k=3.0,
+            output_price_over_200k=4.0
+        )
         
         assert pricing.input_price == 1.0
         assert pricing.output_price == 2.0
         assert pricing.cached_input_price == 0.5
+        assert pricing.input_price_over_200k == 3.0
+        assert pricing.output_price_over_200k == 4.0
 
     def test_model_pricing_immutability(self):
         """[Structure] Verify that ModelPricing is immutable (frozen)."""
@@ -48,12 +56,12 @@ class TestPricingTable:
         """[Content] Ensure critical models defined in specs exist in the table."""
         assert model_key in PRICING_TABLE
 
-    @pytest.mark.parametrize("model, expected_input, expected_output, expected_cached", [
+    @pytest.mark.parametrize("model, expected_input, expected_output, expected_cached, expected_in_200k, expected_out_200k", [
         # Based on Pricing.txt (Source of Truth)
-        ("gemini-3.1-pro-preview", 1.25, 5.00, 0.3125),
-        ("gemini-3-flash-preview", 0.075, 0.30, 0.01875),
+        ("gemini-3.1-pro-preview", 2.00, 12.00, 0.50, 4.00, 18.00),
+        ("gemini-3-flash-preview", 0.50, 3.00, 0.125, 0.0, 0.0),
     ])
-    def test_price_accuracy(self, model, expected_input, expected_output, expected_cached):
+    def test_price_accuracy(self, model, expected_input, expected_output, expected_cached, expected_in_200k, expected_out_200k):
         """
         [Accuracy] Verify prices match the Pricing.txt source of truth exactly.
         This is critical for cost estimation accuracy.
@@ -63,6 +71,8 @@ class TestPricingTable:
         assert pricing.input_price == expected_input, f"{model} input price mismatch"
         assert pricing.output_price == expected_output, f"{model} output price mismatch"
         assert pricing.cached_input_price == expected_cached, f"{model} cached price mismatch"
+        assert pricing.input_price_over_200k == expected_in_200k, f"{model} 200k input price mismatch"
+        assert pricing.output_price_over_200k == expected_out_200k, f"{model} 200k output price mismatch"
 
     def test_pricing_sanity(self):
         """[Sanity] Ensure no negative prices and logical consistency."""
@@ -70,6 +80,8 @@ class TestPricingTable:
             assert p.input_price >= 0, f"{name}: Negative input price"
             assert p.output_price >= 0, f"{name}: Negative output price"
             assert p.cached_input_price >= 0, f"{name}: Negative cached price"
+            assert p.input_price_over_200k >= 0, f"{name}: Negative over 200k input price"
+            assert p.output_price_over_200k >= 0, f"{name}: Negative over 200k output price"
             
             # General rule: Output is usually more expensive than Input
             # (Not strict for all future models, but true for current ones)

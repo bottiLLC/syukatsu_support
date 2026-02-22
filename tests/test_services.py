@@ -100,11 +100,13 @@ class TestLLMService:
             instructions="System prompt"
         )
 
-    def _create_mock_chunk(self, text: str = "", usage=None) -> MagicMock:
+    def _create_mock_chunk(self, text: str = "", usage=None, response_id: str = None) -> MagicMock:
         """Helper to create mock stream chunks."""
         chunk = MagicMock()
         chunk.text = text
         chunk.usage_metadata = usage
+        if response_id:
+            chunk.response_id = response_id
         return chunk
 
     async def _mock_async_generator(self, items):
@@ -123,7 +125,7 @@ class TestLLMService:
         usage_mock.cached_content_token_count = 2
 
         mock_events = [
-            self._create_mock_chunk(text="Hello "),
+            self._create_mock_chunk(text="Hello ", response_id="mock-id-123"),
             self._create_mock_chunk(text="World", usage=usage_mock)
         ]
         
@@ -137,6 +139,7 @@ class TestLLMService:
         assert len(results) == 4
         
         assert isinstance(results[0], StreamResponseCreated)
+        assert results[0].response_id == "mock-id-123"
         
         assert isinstance(results[1], StreamTextDelta)
         assert results[1].delta == "Hello "

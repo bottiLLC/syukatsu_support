@@ -58,13 +58,22 @@ class CostCalculator:
             return "Cost info unavailable"
 
         non_cached_input = max(0, usage.input_tokens - usage.cached_tokens)
-        input_cost = (non_cached_input / cls._TOKEN_UNIT) * pricing.input_price
+        
+        # Use >200k pricing if applicable and prompt exceeds 200k tokens
+        if pricing.input_price_over_200k > 0 and usage.input_tokens > 200_000:
+            effective_input_price = pricing.input_price_over_200k
+            effective_output_price = pricing.output_price_over_200k
+        else:
+            effective_input_price = pricing.input_price
+            effective_output_price = pricing.output_price
+
+        input_cost = (non_cached_input / cls._TOKEN_UNIT) * effective_input_price
 
         cached_cost = (
             usage.cached_tokens / cls._TOKEN_UNIT
         ) * pricing.cached_input_price
 
-        output_cost = (usage.output_tokens / cls._TOKEN_UNIT) * pricing.output_price
+        output_cost = (usage.output_tokens / cls._TOKEN_UNIT) * effective_output_price
 
         total_cost = input_cost + cached_cost + output_cost
         estimate_label = "(Est.)" if is_estimate else ""
@@ -190,9 +199,15 @@ class LLMService(BaseGeminiService):
             async with self.get_async_client() as client:
                 stream = await self._create_stream(client, payload)
 
-                yield StreamResponseCreated(response_id="gemini-stream")
-
+                is_first_chunk = True
                 async for chunk in stream:
+                    if is_first_chunk:
+                        # Fallback to UUID if the API doesn't provide it
+                        import uuid
+                        res_id = getattr(chunk, "response_id", None) or f"gemini-{uuid.uuid4().hex[:12]}"
+                        yield StreamResponseCreated(response_id=res_id)
+                        is_first_chunk = False
+
                     if chunk.text:
                         yield StreamTextDelta(delta=chunk.text)
                         
