@@ -142,7 +142,7 @@ class LLMService(BaseGeminiService):
                     parts.append(genai_types.Part.from_text(text=c.text))
             contents.append(genai_types.Content(role=role, parts=parts))
 
-        config_args = {"temperature": 0.7}
+        config_args = {"temperature": 1.0}
         
         # NOTE: Not all models (e.g. some previews) support ThinkingLevel or specific levels like 'medium'
         # We will apply it, but if it throws a 400 about unsupported thinking we must omit it.
