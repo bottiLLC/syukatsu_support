@@ -1,12 +1,12 @@
 # 就職活動サポートアプリ (SYUKATSU Support)
 
 合同会社ぼっち向けに構築された、就職活動・企業分析用のデスクトップアプリケーションです。
-OpenAIの最新API (`/responses` エンドポイント) と連携し、履歴書作成支援、面接対策、技術面接シミュレーション、および企業レポート(PDF等)の解析（RAG）を行います。
+Google Gemini API (Native Async `client.aio`) と連携し、履歴書作成支援、面接対策、技術面接シミュレーション、および企業レポート(PDF等)の解析（RAG）を行います。
 
 ## 主な機能
 
 1. **企業分析アシスタント**
-   - OpenAIモデル（GPT-5.2等）による高度な推論（Reasoning Effort対応）。
+   - Geminiモデル（gemini-3.1-pro-preview 等）による高度な推論（Thinking Level対応）。
    - 用途に応じた複数のシステムプロンプト（履歴書作成、面接対策、技術面接シミュレーション）をワンタッチで切り替え。
 2. **ナレッジベース管理 (RAG)**
    - 企業のAnnual Reportsや有価証券報告書（PDF）をVector Storeへアップロード。
@@ -23,12 +23,12 @@ OpenAIの最新API (`/responses` エンドポイント) と連携し、履歴書
 src/
 ├── config/             # 環境変数、ユーザー設定 (app_config.py, dependencies.py 等)
 ├── core/               # ビジネスロジック、データモデル
-│   ├── base.py         # AsyncOpenAI通信の基盤クラス
+│   ├── base.py         # Gemini API通信の基盤クラス
 │   ├── errors.py       # API例外処理とエラーメッセージの日本語化定義（UI例外検知）
 │   ├── models.py       # Pydantic V2 スキーマ (ユーザー入力/APIストリームレスポンスの厳密な型定義)
 │   ├── pricing.py      # トークン単価テーブル
 │   ├── prompts.py      # システムプロンプト定義
-│   ├── services.py     # OpenAI API 通信 (`/responses`エンドポイント API), コスト計算
+│   ├── services.py     # Gemini API 通信 (Native Async API), コスト計算
 │   └── rag_services.py # Vector Store と File API の操作
 ├── ui/                 # コアUIコンポーネント (MVPパターン)
 │   ├── main_model.py   # アプリ全体のステータス・設定の保持
@@ -46,7 +46,7 @@ src/
 
 - **OS**: Windows
 - **Python**: 3.13推奨
-- **API Key**: `OPENAI_API_KEY` (アプリ内から設定、または環境変数)
+- **API Key**: `GEMINI_API_KEY` (アプリ内から設定、または環境変数)
 
 ## インストールと起動
 

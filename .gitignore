@@ -138,6 +138,17 @@ Desktop.ini
 # Secret Keys and Configs
 config.json
 .secret.key
+
+# Local Data / DB
+data/
+*.sqlite3
+*.db
+
+# Test Outputs & Debug Logs
+pytest_*.txt
+test_*_debug.txt
+.pytest_cache/
+
 # Logs
 *.log
 # Old/Backup folders
