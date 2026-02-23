@@ -18,15 +18,43 @@ from src.config.logging_config import setup_logging
 logger = logging.getLogger(__name__)
 
 
+def show_splash() -> tk.Tk:
+    """Creates and displays a lightweight splash screen."""
+    splash = tk.Tk()
+    splash.overrideredirect(True)  # Remove window decorations
+    splash.geometry("400x150")
+    splash.eval('tk::PlaceWindow . center')
+    
+    # Basic styling
+    frame = tk.Frame(splash, bg="white", highlightbackground="#007BFF", highlightthickness=2)
+    frame.pack(expand=True, fill="both")
+    
+    label = tk.Label(
+        frame, 
+        text="就活サポートアプリ起動中...", 
+        font=("Helvetica", 14, "bold"), 
+        bg="white",
+        fg="#333333"
+    )
+    label.pack(expand=True)
+    
+    # Force UI update to show immediately
+    splash.update()
+    return splash
+
 def main() -> None:
     """
     Main execution routine.
 
     Orchestrates the application startup sequence:
-    1. Configures logging.
-    2. Checks for required dependencies.
-    3. Launches the main GUI application.
+    1. Shows lightweight splash screen.
+    2. Configures logging.
+    3. Checks for required dependencies.
+    4. Launches the main GUI application.
     """
+    # Show splash screen as fast as possible
+    splash = show_splash()
+
     # 1. Setup Logging
     setup_logging()
     logger.info("Application starting...")
@@ -43,6 +71,10 @@ def main() -> None:
 
         logger.info("Initializing GUI...")
         app = SyukatsuSupportApp()
+        
+        # Destroy splash right before showing main window
+        splash.destroy()
+        
         app.mainloop()
 
     except Exception as e:
