@@ -63,15 +63,17 @@ class CostCalculator:
         if pricing.input_price_over_200k > 0 and usage.input_tokens > 200_000:
             effective_input_price = pricing.input_price_over_200k
             effective_output_price = pricing.output_price_over_200k
+            effective_cached_input_price = pricing.cached_input_price_over_200k
         else:
             effective_input_price = pricing.input_price
             effective_output_price = pricing.output_price
+            effective_cached_input_price = pricing.cached_input_price
 
         input_cost = (non_cached_input / cls._TOKEN_UNIT) * effective_input_price
 
         cached_cost = (
             usage.cached_tokens / cls._TOKEN_UNIT
-        ) * pricing.cached_input_price
+        ) * effective_cached_input_price
 
         output_cost = (usage.output_tokens / cls._TOKEN_UNIT) * effective_output_price
 

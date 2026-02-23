@@ -29,6 +29,7 @@ class ModelPricing:
     cached_input_price: float = 0.0
     input_price_over_200k: float = 0.0
     output_price_over_200k: float = 0.0
+    cached_input_price_over_200k: float = 0.0
 
 
 # Pricing Table based on 'Standard' Tier
@@ -40,11 +41,12 @@ PRICING_TABLE: Dict[str, ModelPricing] = {
         output_price=12.00,
         input_price_over_200k=4.00,
         output_price_over_200k=18.00,
-        cached_input_price=0.50, # 25% of base input price as an assumption
+        cached_input_price=0.20,
+        cached_input_price_over_200k=0.40,
     ),
     "gemini-3-flash-preview": ModelPricing(
         input_price=0.50,
         output_price=3.00,
-        cached_input_price=0.125, # 25% of base input price as an assumption
+        cached_input_price=0.05,
     ),
 }
