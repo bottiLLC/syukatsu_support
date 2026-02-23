@@ -203,8 +203,6 @@ class RagView(tk.Toplevel):
         state = "normal" if has_selection else "disabled"
         self._rename_btn.config(state=state)
         self._del_store_btn.config(state=state)
-        if not has_selection:
-            self.clear_files()
 
     def get_selected_store(self) -> Optional[tuple]:
         selection = self._store_tree.selection()
@@ -242,7 +240,6 @@ class RagView(tk.Toplevel):
     def _handle_store_select(self, event: Any) -> None:
         selection = self._store_tree.selection()
         if not selection:
-            self._current_store_id = None
             if self.on_store_select_callback:
                 self.on_store_select_callback(None, 0)
             return
@@ -278,6 +275,14 @@ class RagView(tk.Toplevel):
 
     def _handle_file_select(self, event: Any) -> None:
         has_selection = bool(self._file_tree.selection())
+        
+        # When a file is selected, clear the store selection to avoid confusing deletes
+        # But keep self._current_store_id so we know which store the file belongs to
+        if has_selection:
+            store_selection = self._store_tree.selection()
+            if store_selection:
+                self._store_tree.selection_remove(*store_selection)
+                
         if self.on_file_select_callback:
             self.on_file_select_callback(has_selection)
 
