@@ -47,7 +47,7 @@ class AppConfig:
 
     # Default settings to enforce on startup (Safety & Cost management)
     DEFAULT_MODEL: str = "gemini-3.1-pro-preview"
-    DEFAULT_THINKING_LEVEL: ThinkingLevel = "medium"
+    DEFAULT_THINKING_LEVEL: ThinkingLevel = "high"
 
     API_TIMEOUT: float = 1200.0
     API_MAX_RETRIES: int = 2
