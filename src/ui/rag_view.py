@@ -183,6 +183,15 @@ class RagView(tk.Toplevel):
     def add_store(self, name: str, s_id: str, status: str, files_count: int, usage: str) -> None:
         self._store_tree.insert("", "end", values=(name, s_id, status, files_count, usage))
 
+    def select_store(self, store_id: str) -> None:
+        for child in self._store_tree.get_children():
+            values = self._store_tree.item(child)["values"]
+            if values and str(values[1]) == store_id:
+                self._store_tree.selection_set(child)
+                self._store_tree.focus(child)
+                self._store_tree.event_generate("<<TreeviewSelect>>")
+                break
+
     def clear_files(self) -> None:
         self._file_tree.delete(*self._file_tree.get_children())
         self._delete_file_btn.config(state="disabled")

@@ -36,6 +36,9 @@ class RagPresenter:
 
     def refresh_stores_async(self) -> None:
         self.view.set_status("Loading FileSearch Stores...", busy=True)
+        # Store current state to preserve selection
+        preserved_store_id = self.model.current_store_id
+        
         self.view.clear_stores()
 
         self.model.current_store_id = None
@@ -45,7 +48,7 @@ class RagPresenter:
         async def _async_task() -> None:
             try:
                 stores = await self.model.rag_service.list_vector_stores()
-                self.view.after(0, lambda: self._update_store_list(stores))
+                self.view.after(0, lambda: self._update_store_list(stores, preserved_store_id))
             except Exception as e:
                 logger.error(f"Failed to load stores: {e}")
                 self.view.after(0, lambda: self.view.set_status(f"Error: {e}"))
@@ -55,7 +58,9 @@ class RagPresenter:
 
         threading.Thread(target=_thread_target, daemon=True).start()
 
-    def _update_store_list(self, stores: List[Any]) -> None:
+    def _update_store_list(self, stores: List[Any], preserved_store_id: Optional[str] = None) -> None:
+        store_found = False
+        
         for s in stores:
             name = s.name if s.name else "(No Name)"
             usage = f"{s.usage_bytes:,}" if hasattr(s, "usage_bytes") else "0"
@@ -68,8 +73,17 @@ class RagPresenter:
                     files_count = s.file_counts.get("total", 0)
 
             self.view.add_store(name, s.id, s.status, files_count, usage)
+            
+            if preserved_store_id and s.id == preserved_store_id:
+                store_found = True
 
         self.view.set_status(f"Loaded {len(stores)} FileSearch Stores.")
+        
+        # Restore selection if it still exists
+        if store_found and preserved_store_id:
+            self.view.select_store(preserved_store_id)
+            # The treeview selection event handler will automatically handle fetching files
+            # but we can explicitly trigger it if needed. The view method will do it.
 
     def handle_store_select(self, store_id: Optional[str], file_count: int) -> None:
         self.model.current_store_id = store_id
