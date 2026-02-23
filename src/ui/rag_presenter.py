@@ -246,6 +246,7 @@ class RagPresenter:
         threading.Thread(target=_thread_target, daemon=True).start()
 
     def _update_file_list(self, files: List[dict]) -> None:
+        self.view.clear_files()
         files.sort(key=lambda x: x["created_at"], reverse=True)
 
         for f in files:
