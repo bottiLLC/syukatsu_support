@@ -2,7 +2,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-合同会社ぼっち向けに構築された、就職活動・企業分析用のデスクトップアプリケーションです。
+合同会社ぼっちが開発した、就職活動・企業分析用のデスクトップアプリケーションです。
 Google Gemini API (Native Async `client.aio`) と連携し、履歴書作成支援、面接対策、技術面接シミュレーション、および企業レポート(PDF等)の解析（RAG）を行います。
 
 ## 主な機能
