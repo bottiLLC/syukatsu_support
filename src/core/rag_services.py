@@ -10,6 +10,9 @@ import json
 import logging
 import uuid
 import time
+import tempfile
+import shutil
+import os
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, List, Optional
@@ -124,22 +127,33 @@ class FileService(BaseGeminiService):
             raise FileNotFoundError(f"File not found: {file_path}")
 
         logger.info(f"Uploading file async to Gemini: {file_path}")
+        
+        # Workaround for Google Gen AI SDK UnicodeEncodeError on Windows
+        # Ensure the path contains only ASCII characters during upload.
+        fd, temp_path = tempfile.mkstemp(suffix=path_obj.suffix)
+        os.close(fd)
+        shutil.copy2(path_obj, temp_path)
+        
         try:
             async with self.get_async_client() as client:
                 # Use standard client for file upload or asyncio to_thread if aio missing
-                # We'll use client.files.upload since files api is often synchronous or basic
                 try: 
-                    response = await client.aio.files.upload(file=str(path_obj), config={'display_name': path_obj.name})
+                    response = await client.aio.files.upload(file=temp_path, config={'display_name': path_obj.name})
                 except AttributeError:
                     import asyncio
                     response = await asyncio.to_thread(
-                        client.files.upload, file=str(path_obj), config={'display_name': path_obj.name}
+                        client.files.upload, file=temp_path, config={'display_name': path_obj.name}
                     )
                 logger.info(f"File uploaded successfully: {response.name}")
                 return _gemini_file_to_namespace(response)
         except Exception as e:
             logger.error(f"Failed to upload file: {e}")
             raise
+        finally:
+            try:
+                Path(temp_path).unlink(missing_ok=True)
+            except Exception as e:
+                logger.warning(f"Failed to delete temporary file {temp_path}: {e}")
 
     async def get_file_details(self, file_id: str) -> Optional[Any]:
         try:

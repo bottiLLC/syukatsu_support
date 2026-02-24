@@ -33,18 +33,18 @@ class MainView(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._handle_close)
 
         # UI State Variables
-        self.api_key_var = tk.StringVar(value=initial_config.api_key or "")
-        self.model_var = tk.StringVar(value=initial_config.model)
-        self.reasoning_var = tk.StringVar(value=initial_config.thinking_level)
-        self.prompt_mode_var = tk.StringVar(value=initial_config.system_prompt_mode)
-        self.status_var = tk.StringVar(value="待機中")
-        self.cost_info_var = tk.StringVar(value="Cost: $0.00000")
+        self.api_key_var = tk.StringVar(master=self, value=initial_config.api_key or "")
+        self.model_var = tk.StringVar(master=self, value=initial_config.model)
+        self.reasoning_var = tk.StringVar(master=self, value=initial_config.thinking_level)
+        self.prompt_mode_var = tk.StringVar(master=self, value=initial_config.system_prompt_mode)
+        self.status_var = tk.StringVar(master=self, value="待機中")
+        self.cost_info_var = tk.StringVar(master=self, value="Cost: $0.00000")
 
         last_id = initial_config.last_response_id
-        self.response_id_var = tk.StringVar(value=last_id if last_id else "None")
+        self.response_id_var = tk.StringVar(master=self, value=last_id if last_id else "None")
 
-        self.vs_id_var = tk.StringVar(value=initial_config.current_vector_store_id or "")
-        self.use_file_search_var = tk.BooleanVar(value=initial_config.use_file_search)
+        self.vs_id_var = tk.StringVar(master=self, value=initial_config.current_vector_store_id or "")
+        self.use_file_search_var = tk.BooleanVar(master=self, value=initial_config.use_file_search)
 
         # UI Components
         self._sys_prompt_view: scrolledtext.ScrolledText = None  # type: ignore
@@ -156,6 +156,8 @@ class MainView(tk.Tk):
             rag_frame,
             text="ファイル検索(RAG)を使用",
             variable=self.use_file_search_var,
+            onvalue=True,
+            offvalue=False,
         ).pack(anchor="w", pady=(5, 0))
 
         ttk.Separator(frame, orient="horizontal").pack(fill="x", pady=10)
@@ -291,6 +293,7 @@ class MainView(tk.Tk):
     def set_system_prompt(self, prompt: str) -> None:
         self._sys_prompt_view.delete("1.0", tk.END)
         self._sys_prompt_view.insert("1.0", prompt)
+        self._sys_prompt_view.see("1.0")
 
     def get_system_prompt(self) -> str:
         return self._sys_prompt_view.get("1.0", tk.END).strip()

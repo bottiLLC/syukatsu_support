@@ -12,6 +12,8 @@ def translate_api_error(e: Exception) -> str:
             return "利用制限エラー: 会話の利用上限に達したか、残高が不足しています。"
         if "504" in err_str or "DEADLINE_EXCEEDED" in err_str:
             return "タイムアウト: サーバーからの応答が制限時間を超えました。"
+        if "503" in err_str or "UNAVAILABLE" in err_str:
+            return "サーバー混雑エラー (503): 現在Gemini AIに多数のリクエストが集中し、一時的に利用できない状態です。数分〜数十分ほど時間をおいてから再度お試しください。"
         
         # Catch errors related to reasoning efforts just in case
         if "reasoning" in err_str.lower():

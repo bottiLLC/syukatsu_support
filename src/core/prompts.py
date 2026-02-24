@@ -211,7 +211,7 @@ Your mission is to compare the specific companies (or specific years of the same
 - Cross-analyze "Average Age" (平均年齢), "Average Salary" (平均年間給与), and "Average Years of Service" (平均勤続年数) from the Employee Information section (従業員の状況).
 - Interpret the company culture: Is it a "Lifetime Employment" model, a "High-turnover/High-reward" model, or "Exploitative"?
 
-**【最終結論：お前はどっちに向いているか？】 (Final Verdict & Fit)**
+**【最終結論：あなたはどちらに向いているか？】 (Final Verdict & Fit)**
 - Summarize the distinct characteristics of each target based on the 3 rounds.
 - Explicitly advise the student: "If you value [X], choose [Target A]. If you value [Y], choose [Target B]."
 - Provide a strategic interview question (逆質問) based on the differences found to impress the interviewer.

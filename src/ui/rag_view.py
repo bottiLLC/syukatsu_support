@@ -253,7 +253,11 @@ class RagView(tk.Toplevel):
             self.on_store_select_callback(store_id, file_count)
 
     def _handle_create_store(self) -> None:
-        name = simpledialog.askstring("新規作成", "FileSearch Storeの名前を入力してください:")
+        self.grab_release()  # Release grab for the dialog to acquire one
+        try:
+            name = simpledialog.askstring("新規作成", "FileSearch Storeの名前を入力してください:", parent=self)
+        finally:
+            self.grab_set()  # Re-acquire grab
         if name and self.on_create_store_callback:
             self.on_create_store_callback(name)
 
@@ -263,9 +267,13 @@ class RagView(tk.Toplevel):
             return
 
         current_name = values[0]
-        new_name = simpledialog.askstring(
-            "名前変更", "新しい名前を入力してください:", initialvalue=current_name
-        )
+        self.grab_release()  # Release grab for the dialog to acquire one
+        try:
+            new_name = simpledialog.askstring(
+                "名前変更", "新しい名前を入力してください:", initialvalue=current_name, parent=self
+            )
+        finally:
+            self.grab_set()  # Re-acquire grab
         if new_name and new_name != current_name and self.on_rename_store_callback:
             self.on_rename_store_callback(self._current_store_id, new_name)
 
