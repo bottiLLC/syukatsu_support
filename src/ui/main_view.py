@@ -22,6 +22,7 @@ class MainView(tk.Tk):
         # Callbacks (assigned by Presenter)
         self.on_close_callback: Optional[Callable[[], None]] = None
         self.on_key_update_callback: Optional[Callable[[str], None]] = None
+        self.on_register_key_callback: Optional[Callable[[str], None]] = None
         self.on_apply_prompt_mode_callback: Optional[Callable[[str], None]] = None
         self.on_open_rag_manager_callback: Optional[Callable[[], None]] = None
         self.on_start_generation_callback: Optional[Callable[[], None]] = None
@@ -33,7 +34,6 @@ class MainView(tk.Tk):
 
         # UI State Variables
         self.api_key_var = tk.StringVar(value=initial_config.api_key or "")
-        self.show_key_var = tk.BooleanVar(value=False)
         self.model_var = tk.StringVar(value=initial_config.model)
         self.reasoning_var = tk.StringVar(value=initial_config.thinking_level)
         self.prompt_mode_var = tk.StringVar(value=initial_config.system_prompt_mode)
@@ -94,16 +94,22 @@ class MainView(tk.Tk):
 
         # API Key Section
         ttk.Label(frame, text="Gemini APIキー:", style="Bold.TLabel").pack(anchor="w")
-        self._entry_key = ttk.Entry(frame, textvariable=self.api_key_var, show="*")
-        self._entry_key.pack(fill="x", pady=(2, 0))
+        
+        key_frame = ttk.Frame(frame)
+        key_frame.pack(fill="x", pady=(2, 0))
+        
+        self._entry_key = tk.Entry(key_frame, show="*", relief="solid", bd=1)
+        if self.api_key_var.get():
+            self._entry_key.insert(0, self.api_key_var.get())
+        self._entry_key.pack(side="left", fill="x", expand=True, ipady=2)
         self._entry_key.bind("<FocusOut>", self._handle_key_update)
 
-        ttk.Checkbutton(
-            frame,
-            text="キーを表示",
-            variable=self.show_key_var,
-            command=self._toggle_key_visibility,
-        ).pack(anchor="w")
+        ttk.Button(
+            key_frame,
+            text="登録",
+            command=self._handle_register_key,
+            width=6,
+        ).pack(side="right", padx=(5, 0))
 
         ttk.Separator(frame, orient="horizontal").pack(fill="x", pady=10)
 
@@ -289,6 +295,9 @@ class MainView(tk.Tk):
     def get_system_prompt(self) -> str:
         return self._sys_prompt_view.get("1.0", tk.END).strip()
 
+    def get_api_key(self) -> str:
+        return self._entry_key.get().strip()
+
     def get_user_input(self) -> str:
         return self._input_view.get("1.0", tk.END).strip()
 
@@ -356,15 +365,13 @@ class MainView(tk.Tk):
             self.on_close_callback()
         self.destroy()
 
-    def _toggle_key_visibility(self) -> None:
-        if self.show_key_var.get():
-            self._entry_key.config(show="")
-        else:
-            self._entry_key.config(show="*")
+    def _handle_register_key(self) -> None:
+        if self.on_register_key_callback:
+            self.on_register_key_callback(self.get_api_key())
 
     def _handle_key_update(self, event: Any) -> None:
         if self.on_key_update_callback:
-            self.on_key_update_callback(self.api_key_var.get().strip())
+            self.on_key_update_callback(self.get_api_key())
 
     def _handle_apply_prompt_mode(self, event: Optional[tk.Event] = None) -> None:
         if self.on_apply_prompt_mode_callback:

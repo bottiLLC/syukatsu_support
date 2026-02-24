@@ -38,9 +38,9 @@ src/
 │   ├── main_presenter.py # ViewとModelを繋ぎ、バックグラウンド処理を管理
 │   ├── gui.py          # 上記3つを結合するメインファクトリ (エントリーポイント)
 │   ├── rag_model.py    # RAG管理画面のステータス保持
-│   ├── rag_view.py     # RAG管理画面 (tk.Toplevel) の構築
-│   ├── rag_presenter.py  # RAG UIの非同期処理とAPI呼び出しを仲介
-│   └── styles.py       # アプリケーション全体のUIスタイリング
+│   ├── rag_view.py     # RAG管理画面 (tk.Toplevel / ttk.PanedWindow) の構築
+│   ├── rag_presenter.py  # RAG UIの非同期処理と自動修復例外制御を仲介
+│   └── rag_window.py   # RAG管理画面用ファクトリ
 └── tests/              # pytest / pytest-asyncio による非同期ユニットテスト/統合テスト
 ```
 
@@ -66,7 +66,7 @@ python main.py
 
 ## テストの実行
 
-Mvpパターンの導入により、`tests/test_mvp_presenters.py` にて、Tkinterの画面に依存しない純粋な状態管理とバックグラウンド通信のテストが可能です。
+MVPパターンの完全導入により、Tkinterの画面描画に依存しない純粋な状態管理とバックグラウンド通信のテストが可能になりました。UI検証用の不要なスクリプト群はクリーンアップされています。
 
 ```bash
 pytest tests/ -v

@@ -33,7 +33,7 @@ class RagView(tk.Toplevel):
         self.on_file_select_callback: Optional[Callable[[bool], None]] = None
 
         # UI State
-        self.status_var = tk.StringVar(value="Ready")
+        self.status_var = tk.StringVar(self, value="Ready")
 
         # Widget references
         self._store_tree: ttk.Treeview = None  # type: ignore

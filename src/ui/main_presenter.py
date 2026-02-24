@@ -47,6 +47,7 @@ class MainPresenter:
     def _bind_callbacks(self) -> None:
         self.view.on_close_callback = self.handle_close
         self.view.on_key_update_callback = self.handle_key_update
+        self.view.on_register_key_callback = self.handle_register_key
         self.view.on_apply_prompt_mode_callback = self.handle_apply_prompt_mode
         self.view.on_open_rag_manager_callback = self.handle_open_rag_manager
         self.view.on_start_generation_callback = self.handle_start_generation
@@ -72,6 +73,19 @@ class MainPresenter:
         if api_key:
             self._init_services(api_key)
             self._refresh_vector_stores()
+
+    def handle_register_key(self, api_key: str) -> None:
+        if not api_key:
+            self.view.show_warning("入力エラー", "API Keyを入力してください。")
+            return
+        self.handle_key_update(api_key)
+        self.model.user_config.api_key = api_key
+        try:
+            self.model.save_config()
+        except Exception as e:
+            logger.error(f"Failed to save API key configuration: {e}")
+            
+        self.view.show_info("登録完了", "APIキーを登録し、サービスを初期化しました。")
 
     def handle_apply_prompt_mode(self, mode: str) -> None:
         prompt = SYSTEM_PROMPTS.get(mode, "")
@@ -121,7 +135,7 @@ class MainPresenter:
             self.view.show_error("エラー", "RAG管理モジュールを読み込めませんでした。")
             return
 
-        api_key = self.view.api_key_var.get().strip()
+        api_key = self.view.get_api_key()
         if not api_key:
             self.view.show_warning("設定エラー", "API Keyを設定してください。")
             return
@@ -138,7 +152,7 @@ class MainPresenter:
         if self.model.is_generating:
             return
 
-        api_key = self.view.api_key_var.get().strip()
+        api_key = self.view.get_api_key()
         user_input_text = self.view.get_user_input()
         sys_instructions = self.view.get_system_prompt()
 
@@ -299,7 +313,7 @@ class MainPresenter:
                 self.view.show_error("保存エラー", f"保存に失敗しました: {str(e)}")
 
     def handle_close(self) -> None:
-        self.model.user_config.api_key = self.view.api_key_var.get()
+        self.model.user_config.api_key = self.view.get_api_key()
         self.model.user_config.model = self.view.model_var.get()
         self.model.user_config.thinking_level = self.view.reasoning_var.get()  # type: ignore
         self.model.user_config.system_prompt_mode = self.view.prompt_mode_var.get()

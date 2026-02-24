@@ -1,0 +1,21 @@
+Toplevel geometry: 1100x750+0+0
+.!ragmanagementwindow: mapped=1, req=957x345, actual=1100x750
+  .!ragmanagementwindow.!frame: mapped=1, req=947x312, actual=1090x717
+    .!ragmanagementwindow.!frame.!labelframe: mapped=1, req=436x312, actual=507x717
+      .!ragmanagementwindow.!frame.!labelframe.!treeview: mapped=1, req=422x226, actual=493x631
+      .!ragmanagementwindow.!frame.!labelframe.!scrollbar: mapped=1, req=17x51, actual=17x57
+      .!ragmanagementwindow.!frame.!labelframe.!frame: mapped=1, req=160x52, actual=476x52
+        .!ragmanagementwindow.!frame.!labelframe.!frame.!frame: mapped=1, req=160x25, actual=476x25
+          .!ragmanagementwindow.!frame.!labelframe.!frame.!frame.!button: mapped=1, req=77x25, actual=235x25
+          .!ragmanagementwindow.!frame.!labelframe.!frame.!frame.!button2: mapped=1, req=77x25, actual=235x25
+        .!ragmanagementwindow.!frame.!labelframe.!frame.!frame2: mapped=1, req=158x25, actual=476x25
+          .!ragmanagementwindow.!frame.!labelframe.!frame.!frame2.!button: mapped=1, req=76x25, actual=235x25
+          .!ragmanagementwindow.!frame.!labelframe.!frame.!frame2.!button2: mapped=1, req=76x25, actual=235x25
+    .!ragmanagementwindow.!frame.!labelframe2: mapped=1, req=506x306, actual=578x717
+      .!ragmanagementwindow.!frame.!labelframe2.!treeview: mapped=1, req=492x226, actual=564x637
+      .!ragmanagementwindow.!frame.!labelframe2.!scrollbar: mapped=1, req=17x51, actual=17x51
+      .!ragmanagementwindow.!frame.!labelframe2.!frame: mapped=1, req=444x25, actual=547x25
+        .!ragmanagementwindow.!frame.!labelframe2.!frame.!button: mapped=1, req=110x25, actual=110x25
+        .!ragmanagementwindow.!frame.!labelframe2.!frame.!button2: mapped=1, req=99x25, actual=99x25
+        .!ragmanagementwindow.!frame.!labelframe2.!frame.!label: mapped=1, req=220x17, actual=220x17
+  .!ragmanagementwindow.!label: mapped=1, req=156x23, actual=1100x23

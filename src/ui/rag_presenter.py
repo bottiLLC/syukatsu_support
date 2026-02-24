@@ -51,7 +51,7 @@ class RagPresenter:
                 self.view.after(0, lambda: self._update_store_list(stores, preserved_store_id))
             except Exception as e:
                 logger.error(f"Failed to load stores: {e}")
-                self.view.after(0, lambda: self.view.set_status(f"Error: {e}"))
+                self.view.after(0, self.view.set_status, f"Error: {e}")
 
         def _thread_target() -> None:
             asyncio.run(_async_task())
@@ -106,8 +106,8 @@ class RagPresenter:
                 self.view.after(0, lambda: self.view.set_status(f"Created store '{name}'."))
                 self.view.after(0, self.refresh_stores_async)
             except Exception as e:
-                self.view.after(0, lambda: self.view.show_error("Error", str(e)))
-                self.view.after(0, lambda: self.view.set_status("Create failed."))
+                self.view.after(0, self.view.show_error, "Error", str(e))
+                self.view.after(0, self.view.set_status, "Create failed.")
 
         def _thread_target() -> None:
             asyncio.run(_async_task())
@@ -123,8 +123,8 @@ class RagPresenter:
                 self.view.after(0, lambda: self.view.set_status("Rename successful."))
                 self.view.after(0, self.refresh_stores_async)
             except Exception as e:
-                self.view.after(0, lambda: self.view.show_error("Error", str(e)))
-                self.view.after(0, lambda: self.view.set_status("Rename failed."))
+                self.view.after(0, self.view.show_error, "Error", str(e))
+                self.view.after(0, self.view.set_status, "Rename failed.")
 
         def _thread_target() -> None:
             asyncio.run(_async_task())
@@ -155,8 +155,8 @@ class RagPresenter:
                 self.view.after(0, lambda: self.view.set_status("Store deleted."))
                 self.view.after(0, self.refresh_stores_async)
             except Exception as e:
-                self.view.after(0, lambda: self.view.show_error("Error", str(e)))
-                self.view.after(0, lambda: self.view.set_status("Delete failed."))
+                self.view.after(0, self.view.show_error, "Error", str(e))
+                self.view.after(0, self.view.set_status, "Delete failed.")
 
         def _thread_target() -> None:
             asyncio.run(_async_task())
@@ -183,8 +183,8 @@ class RagPresenter:
 
             except Exception as e:
                 logger.error(f"Upload failed: {e}")
-                self.view.after(0, lambda: self.view.show_error("Upload Failed", str(e)))
-                self.view.after(0, lambda: self.view.set_status("Upload failed."))
+                self.view.after(0, self.view.show_error, "Upload Failed", str(e))
+                self.view.after(0, self.view.set_status, "Upload failed.")
             finally:
                 self.view.after(0, lambda: self.view.set_upload_btn_state("normal"))
 
@@ -238,7 +238,7 @@ class RagPresenter:
 
             except Exception as e:
                 logger.error(f"Failed to load files: {e}")
-                self.view.after(0, lambda: self.view.set_status(f"Error loading files: {e}"))
+                self.view.after(0, self.view.set_status, f"Error loading files: {e}")
 
         def _thread_target() -> None:
             asyncio.run(_async_task())
@@ -278,9 +278,9 @@ class RagPresenter:
                 self.view.after(0, lambda: self.on_delete_success(store_id))
             except Exception as e:
                 logger.error(f"Deletion failed: {e}")
-                self.view.after(0, lambda: self.view.show_error("Deletion Failed", str(e)))
-                self.view.after(0, lambda: self.view.set_status("Deletion failed."))
-                self.view.after(0, lambda: self.view.set_delete_file_btn_state("normal"))
+                self.view.after(0, self.view.show_error, "Deletion Failed", str(e))
+                self.view.after(0, self.view.set_status, "Deletion failed.")
+                self.view.after(0, self.view.set_delete_file_btn_state, "normal")
 
         def _thread_target() -> None:
             asyncio.run(_async_task())

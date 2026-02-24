@@ -81,7 +81,8 @@ class TestMainApplication:
                 
                 # 2. Verify Fallback Root Creation (since _default_root was None)
                 # It should create a Tk instance and withdraw (hide) it
-                MockTk.assert_called_once()
+                # MockTk is called once in show_splash and once here.
+                assert MockTk.call_count == 2
                 MockTk.return_value.withdraw.assert_called_once()
                 
                 # 3. Verify User Alert
@@ -108,8 +109,9 @@ class TestMainApplication:
                  with pytest.raises(SystemExit):
                      main.main()
                  
-                 # Should NOT create new root because one exists
-                 MockTk.assert_not_called()
+                 # Should NOT create new root in exception handler because one exists
+                 # However, it IS created once in show_splash()
+                 MockTk.assert_called_once()
                  
                  # Should still show error
                  mock_showerror.assert_called()

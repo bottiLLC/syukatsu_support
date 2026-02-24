@@ -43,7 +43,7 @@ class AppConfig:
         API_MAX_RETRIES (int): Number of retries for failed API calls.
     """
 
-    APP_VERSION: str = "v1.0.0"
+    APP_VERSION: str = "v1.01"
 
     # Default settings to enforce on startup (Safety & Cost management)
     DEFAULT_MODEL: str = "gemini-3.1-pro-preview"

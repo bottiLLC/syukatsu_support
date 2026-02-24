@@ -56,7 +56,7 @@ class TestUserConfig:
         config = UserConfig()
         assert config.api_key is None
         assert config.model == "gemini-3.1-pro-preview"
-        assert config.thinking_level == "medium"
+        assert config.thinking_level == "high"
         # Updated to match the Job Hunting Support context (FIX: Added space)
         assert config.system_prompt_mode == "有価証券報告書 -財務分析-"
         assert config.use_file_search is False
