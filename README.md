@@ -6,71 +6,74 @@ OpenAIの最新API (`/responses` エンドポイント) と連携し、履歴書
 ## 主な機能
 
 1. **企業分析アシスタント**
-   - OpenAIモデル（GPT-5.2等）による高度な推論（Reasoning Effort対応）。
-   - 用途に応じた複数のシステムプロンプト（履歴書作成、面接対策、技術面接シミュレーション）をワンタッチで切り替え。
+    - OpenAIの最新アーキテクチャモデル（`gpt-5.2` 等）による高度な推論（Reasoning Effort対応）。
+    - 履歴書作成支援、面接対策、有報比較など、用途に応じた複数のシステムプロンプトをワンタッチで切り替え。
 2. **ナレッジベース管理 (RAG)**
-   - 企業のAnnual Reportsや有価証券報告書（PDF）をVector Storeへアップロード。
-   - `file_search` ツールを通じたセキュアかつ精度の高いドキュメント参照による回答生成。
-   - Vector Storeとそれに紐づくファイル群をGUIから直接管理（作成、名前変更、削除、アップロード）。
+    - 企業のAnnual Reportsや有価証券報告書（PDF/TXT等）をVector Storeへアップロード。
+    - `file_search` ツールを通じたセキュアかつ精度の高いドキュメント参照による回答生成。
+    - Vector Storeとそれに紐づくファイル群をGUIから直接管理（作成、名前変更、削除、アップロード）。
 3. **コスト計算と可視化**
-   - APIリクエストのトークン使用量を元に、リアルタイムで概算コスト（USD）を計算してステータスバーに表示。
+    - APIリクエストのトークン使用量を元に、リアルタイムで概算コスト（USD）を計算してステータスバーに表示。
 
-## アーキテクチャ
+## アーキテクチャ (The Phoenix Protocol)
 
-本アプリケーションは、クリーンアーキテクチャの思想を取り入れ、さらにUI層においては**MVP (Model-View-Presenter)** パターンを採用しています。これにより、Tkinter（GUI）とビジネスロジックが完全に分離され、UIなしでの単体テストが可能となっています。
+本アプリケーションは、**State-Driven Architecture (状態駆動型アーキテクチャ)** を採用し、UI層とビジネスロジック・インフラストラクチャ層を完全に分離しています。これにより、高い保守性と耐障害性（Resilience）を実現しています。
 
 ```text
 src/
-├── config/             # 環境変数、ユーザー設定 (app_config.py, dependencies.py 等)
-├── core/               # ビジネスロジック、データモデル
-│   ├── base.py         # AsyncOpenAI通信の基盤クラス
-│   ├── errors.py       # API例外処理とエラーメッセージの日本語化定義（UI例外検知）
-│   ├── models.py       # Pydantic V2 スキーマ (ユーザー入力/APIストリームレスポンスの厳密な型定義)
-│   ├── pricing.py      # トークン単価テーブル
+├── app.py              # アプリケーションのエントリーポイント
+├── state.py            # (AppState) アプリケーションの状態管理、ビジネスロジック、非同期スレッド管理
+├── ui.py               # メインウィンドウ (Tkinter) の純粋なUIレイアウト宣言
+├── rag_ui.py           # RAG管理画面 (Tkinter) の純粋なUIレイアウト宣言
+├── models.py           # Pydantic V2 スキーマ (ユーザー設定、API入出力の厳密な型定義)
+├── styles.py           # UIフォントやカラー設定
+├── infrastructure/     # インフラ層 (外部依存関係)
+│   ├── openai_client.py # AsyncOpenAI を用いたAPI通信、ストリーミング、RAG管理
+│   └── security.py      # Fernet を用いた API Key の暗号化・復号、設定の永続化
+├── core/               # コアロジック (UI/インフラに依存しない)
+│   ├── errors.py       # APIエラーハンドリング・ユーザー向けメッセージ変換
+│   ├── pricing.py      # トークン単価算定のロジック
 │   ├── prompts.py      # システムプロンプト定義
-│   ├── services.py     # OpenAI API 通信 (`/responses`エンドポイント API), コスト計算
-│   └── rag_services.py # Vector Store と File API の操作
-├── ui/                 # コアUIコンポーネント (MVPパターン)
-│   ├── main_model.py   # アプリ全体のステータス・設定の保持
-│   ├── main_view.py    # Tkinter メインウィンドウ構築 (純粋なView)
-│   ├── main_presenter.py # ViewとModelを繋ぎ、バックグラウンド処理を管理
-│   ├── gui.py          # 上記3つを結合するメインファクトリ (エントリーポイント)
-│   ├── rag_model.py    # RAG管理画面のステータス保持
-│   ├── rag_view.py     # RAG管理画面 (tk.Toplevel) の構築
-│   ├── rag_presenter.py  # RAG UIの非同期処理とAPI呼び出しを仲介
-│   └── styles.py       # アプリケーション全体のUIスタイリング
-└── tests/              # pytest / pytest-asyncio による非同期ユニットテスト/統合テスト
+│   ├── resilience.py   # Tenacityを用いた非同期リトライデコレータ
+│   └── logger.py       # Structlogを用いたログ可視化・構造化設定
+└── tests/              # pytest / pytest-asyncio による各コンポーネントのテスト
 ```
+
+### 重要な設計原則
+- **Trinitarian Integrity**: ビジネスロジックと外部通信はすべて `pydantic` モデルを用いた強固な検証を経由します。
+- **Resilience**: 一過性のネットワークエラーやレートリミットに対しては `@resilient_api_call` により自動指数バックオフが行われます。
+- **No Blocking**: API通信はすべて `asyncio` を用いた別スレッドから実行され、TkinterのメインUIループを決してブロックしません。
 
 ## 必要要件
 
-- **OS**: Windows
-- **Python**: 3.13推奨
-- **API Key**: `OPENAI_API_KEY` (アプリ内から設定、または環境変数)
+- **OS**: Windows (開発環境)
+- **Python**: 3.13 推奨
+- **Package Manager**: [uv](https://github.com/astral-sh/uv) (高速なPythonパッケージ/仮想環境管理ツール)
+- **API Key**: `OPENAI_API_KEY` (アプリ内から設定して暗号化保存)
 
 ## インストールと起動
 
-```bash
-# 仮装環境の作成と有効化
-python -m venv .venv
-.venv\Scripts\activate
+本プロジェクトでは、依存関係と環境の管理に **uv** を使用します。これにより、環境の構築と実行が完全に自動化・高速化されます。
 
-# 依存パッケージのインストール
-pip install -r requirements.txt
-
-# アプリケーションの起動
-python main.py
+```powershell
+# 初回セットアップ & アプリケーションの起動
+uv run src/app.py
 ```
+> ※ `uv run` は自動的に仮想環境を構築し、`pyproject.toml` や `uv.lock` に基づいて依存関係を解決してからアプリを起動します。手動で `pip install` などを実行する必要はありません。
 
 ## テストの実行
 
-Mvpパターンの導入により、`tests/test_mvp_presenters.py` にて、Tkinterの画面に依存しない純粋な状態管理とバックグラウンド通信のテストが可能です。
+非同期処理を用いたビジネスロジックおよびモデル定義に対するテストを実行します。
 
-```bash
-pytest tests/ -v
+```powershell
+uv run pytest tests/ -v
 ```
 
 ## ロギングとデータ保存
 
-- **設定ファイル**: アプリを実行するとプロジェクトルートに `config.json` が生成されます。APIキーや最後に選択したモデル情報などが安全に保存されます。
-- **ログのテキスト保存**: アプリ画面の「保存 💾」ボタンから、タイムスタンプ付きのテキストファイルとして応答結果（分析レポート）をローカルに書き出すことができます。
+- **設定ファイル**:
+    APIキーや最後に選択したモデル情報などは暗号化処理され、プロジェクトルートの `config.json` (公開非推奨) および `.secret.key` (鍵ファイル) に安全に保存されます。
+- **ログのテキスト保存**:
+    アプリ画面の「保存 💾」ボタンから、タイムスタンプ付きのテキストファイルとして応答結果（分析レポート）をローカルに書き出すことができます。
+- **構造化ロギング**:
+    コンソール出力は `structlog` を経由し、障害調査が容易なタイムスタンプ付きの詳細なコンテキスト（変数状態）を含んで記録されます。

@@ -3,5 +3,17 @@
   "tests/test_pricing.py::TestPricingTable::test_price_accuracy[o3-pro-20.0-80.0-0.0]": true,
   "tests/test_rag_window.py::TestRAGManagementWindow::test_initial_load": true,
   "tests/test_rag_window.py::TestRAGManagementWindow::test_selection_update_button_state": true,
-  "tests/test_rag_window.py::TestRAGManagementWindow::test_delete_store_safety_check": true
+  "tests/test_rag_window.py::TestRAGManagementWindow::test_delete_store_safety_check": true,
+  "test_stream2.py": true,
+  "tests/test_app_config.py": true,
+  "tests/test_base.py": true,
+  "tests/test_dependencies.py": true,
+  "tests/test_logging_config.py": true,
+  "tests/test_main.py": true,
+  "tests/test_mvp_presenters.py": true,
+  "tests/test_prompts.py": true,
+  "tests/test_rag_services.py": true,
+  "tests/test_services.py": true,
+  "tests/test_styles.py": true,
+  "tests/test_types.py": true
 }
