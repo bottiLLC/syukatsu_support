@@ -1,22 +1,23 @@
 """
-Data models for the OpenAI Responses API.
+OpenAI Responses API 用のデータモデル。
 
-This module defines Pydantic models that strictly adhere to the `openapi.documented.yml`
-specifications for the `/v1/responses` endpoint. It handles validation, serialization,
-and normalization of request payloads and response stream events.
+このモジュールは `/v1/responses` エンドポイントの `openapi.documented.yml` 仕様に
+厳密に従うPydanticモデルを定義します。リクエストペイロードやレスポンスのストリームイベントの
+バリデーション、シリアライズ、正規化を処理します。
 """
 
 from typing import List, Literal, Optional, Union, Any
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 # --- Input Message Models (Strict Schema) ---
 
 
 class InputTextContent(BaseModel):
     """
-    Represents the text content of an input message.
+    入力メッセージのテキストコンテンツを表します。
     Schema: {"type": "input_text", "text": "..."}
     """
+    model_config = ConfigDict(extra='forbid')
 
     type: Literal["input_text"] = "input_text"
     text: str
@@ -24,9 +25,10 @@ class InputTextContent(BaseModel):
 
 class InputMessage(BaseModel):
     """
-    Represents a message in the conversation history.
+    会話履歴内のメッセージを表します。
     Schema: {"role": "user" | "assistant", "content": [...]}
     """
+    model_config = ConfigDict(extra='forbid')
 
     role: Literal["user", "assistant"]
     content: List[InputTextContent]
@@ -37,9 +39,10 @@ class InputMessage(BaseModel):
 
 class FileSearchTool(BaseModel):
     """
-    Definition of the File Search tool.
-    Matches the flat structure expected by the application tests.
+    File Search ツールの定義。
+    アプリのテストで想定されるフラットな構造に一致させます。
     """
+    model_config = ConfigDict(extra='forbid')
 
     type: Literal["file_search"] = "file_search"
     vector_store_ids: List[str] = Field(default_factory=list)
@@ -47,8 +50,9 @@ class FileSearchTool(BaseModel):
 
 class WebSearchTool(BaseModel):
     """
-    Definition of the Web Search tool (Preview).
+    Web Search ツールの定義 (プレビュー)。
     """
+    model_config = ConfigDict(extra='forbid')
 
     type: Literal["web_search_preview"] = "web_search_preview"
     search_context_size: Optional[Literal["low", "medium", "high"]] = "medium"
@@ -59,8 +63,9 @@ class WebSearchTool(BaseModel):
 
 class ReasoningOptions(BaseModel):
     """
-    Configuration for the model's reasoning effort.
+    モデルの推論強度 (reasoning effort) の設定。
     """
+    model_config = ConfigDict(extra='forbid')
 
     # Updated to match 'ReasoningEffort' in openapi.documented.yml
     effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"] = "medium"
@@ -71,9 +76,10 @@ class ReasoningOptions(BaseModel):
 
 class ResponseRequestPayload(BaseModel):
     """
-    The main payload for `client.responses.create`.
-    Strictly follows the InputParam schema.
+    `client.responses.create` 用のメインペイロード。
+    InputParam スキーマに厳密に従います。
     """
+    model_config = ConfigDict(extra='forbid')
 
     model: str
     input: List[InputMessage]
@@ -87,9 +93,9 @@ class ResponseRequestPayload(BaseModel):
     @classmethod
     def normalize_input(cls, v: Any) -> List[Any]:
         """
-        Normalizes the input field.
-        If a simple string is provided (from GUI), converts it to the
-        required List[InputMessage] structure with 'user' role.
+        入力フィールドを正規化します。
+        単純な文字列が提供された場合（GUIから）、'user' ロールを持つ
+        必要な List[InputMessage] 構造へと変換します。
         """
         if isinstance(v, str):
             return [
@@ -105,19 +111,20 @@ class ResponseRequestPayload(BaseModel):
 
 
 class StreamTextDelta(BaseModel):
-    """Represents a text chunk from the stream (response.output_text.delta)."""
-
+    """ストリームからのテキストチャンク (response.output_text.delta) を表します。"""
+    model_config = ConfigDict(extra='forbid')
     delta: str
 
 
 class StreamResponseCreated(BaseModel):
-    """Represents the creation of a response (response.created)."""
-
+    """レスポンスの生成 (response.created) を表します。"""
+    model_config = ConfigDict(extra='forbid')
     response_id: str
 
 
 class StreamUsage(BaseModel):
-    """Represents token usage statistics (response.completed)."""
+    """トークン使用量の統計情報 (response.completed) を表します。"""
+    model_config = ConfigDict(extra='forbid')
 
     input_tokens: int = 0
     output_tokens: int = 0
@@ -126,10 +133,10 @@ class StreamUsage(BaseModel):
 
 
 class StreamError(BaseModel):
-    """Represents an error occurring during the stream."""
-
+    """ストリーム中に発生したエラーを表します。"""
+    model_config = ConfigDict(extra='forbid')
     message: str
 
 
-# Union type for all possible stream results yielded by LLMService
+# LLMService が生成する可能性があるすべてのストリーム結果の Union 型
 StreamResult = Union[StreamTextDelta, StreamResponseCreated, StreamUsage, StreamError]

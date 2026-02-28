@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 import threading
 import queue
+import structlog
 import logging
 import os
 import sys
@@ -22,16 +23,16 @@ from tenacity import (
     before_sleep_log
 )
 
-# --- 1. Configuration Layer ---
+# --- 1. 設定レイヤー (Configuration Layer) ---
 @dataclass(frozen=True)
 class AppConfig:
-    """Centralized configuration management."""
+    """中央集権的な設定管理。"""
     API_KEY: str
     MODEL_ID: str = "gpt-5.2"
 
     @classmethod
     def from_env(cls) -> "AppConfig":
-        # Fail fast strategy
+        # フェイルファスト戦略
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             # テスト実行時や開発用にダミーキーを許容する場合はここを調整
@@ -39,7 +40,7 @@ class AppConfig:
             pass
         return cls(API_KEY=api_key or "dummy-key-for-test")
 
-# --- 2. Data Models (Pydantic V2) ---
+# --- 2. データモデル (Data Models / Pydantic V2) ---
 class InputContent(BaseModel):
     type: Literal["input_text"] = "input_text"
     text: str
@@ -50,16 +51,16 @@ class InputItem(BaseModel):
     content: List[InputContent]
 
 class GenerationPayload(BaseModel):
-    """Schema for /v1/responses"""
+    """/v1/responses 用のスキーマ"""
     model_config = ConfigDict(populate_by_name=True, extra='forbid')
     
     model: str
     instructions: str = "You are a helpful assistant."
     input: List[InputItem]
 
-# --- 3. Service Layer (Business Logic) ---
+# --- 3. サービスレイヤー (Business Logic) ---
 class BackendService:
-    """Handles API interactions. Knows NOTHING about Tkinter."""
+    """APIとのやり取りを処理します。Tkinterについては何も知りません。"""
     def __init__(self, config: AppConfig):
         self.client = OpenAI(api_key=config.API_KEY)
         self.model_id = config.MODEL_ID
@@ -68,17 +69,17 @@ class BackendService:
         retry=retry_if_exception_type((RateLimitError, APIConnectionError)),
         wait=wait_random_exponential(multiplier=1, max=60),
         stop=stop_after_attempt(5),
-        before_sleep=before_sleep_log(logging.getLogger(__name__), logging.INFO)
+        before_sleep=before_sleep_log(structlog.get_logger(__name__), logging.INFO)
     )
     def fetch_response(self, payload: GenerationPayload) -> str:
         """
-        Synchronous API call with Tenacity retries.
-        Executed in a WORKER THREAD.
+        Tenacityリトライを利用した同期API呼び出し。
+        ワーカースレッド（WORKER THREAD）で実行されます。
         """
         data = payload.model_dump(exclude_none=True)
         
-        # API Call (max_retries=0 to use Tenacity)
-        # Using client.responses.create as specified
+        # API呼び出し (Tenacityを使用するため max_retries=0)
+        # 指定通り client.responses.create を使用
         try:
             response = self.client.responses.create(
                 **data,
@@ -86,16 +87,16 @@ class BackendService:
             )
             return response.output[0].message.content
         except AttributeError:
-            # Fallback/Mock logic if specific SDK version lacks 'responses'
-            return "Mock Response: API endpoint /v1/responses accessed (Stub)."
+            # 特定のSDKバージョンに'responses'がない場合のフォールバック/モックロジック
+            return "モックレスポンス: APIエンドポイント /v1/responses にアクセスしました（スタブ）。"
 
-# --- 4. GUI Application (Presentation Layer) ---
+# --- 4. GUIアプリケーション (Presentation Layer) ---
 class SyukatsuSupportApp(tk.Tk):
     def __init__(self, config: Optional[AppConfig] = None):
         super().__init__()
         self.config = config if config else AppConfig.from_env()
         
-        self.title("Syukatsu Support AI (Refactored)")
+        self.title("就活サポートAI (Refactored)")
         self.geometry("700x600")
         
         self.service = BackendService(self.config)
@@ -111,11 +112,11 @@ class SyukatsuSupportApp(tk.Tk):
             self.style.theme_use('clam')
 
     def _setup_ui(self):
-        # Chat History (ScrolledText)
+        # チャット履歴 (ScrolledText)
         self.txt_history = scrolledtext.ScrolledText(self, state='disabled', height=20)
         self.txt_history.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
-        # Input Area
+        # 入力エリア
         frame_input = tk.Frame(self)
         frame_input.pack(padx=10, pady=(0, 10), fill=tk.X)
 
@@ -123,7 +124,7 @@ class SyukatsuSupportApp(tk.Tk):
         self.txt_input.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
         self.txt_input.bind("<Return>", lambda event: self.on_send())
 
-        self.btn_send = tk.Button(frame_input, text="Send", command=self.on_send)
+        self.btn_send = tk.Button(frame_input, text="送信", command=self.on_send)
         self.btn_send.pack(side=tk.RIGHT)
 
     def append_history(self, role: str, text: str):
@@ -135,21 +136,22 @@ class SyukatsuSupportApp(tk.Tk):
 
     def on_send(self):
         user_text = self.txt_input.get()
-        if not user_text: return
+        if not user_text:
+            return
 
         try:
-            # 1. Validate Input
+            # 1. 入力のバリデーション
             payload = GenerationPayload(
                 model=self.config.MODEL_ID,
                 input=[InputItem(content=[InputContent(text=user_text)])]
             )
             
-            # 2. Update UI
+            # 2. UIの更新
             self.append_history("User", user_text)
             self.txt_input.delete(0, tk.END)
             self.set_ui_state("disabled")
             
-            # 3. Start Thread
+            # 3. スレッドの開始
             thread = threading.Thread(
                 target=self._run_worker,
                 args=(payload,),
@@ -157,16 +159,16 @@ class SyukatsuSupportApp(tk.Tk):
             )
             thread.start()
             
-            # 4. Start Polling
+            # 4. ポーリングの開始
             self.after(100, self.process_queue)
 
         except ValidationError as e:
-            messagebox.showerror("Validation Error", str(e))
+            messagebox.showerror("バリデーションエラー", str(e))
         except Exception as e:
-            messagebox.showerror("Error", str(e))
+            messagebox.showerror("エラー", str(e))
 
     def _run_worker(self, payload):
-        """Background thread execution."""
+        """バックグラウンドスレッドの実行。"""
         try:
             result = self.service.fetch_response(payload)
             self.queue.put(("success", result))
@@ -174,21 +176,21 @@ class SyukatsuSupportApp(tk.Tk):
             self.queue.put(("error", str(e)))
 
     def process_queue(self):
-        """Main thread polling loop."""
+        """メインスレッドのポーリングループ。"""
         try:
-            while True: # Process all available messages
+            while True: # 利用可能なすべてのメッセージを処理
                 msg_type, content = self.queue.get_nowait()
                 
                 if msg_type == "success":
                     self.append_history("AI", content)
                 elif msg_type == "error":
-                    messagebox.showerror("API Error", content)
-                    self.append_history("System", f"Error: {content}")
+                    messagebox.showerror("APIエラー", content)
+                    self.append_history("System", f"エラー: {content}")
                 
                 self.set_ui_state("normal")
                 
         except queue.Empty:
-            # Keep polling if UI is still disabled
+            # UIがまだ無効になっている場合はポーリングを継続
             if self.btn_send['state'] == 'disabled':
                 self.after(100, self.process_queue)
 
@@ -197,9 +199,12 @@ class SyukatsuSupportApp(tk.Tk):
         self.txt_input.config(state=state)
 
 if __name__ == "__main__":
+    import logging
     logging.basicConfig(level=logging.INFO)
     try:
         app = SyukatsuSupportApp()
         app.mainloop()
     except Exception as e:
-        print(f"STARTUP ERROR: {e}", file=sys.stderr)
+        import structlog
+        structlog.get_logger().error("起動エラー", error=str(e))
+        raise

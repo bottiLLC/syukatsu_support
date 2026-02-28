@@ -1,3 +1,7 @@
+"""
+MVP Presenters（MainPresenterとRagPresenter）のユニットテスト。
+"""
+
 import pytest
 import queue
 import threading
@@ -34,27 +38,27 @@ def mock_main_model():
 
 @pytest.mark.asyncio
 async def test_main_presenter_initialization(mock_main_view, mock_main_model):
-    """Test that MainPresenter initializes without UI dependencies and binds correctly."""
+    """MainPresenterがUIの依存関係なしに初期化され、正しくバインドされることをテストします。"""
     with patch("src.ui.main_presenter.VectorStoreService") as MockVS, \
          patch("src.ui.main_presenter.FileService") as MockFS:
         
         presenter = MainPresenter(mock_main_view, mock_main_model)
         
-        # Verify callbacks are bound
+        # コールバックがバインドされていることを検証
         assert mock_main_view.on_start_generation_callback == presenter.handle_start_generation
         assert mock_main_view.on_close_callback == presenter.handle_close
         
-        # Verify initial state applied
+        # 初期状態が適用されていることを検証
         mock_main_view.set_system_prompt.assert_called_once()
         
-        # Verify services initialized
+        # サービスが初期化されていることを検証
         MockVS.assert_called_once_with("test_key")
         MockFS.assert_called_once_with("test_key")
 
 
 @pytest.mark.asyncio
 async def test_main_presenter_start_generation(mock_main_view, mock_main_model):
-    """Test that starting generation updates model state and view appropriately."""
+    """生成を開始するとモデルの状態とビューが適切に更新されることをテストします。"""
     with patch("src.ui.main_presenter.VectorStoreService"), \
          patch("src.ui.main_presenter.FileService"):
         
@@ -65,7 +69,7 @@ async def test_main_presenter_start_generation(mock_main_view, mock_main_model):
         
         presenter.handle_start_generation()
         
-        # Verify generation state updated on View and Model
+        # 生成状態がビューとモデルで更新されていることを検証
         assert mock_main_model.is_generating is True
         mock_main_view.set_generation_state.assert_called_with(True)
         mock_main_view.append_log.assert_called()
@@ -92,10 +96,10 @@ def mock_rag_model():
 
 @pytest.mark.asyncio
 async def test_rag_presenter_refresh(mock_rag_view, mock_rag_model):
-    """Test that RagPresenter triggers background fetch of vector stores."""
+    """RagPresenterがVector Storeのバックグラウンドフェッチをトリガーすることをテストします。"""
     presenter = RagPresenter(mock_rag_view, mock_rag_model)
     
-    # Callback binding check
+    # コールバックバインディングのチェック
     assert mock_rag_view.on_refresh_stores_callback == presenter.refresh_stores_async
     assert mock_rag_view.on_create_store_callback == presenter.create_store
     

@@ -1,35 +1,36 @@
 """
-Job Hunting Support Application Entry Point.
+就活サポートアプリケーションのエントリーポイント。
 
-This module serves as the bootstrap script for the SyukatsuSupportApp.
-It orchestrates logging setup, dependency verification, and GUI initialization.
+このモジュールはSyukatsuSupportAppのブートストラップスクリプトとして機能します。
+ロギングの設定、依存関係の検証、GUIの初期化をオーケストレーションします。
 """
 
-import logging
 import sys
 import tkinter as tk
 from tkinter import messagebox
+
+import structlog
 
 # Local imports
 from src.config.dependencies import check_dependencies
 from src.config.logging_config import setup_logging
 
 # Initialize logger
-logger = logging.getLogger(__name__)
+log = structlog.get_logger()
 
 
 def main() -> None:
     """
-    Main execution routine.
+    メイン実行ルーチン。
 
-    Orchestrates the application startup sequence:
-    1. Configures logging.
-    2. Checks for required dependencies.
-    3. Launches the main GUI application.
+    アプリケーションの起動シーケンスをオーケストレーションします：
+    1. ロギングを設定します。
+    2. 必要な依存関係をチェックします。
+    3. メインGUIアプリケーションを起動します。
     """
     # 1. Setup Logging
     setup_logging()
-    logger.info("Application starting...")
+    log.info("Application starting...")
 
     # 2. Check Dependencies
     # Must be done before importing modules that use these dependencies
@@ -41,12 +42,12 @@ def main() -> None:
         # pylint: disable=import-outside-toplevel
         from src.ui.gui import SyukatsuSupportApp
 
-        logger.info("Initializing GUI...")
+        log.info("Initializing GUI...")
         app = SyukatsuSupportApp()
         app.mainloop()
 
     except Exception as e:
-        logger.critical(f"Application failed to start: {e}", exc_info=True)
+        log.critical(f"Application failed to start: {e}", exc_info=True)
 
         # Fallback error reporting using a temporary Tk instance if the app crashed
         # before the main window could handle the error.

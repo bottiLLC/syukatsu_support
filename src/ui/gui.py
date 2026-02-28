@@ -1,33 +1,32 @@
 """
-Job Hunting Support GUI Application (MVP Factory).
+就活サポートGUIアプリケーション（MVPファクトリー）。
 
-This module connects the components of the Main Window MVP pattern:
+このモジュールはメインウィンドウのMVPパターンのコンポーネントを接続します：
 - MainModel
 - MainView
 - MainPresenter
 """
 
-import logging
+import structlog
 
 from src.ui.main_model import MainModel
 from src.ui.main_view import MainView
 from src.ui.main_presenter import MainPresenter
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger()
 
 class SyukatsuSupportApp:
     """
-    Main application wrapper connecting MVP components.
-    Provides the same interface as the old tk.Tk subclass
-    for backwards compatibility in main.py.
+    MVPコンポーネントを接続するメインアプリケーションのラッパー。
+    main.pyでの後方互換性のために、古いtk.Tkサブクラスと同じインターフェースを提供します。
     """
 
     def __init__(self) -> None:
-        logger.info("Initializing MVP Architecture... Creating Model -> View -> Presenter")
+        log.info("MVPアーキテクチャの初期化中... Model -> View -> Presenter を作成")
         self.model = MainModel()
         self.view = MainView(self.model.user_config)
         self.presenter = MainPresenter(self.view, self.model)
 
     def mainloop(self) -> None:
-        """Starts the Tkinter main loop."""
+        """Tkinterのメインループを開始します。"""
         self.view.mainloop()

@@ -1,10 +1,9 @@
 """
-System prompts definition module.
+システムプロンプト定義モジュール。
 
-This module contains the static system instructions used by the AI model
-for different analysis modes. It defines the specific prompts for
-Financial Analysis, Human Capital Analysis, Entry Sheet (ES) Strategy,
-and Competitor/Historical Comparison scenarios.
+このモジュールには、AIモデルが各種分析モードで使用する静的なシステム指示文が含まれています。
+財務分析、人的資本分析、エントリーシート（ES）戦略、
+および競合・経年比較分析シナリオのための特定のプロンプトを定義します。
 """
 
 from typing import Dict, Final
@@ -189,32 +188,33 @@ Your mission is to compare the specific companies (or specific years of the same
 ### OBJECTIVE
 **CORE INSTRUCTION 1 (User-Driven Comparison):** Identify the companies or years the user explicitly wants to compare from their input. Extract data ONLY relevant to those specified targets from the Vector Store.
 **CORE INSTRUCTION 2 (Strict Isolation):** You MUST strictly differentiate the data. NEVER mix up the metrics of the comparison targets.
-**CORE INSTRUCTION 3 (Evidence):** You must cite the source (Company Name/Year, Page Number) for every metric you quote.
+**CORE INSTRUCTION 3 (Evidence):** You must cite the source using the exact format: [ファイル名, 項目名, ページ数] for every data point or metric you quote. Do not omit this. (e.g., [株式会社サンプル_2023.pdf, 従業員の状況, 15ページ])
 
 ### OUTPUT CONSTRAINTS
-1.  **Language:** Japanese (Professional, engaging, and critical).
-2.  **Volume:** 4,000 to 6,000 characters.
-3.  **Format:** Use Markdown. Structure as a "Comparative Battle (Round system)".
+1.  **Language & Tone:** Japanese. Use a polite, persuasive, and highly professional tone. Do NOT use sensational, provocative, or casual language (e.g., avoid words like "ガチ" or "対決").
+2.  **Formatting Restrictions:** Do NOT use emojis or decorative symbols (such as 💬, ★, 💡, ⚠️, etc.). Use standard text and proper Markdown structure only.
+3.  **Volume:** 4,000 to 6,000 characters.
+4.  **Format:** Use Markdown.
 
-### REPORT STRUCTURE (The 3 Rulers of Comparison)
+### REPORT STRUCTURE (Comparative Analysis)
 
-**【ROUND 1：稼ぎの構造対決】 (Segment & Revenue Structure)**
+**1. 収益構造の比較分析 (Segment & Revenue Structure)**
 - Compare "Segment Information" (セグメント情報).
 - What is the actual core business (biggest profit driver) for each?
 - Are they growing steadily over the past 5 years (主要な経営指標等の推移)?
 
-**【ROUND 2：未来への投資対決】 (Investment for the Future)**
+**2. 将来投資の比較分析 (Investment for the Future)**
 - Compare "R&D Expenses" (研究開発活動) and "Capital Expenditures" (設備投資).
-- Are they investing aggressively in the future, or just hoarding cash/paying dividends?
+- Are they investing aggressively in the future, or primarily accumulating internal reserves?
 
-**【ROUND 3：従業員の消耗度対決】 (Human Capital & Burnout Check)**
+**3. 人的資本・就労環境の比較分析 (Human Capital & Working Environment)**
 - Cross-analyze "Average Age" (平均年齢), "Average Salary" (平均年間給与), and "Average Years of Service" (平均勤続年数) from the Employee Information section (従業員の状況).
-- Interpret the company culture: Is it a "Lifetime Employment" model, a "High-turnover/High-reward" model, or "Exploitative"?
+- Interpret the company culture objectively based on these metrics.
 
-**【最終結論：お前はどっちに向いているか？】 (Final Verdict & Fit)**
-- Summarize the distinct characteristics of each target based on the 3 rounds.
-- Explicitly advise the student: "If you value [X], choose [Target A]. If you value [Y], choose [Target B]."
-- Provide a strategic interview question (逆質問) based on the differences found to impress the interviewer.
+**4. 最終結論と適性評価 (Final Verdict & Fit)**
+- Summarize the distinct characteristics of each target based on the previous sections.
+- Explicitly advise the student objectively: "If you value [X], choose [Target A]. If you value [Y], choose [Target B]."
+- Provide a strategic interview question (逆質問) based on the differences found.
 """
 
 # --- Exported Configuration ---

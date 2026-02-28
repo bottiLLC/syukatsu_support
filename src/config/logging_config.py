@@ -1,29 +1,36 @@
 """
-Logging configuration module for the Job Hunting Support Application.
+就活サポートアプリのロギング設定モジュール。
 
-This module handles the setup of the application-wide logging configuration.
-Separating this allows for easier modifications to log formats or handlers
-(e.g., adding file logging) without modifying the main entry point.
+このモジュールはアプリケーション全体のロギング設定を処理します。
+これを分離することで、メインのエントリポイントを変更することなく、
+ログの形式やハンドラー（例：ファイルロギングの追加）の変更を容易にします。
 """
 
 import logging
-
-# Logging configuration constants
-LOG_LEVEL = logging.INFO
-LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-
+import structlog
+import sys
 
 def setup_logging() -> None:
     """
-    Configures the root logger for the application.
-
-    This function initializes the logging system with the standard format,
-    date format, and log level defined in the module constants.
-    It uses `logging.basicConfig` to ensure a default StreamHandler is attached.
+    structlogを使用してアプリケーションのルートロガーを設定します。
+    
+    これにより、観測性（Observability）向上のための構造化ロギングが初期化されます。
     """
-    logging.basicConfig(
-        level=LOG_LEVEL,
-        format=LOG_FORMAT,
-        datefmt=DATE_FORMAT,
+    # WindowsコンソールでのUnicodeEncodeErrorを防ぐため、標準出力をUTF-8に強制
+    if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
+
+    structlog.configure(
+        processors=[
+            structlog.processors.add_log_level,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.dev.ConsoleRenderer(),
+        ],
+        wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
+        context_class=dict,
+        logger_factory=structlog.PrintLoggerFactory(),
+        cache_logger_on_first_use=False
     )

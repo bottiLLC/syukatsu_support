@@ -1,7 +1,7 @@
 {
-  "tests/test_gui.py::TestSyukatsuSupportApp::test_startup_initialization": true,
-  "tests/test_gui.py::TestSyukatsuSupportApp::test_start_generation_flow": true,
-  "tests/test_gui.py::TestSyukatsuSupportApp::test_process_queue_ui_updates": true,
-  "tests/test_gui.py::TestSyukatsuSupportApp::test_rag_tool_configuration": true,
-  "tests/test_gui.py::TestSyukatsuSupportApp::test_api_key_update": true
+  "tests/test_pricing.py::TestPricingTable::test_essential_models_exist[o3-pro]": true,
+  "tests/test_pricing.py::TestPricingTable::test_price_accuracy[o3-pro-20.0-80.0-0.0]": true,
+  "tests/test_rag_window.py::TestRAGManagementWindow::test_initial_load": true,
+  "tests/test_rag_window.py::TestRAGManagementWindow::test_selection_update_button_state": true,
+  "tests/test_rag_window.py::TestRAGManagementWindow::test_delete_store_safety_check": true
 }

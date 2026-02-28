@@ -1,13 +1,12 @@
 """
-Unit tests for the service layer (LLMService and CostCalculator).
-Focuses on interactions with the OpenAI Responses API and cost estimation logic.
+サービス層（LLMServiceとCostCalculator）のユニットテスト。
+OpenAI Responses APIとのやり取りとコスト計算ロジックに焦点を当てています。
 """
 
-from unittest.mock import MagicMock, patch
-from typing import Any, List
+from unittest.mock import MagicMock, patch, AsyncMock
 
 import pytest
-from openai import APIConnectionError, RateLimitError, APITimeoutError, AuthenticationError
+from openai import APIConnectionError, RateLimitError
 
 from src.core.services import LLMService, CostCalculator
 from src.core.models import (
@@ -24,10 +23,10 @@ from src.core.pricing import PRICING_TABLE
 
 
 class TestCostCalculator:
-    """Tests for the CostCalculator utility class."""
+    """CostCalculatorユーティリティクラスのテスト。"""
 
     def test_calculate_known_model(self):
-        """Verifies cost calculation for a known model (e.g., gpt-4o)."""
+        """既知のモデル（例: gpt-4oなど）のコスト計算を確認します。"""
         # Create a dummy usage object
         usage = StreamUsage(
             input_tokens=1000,
@@ -47,7 +46,7 @@ class TestCostCalculator:
         assert "Tokens: 1500" in cost_str
 
     def test_calculate_unknown_model_fallback(self):
-        """Verifies that an unknown model falls back to default pricing (gpt-5.2)."""
+        """未知のモデルがデフォルトの価格設定（gpt-5.2）にフォールバックすることを確認します。"""
         usage = StreamUsage(
             input_tokens=1000,
             output_tokens=1000,
@@ -63,7 +62,7 @@ class TestCostCalculator:
         assert "Cost: $" in cost_str
 
     def test_calculate_with_caching(self):
-        """Verifies that cached tokens are calculated at a lower rate."""
+        """キャッシュされたトークンがより低いレートで計算されることを確認します。"""
         usage = StreamUsage(
             input_tokens=1000,
             output_tokens=0,
@@ -80,26 +79,32 @@ class TestCostCalculator:
 
 
 class TestLLMService:
-    """Tests for LLMService interactions with OpenAI API."""
+    """LLMServiceとOpenAI APIのやり取りのテスト。"""
+
+    @pytest.fixture(autouse=True)
+    def mock_sleep(self):
+        """Tenacityのリトライ待機（asyncio.sleep）をモックしてテストを高速化します。"""
+        with patch("asyncio.sleep", new_callable=AsyncMock) as m:
+            yield m
 
     @pytest.fixture
     def mock_client(self):
-        """Mocks the OpenAI client instance."""
-        # FIX: Patch src.core.base.OpenAI because LLMService inherits init from BaseOpenAIService
-        # defined in src.core.base, which is where the OpenAI class is imported and instantiated.
-        with patch("src.core.base.OpenAI") as mock_openai_cls:
-            mock_instance = MagicMock()
+        """OpenAIクライアントインスタンスをモックします。"""
+        # FIX: Patch src.core.base.AsyncOpenAI because LLMService inherits init from BaseOpenAIService
+        # defined in src.core.base, which is where the AsyncOpenAI class is imported and instantiated.
+        with patch("src.core.base.AsyncOpenAI") as mock_openai_cls:
+            mock_instance = AsyncMock()
             mock_openai_cls.return_value = mock_instance
             yield mock_instance
 
     @pytest.fixture
     def service(self, mock_client):
-        """Initializes LLMService with the mocked client."""
+        """モックされたクライアントでLLMServiceを初期化します。"""
         return LLMService(api_key="test-key")
 
     @pytest.fixture
     def valid_payload(self):
-        """Returns a valid ResponseRequestPayload."""
+        """有効なResponseRequestPayloadを返します。"""
         return ResponseRequestPayload(
             model="gpt-5.2",
             input="Test input",  # Will be normalized
@@ -107,29 +112,30 @@ class TestLLMService:
         )
 
     def _create_mock_event(self, event_type: str, **kwargs) -> MagicMock:
-        """Helper to create mock stream events."""
+        """モックおよびストリームイベントを作成するためのヘルパー。"""
         event = MagicMock()
         event.type = event_type
         for k, v in kwargs.items():
             setattr(event, k, v)
         return event
 
-    def test_stream_analysis_success(self, service, mock_client, valid_payload):
+    @pytest.mark.asyncio
+    async def test_stream_analysis_success(self, service, mock_client, valid_payload):
         """
-        Verifies a successful streaming session with text deltas and usage stats.
+        テキストのデルタと使用量統計を伴うストリーミングセッションが成功することを確認します。
         """
         # Setup mock stream events
         mock_events = [
             self._create_mock_event(
-                "response.created", 
+                "response.created",
                 response=MagicMock(id="resp_123")
             ),
             self._create_mock_event(
-                "response.output_text.delta", 
+                "response.output_text.delta",
                 delta="Hello "
             ),
             self._create_mock_event(
-                "response.output_text.delta", 
+                "response.output_text.delta",
                 delta="World"
             ),
             self._create_mock_event(
@@ -144,12 +150,14 @@ class TestLLMService:
                 )
             )
         ]
-        
+    
         # Configure client mock
-        mock_client.responses.create.return_value = iter(mock_events)
-
+        mock_stream = AsyncMock()
+        mock_stream.__aiter__.return_value = mock_events
+        mock_client.responses.create.return_value = mock_stream
+    
         # Execute
-        results = list(service.stream_analysis(valid_payload))
+        results = [result async for result in service.stream_analysis(valid_payload)]
 
         # Assertions
         assert len(results) == 4
@@ -177,59 +185,70 @@ class TestLLMService:
         assert isinstance(call_kwargs["input"], list)
         assert call_kwargs["input"][0]["role"] == "user"
 
-    def test_stream_analysis_api_connection_error(self, service, mock_client, valid_payload):
-        """Verifies handling of API connection errors."""
+    @pytest.mark.asyncio
+    async def test_stream_analysis_api_connection_error(self, service, mock_client, valid_payload):
+        """API接続エラーの処理を確認します。"""
         # Tenacity retry logic will catch this, retry, and eventually raise.
         # However, the service layer catches the raised exception and yields a StreamError.
         # We need to simulate the failure persisting across retries.
         mock_client.responses.create.side_effect = APIConnectionError(message="Connection failed", request=MagicMock())
 
-        results = list(service.stream_analysis(valid_payload))
+        results = [result async for result in service.stream_analysis(valid_payload)]
 
         # Expect one StreamError after retries are exhausted
         assert len(results) == 1
         assert isinstance(results[0], StreamError)
-        assert "[Connection Error]" in results[0].message
+        assert "【通信エラー】" in results[0].message
         
-        # Verify retries occurred (Tenacity stop_after_attempt is 3 in services.py)
-        assert mock_client.responses.create.call_count == 3
+        # Verify retries occurred (Tenacity stop_after_attempt is 5 in resilience.py)
+        # Note: In the refactoring, we used resilient_api_call which defaults to 5 attempts.
+        assert mock_client.responses.create.call_count == 5
 
-    def test_stream_analysis_rate_limit_error(self, service, mock_client, valid_payload):
-        """Verifies handling of Rate Limit errors."""
+    @pytest.mark.asyncio
+    async def test_stream_analysis_rate_limit_error(self, service, mock_client, valid_payload):
+        """Rate Limitエラーの処理を確認します。"""
         mock_client.responses.create.side_effect = RateLimitError(message="Rate limit", response=MagicMock(), body=None)
 
-        results = list(service.stream_analysis(valid_payload))
+        results = [result async for result in service.stream_analysis(valid_payload)]
 
         assert len(results) == 1
         assert isinstance(results[0], StreamError)
-        assert "[Rate Limit]" in results[0].message
+        assert "【利用制限エラー】" in results[0].message
         # Verify retries
-        assert mock_client.responses.create.call_count == 3
+        assert mock_client.responses.create.call_count == 5
 
-    def test_stream_analysis_stream_error_event(self, service, mock_client, valid_payload):
-        """Verifies handling of an 'error' event emitted during the stream."""
+    @pytest.mark.asyncio
+    async def test_stream_analysis_stream_error_event(self, service, mock_client, valid_payload):
+        """ストリーム中に発行された 'error' イベントの処理を確認します。"""
         mock_events = [
             self._create_mock_event(
                 "error",
                 error=MagicMock(message="Something went wrong mid-stream")
             )
         ]
-        mock_client.responses.create.return_value = iter(mock_events)
+        
+        mock_stream = AsyncMock()
+        mock_stream.__aiter__.return_value = mock_events
+        mock_client.responses.create.return_value = mock_stream
 
-        results = list(service.stream_analysis(valid_payload))
+        results = [result async for result in service.stream_analysis(valid_payload)]
 
         assert len(results) == 1
         assert isinstance(results[0], StreamError)
         assert "Something went wrong" in results[0].message
 
-    def test_stream_analysis_ignore_unknown_events(self, service, mock_client, valid_payload):
-        """Verifies that unknown event types are ignored."""
+    @pytest.mark.asyncio
+    async def test_stream_analysis_ignore_unknown_events(self, service, mock_client, valid_payload):
+        """未知のイベントタイプが無視されることを確認します。"""
         mock_events = [
             self._create_mock_event("response.unknown_event_type")
         ]
-        mock_client.responses.create.return_value = iter(mock_events)
+        
+        mock_stream = AsyncMock()
+        mock_stream.__aiter__.return_value = mock_events
+        mock_client.responses.create.return_value = mock_stream
 
-        results = list(service.stream_analysis(valid_payload))
+        results = [result async for result in service.stream_analysis(valid_payload)]
 
         # Should produce no results, but strictly not raise an error
         assert len(results) == 0

@@ -1,18 +1,18 @@
 """
-View component for RAG Management MVP pattern.
+RAG管理MVPパターンのためのViewコンポーネント。
 """
 
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Optional
 
 from src.ui.styles import UI_FONTS
 
 
 class RagView(tk.Toplevel):
     """
-    View component for RAG Management MVP pattern.
-    Responsible for rendering the UI and forwarding user events.
+    RAG管理MVPパターンのためのViewコンポーネント。
+    UIのレンダリングとユーザーイベントの転送を担当します。
     """
 
     def __init__(self, parent: tk.Tk) -> None:

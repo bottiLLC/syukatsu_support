@@ -1,18 +1,18 @@
 import asyncio
 import datetime
-import logging
+import structlog
 import threading
 from typing import Any, Dict, List, Optional
 
 from src.ui.rag_model import RagModel
 from src.ui.rag_view import RagView
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger()
 
 class RagPresenter:
     """
-    Presenter component for RAG Management MVP pattern.
-    Handles business logic for vector stores and files management using async/await.
+    RAG管理MVPパターンのためのPresenterコンポーネント。
+    async/awaitを使用して、Vector Storeとファイル管理のビジネスロジックを処理します。
     """
 
     def __init__(self, view: RagView, model: RagModel) -> None:
@@ -47,8 +47,8 @@ class RagPresenter:
                 stores = await self.model.rag_service.list_vector_stores()
                 self.view.after(0, lambda: self._update_store_list(stores))
             except Exception as e:
-                logger.error(f"Failed to load stores: {e}")
-                self.view.after(0, lambda: self.view.set_status(f"Error: {e}"))
+                log.error("Failed to load stores", error=str(e))
+                self.view.after(0, lambda err=e: self.view.set_status(f"Error: {err}"))
 
         def _thread_target() -> None:
             asyncio.run(_async_task())
@@ -92,7 +92,7 @@ class RagPresenter:
                 self.view.after(0, lambda: self.view.set_status(f"Created store '{name}'."))
                 self.view.after(0, self.refresh_stores_async)
             except Exception as e:
-                self.view.after(0, lambda: self.view.show_error("Error", str(e)))
+                self.view.after(0, lambda err=e: self.view.show_error("Error", str(err)))
                 self.view.after(0, lambda: self.view.set_status("Create failed."))
 
         def _thread_target() -> None:
@@ -109,7 +109,7 @@ class RagPresenter:
                 self.view.after(0, lambda: self.view.set_status("Rename successful."))
                 self.view.after(0, self.refresh_stores_async)
             except Exception as e:
-                self.view.after(0, lambda: self.view.show_error("Error", str(e)))
+                self.view.after(0, lambda err=e: self.view.show_error("Error", str(err)))
                 self.view.after(0, lambda: self.view.set_status("Rename failed."))
 
         def _thread_target() -> None:
@@ -141,7 +141,7 @@ class RagPresenter:
                 self.view.after(0, lambda: self.view.set_status("Store deleted."))
                 self.view.after(0, self.refresh_stores_async)
             except Exception as e:
-                self.view.after(0, lambda: self.view.show_error("Error", str(e)))
+                self.view.after(0, lambda err=e: self.view.show_error("Error", str(err)))
                 self.view.after(0, lambda: self.view.set_status("Delete failed."))
 
         def _thread_target() -> None:
@@ -168,8 +168,8 @@ class RagPresenter:
                 self.view.after(0, self.refresh_stores_async)
 
             except Exception as e:
-                logger.error(f"Upload failed: {e}")
-                self.view.after(0, lambda: self.view.show_error("Upload Failed", str(e)))
+                log.error("Upload failed", error=str(e), file_path=file_path)
+                self.view.after(0, lambda err=e: self.view.show_error("Upload Failed", str(err)))
                 self.view.after(0, lambda: self.view.set_status("Upload failed."))
             finally:
                 self.view.after(0, lambda: self.view.set_upload_btn_state("normal"))
@@ -193,20 +193,22 @@ class RagPresenter:
                     self.view.after(0, lambda: self.view.set_status(f"No files found in {store_id}."))
                     return
 
-                # Gather details for all files concurrently instead of using ThreadPool
-                tasks = [self.model.file_service.get_file_details(f.id) for f in vs_files]
+                # Limit concurrency to 10 to prevent memory/connection exhaustion
+                sem = asyncio.Semaphore(10)
+                
+                async def fetch_detail_with_sem(f_id: str) -> Any:
+                    async with sem:
+                        return await self.model.file_service.get_file_details(f_id)
+
+                tasks = [fetch_detail_with_sem(f.id) for f in vs_files]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
 
                 file_details: List[Dict[str, Any]] = []
 
                 for vs_file, result in zip(vs_files, results):
                     if isinstance(result, Exception):
-                        logger.warning(f"Failed to fetch metadata for file {vs_file.id}: {result}")
-                        file_details.append({
-                            "id": vs_file.id,
-                            "filename": "<Error>",
-                            "created_at": vs_file.created_at,
-                        })
+                        log.warning("Failed to fetch metadata for file, possibly deleted", file_id=vs_file.id, error=str(result))
+                        continue
                     elif result:
                         file_details.append({
                             "id": result.id,
@@ -214,17 +216,14 @@ class RagPresenter:
                             "created_at": result.created_at,
                         })
                     else:
-                        file_details.append({
-                            "id": vs_file.id,
-                            "filename": "<Unknown>",
-                            "created_at": vs_file.created_at,
-                        })
+                        log.warning("File details not found, skipping as it might be deleted.", file_id=vs_file.id)
+                        continue
 
                 self.view.after(0, lambda: self._update_file_list(file_details))
 
             except Exception as e:
-                logger.error(f"Failed to load files: {e}")
-                self.view.after(0, lambda: self.view.set_status(f"Error loading files: {e}"))
+                log.error("Failed to load files", error=str(e), store_id=store_id)
+                self.view.after(0, lambda err=e: self.view.set_status(f"Error loading files: {err}"))
 
         def _thread_target() -> None:
             asyncio.run(_async_task())
@@ -255,15 +254,15 @@ class RagPresenter:
         async def _async_task() -> None:
             try:
                 await self.model.rag_service.delete_file_from_store(store_id, file_id)
-                logger.info(f"Removed {file_id} from store {store_id}")
+                log.info("Removed file from store", file_id=file_id, store_id=store_id)
 
                 await self.model.file_service.delete_file(file_id)
-                logger.info(f"Deleted file entity {file_id}")
+                log.info("Deleted file entity", file_id=file_id)
 
                 self.view.after(0, lambda: self.on_delete_success(store_id))
             except Exception as e:
-                logger.error(f"Deletion failed: {e}")
-                self.view.after(0, lambda: self.view.show_error("Deletion Failed", str(e)))
+                log.error("Deletion failed", error=str(e), file_id=file_id)
+                self.view.after(0, lambda err=e: self.view.show_error("Deletion Failed", str(err)))
                 self.view.after(0, lambda: self.view.set_status("Deletion failed."))
                 self.view.after(0, lambda: self.view.set_delete_file_btn_state("normal"))
 

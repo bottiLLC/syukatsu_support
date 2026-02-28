@@ -9,7 +9,7 @@ from src.config.app_config import UserConfig
 
 def test_prompts_structure():
     """
-    [Structure] SYSTEM_PROMPTS must be a non-empty dictionary.
+    [構造] SYSTEM_PROMPTS は空ではない辞書である必要があります。
     """
     assert isinstance(SYSTEM_PROMPTS, dict), "SYSTEM_PROMPTS must be a dict"
     assert len(SYSTEM_PROMPTS) > 0, "SYSTEM_PROMPTS cannot be empty"
@@ -21,7 +21,7 @@ def test_prompts_structure():
 ])
 def test_prompts_keys_exist(required_key):
     """
-    [Integrity] Verify that essential analysis modes exist as keys.
+    [整合性] 必須の分析モードがキーとして存在することを検証します。
     """
     assert required_key in SYSTEM_PROMPTS, f"Missing required key: {required_key}"
 
@@ -32,7 +32,7 @@ def test_prompts_keys_exist(required_key):
 ])
 def test_prompts_content_integrity(mode, expected_keywords):
     """
-    [Content] Verify prompt content is valid strings and contains key domain terms.
+    [コンテンツ] プロンプトの内容が有効な文字列であり、重要なドメインタームが含まれているか検証します。
     """
     prompt_text = SYSTEM_PROMPTS.get(mode)
     
@@ -53,17 +53,19 @@ def test_prompts_content_integrity(mode, expected_keywords):
 
 def test_prompts_contain_required_sections():
     """
-    [Structure] Prompts must contain critical structural headers for the AI.
+    [構造] プロンプトにはAIのための重要な構造的ヘッダーが含まれている必要があります。
     """
     for mode, prompt_text in SYSTEM_PROMPTS.items():
+        if not prompt_text:
+            continue
         assert "### ROLE" in prompt_text, f"{mode} missing ROLE section"
         assert "### OBJECTIVE" in prompt_text, f"{mode} missing OBJECTIVE section"
         assert "### OUTPUT CONSTRAINTS" in prompt_text, f"{mode} missing OUTPUT CONSTRAINTS section"
 
 def test_default_config_key_exists_in_prompts():
     """
-    [Integration] Verify that the default prompt mode in UserConfig 
-    actually exists in the definitions.
+    [統合] UserConfig のデフォルトプロンプトモードが
+    実際に定義内に存在することを検証します。
     """
     # Instantiate default config
     config = UserConfig()

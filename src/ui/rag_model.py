@@ -1,18 +1,18 @@
 """
-Model for the RAG Management MVP pattern.
+RAG管理MVPパターンのためのモデル。
 """
 
-import logging
+import structlog
 from typing import Optional
 
 from src.core.rag_services import FileService, VectorStoreService
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger()
 
 class RagModel:
     """
-    Model for the RAG Management MVP pattern.
-    Manages state and service instances for vector stores and files.
+    RAG管理MVPパターンのためのモデル。
+    ベクトルストアとファイルのための状態とサービスインスタンスを管理します。
     """
 
     def __init__(self, rag_service: VectorStoreService, file_service: FileService) -> None:

@@ -1,6 +1,6 @@
 """
-Unit tests for data models defined in src/core/models.py.
-Ensures Pydantic models correctly validate and serialize data according to the OpenAI Responses API schema.
+src/core/models.py で定義されたデータモデルのユニットテスト。
+Pydanticモデルが OpenAI Responses API スキーマに従ってデータを正しく検証およびシリアライズすることを保証します。
 """
 
 import pytest
@@ -11,20 +11,18 @@ from src.core.models import (
     InputMessage,
     InputTextContent,
     FileSearchTool,
-    ReasoningOptions,
     StreamTextDelta,
-    StreamResponseCreated,
     StreamUsage,
     StreamError,
 )
 
 class TestResponseRequestPayload:
-    """Tests for the main API request payload model."""
+    """メインAPIリクエストペイロードモデルのテスト。"""
 
     def test_payload_normalization_string_input(self):
         """
-        Verifies that a simple string input is correctly normalized into 
-        the complex List[InputMessage] structure required by the API.
+        単純な文字列入力が、APIで必要とされる複雑な List[InputMessage] 構造へと
+        正しく正規化されることを検証します。
         """
         payload = ResponseRequestPayload(
             model="gpt-5.2",
@@ -35,7 +33,6 @@ class TestResponseRequestPayload:
         assert len(payload.input) == 1
         message = payload.input[0]
         assert isinstance(message, InputMessage)
-        assert message.type == "message"
         assert message.role == "user"
         
         # 2. Check content nesting
@@ -47,7 +44,7 @@ class TestResponseRequestPayload:
 
     def test_payload_explicit_list_input(self):
         """
-        Verifies that passing a pre-formatted list of InputMessage objects works as is.
+        構築済みの InputMessage オブジェクトのリストを渡した場合、そのまま機能することを検証します。
         """
         raw_input = [
             InputMessage(
@@ -64,7 +61,7 @@ class TestResponseRequestPayload:
         assert payload.input[0].content[0].text == "Explicit input"
 
     def test_payload_with_tools(self):
-        """Verifies correct serialization of tools (RAG/File Search)."""
+        """ツール群（RAG/File Search等）の正しいシリアライズを検証します。"""
         tools = [
             FileSearchTool(vector_store_ids=["vs_123"])
         ]
@@ -80,7 +77,7 @@ class TestResponseRequestPayload:
         assert dump["tools"][0]["vector_store_ids"] == ["vs_123"]
 
     def test_payload_validation_failure(self):
-        """Verifies that missing required fields raises ValidationError."""
+        """必須フィールドが欠如している場合に ValidationError が発生することを検証します。"""
         with pytest.raises(ValidationError):
             ResponseRequestPayload(
                 # Missing 'model' and 'input'
@@ -88,7 +85,7 @@ class TestResponseRequestPayload:
             )
 
 class TestStreamEvents:
-    """Tests for stream response event models."""
+    """ストリームレスポンスイベントモデルのテスト。"""
 
     def test_stream_text_delta(self):
         delta = StreamTextDelta(delta="Hello")

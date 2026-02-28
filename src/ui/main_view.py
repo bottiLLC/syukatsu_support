@@ -1,4 +1,3 @@
-import datetime
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 from typing import Any, Callable, List, Optional
@@ -11,7 +10,7 @@ from src.ui.styles import UI_COLORS, UI_FONTS, WINDOW_SIZE
 
 class MainView(tk.Tk):
     """
-    Main GUI view component.
+    メインGUIビューコンポーネント。
     """
 
     def __init__(self, initial_config: UserConfig) -> None:
@@ -33,7 +32,6 @@ class MainView(tk.Tk):
 
         # UI State Variables
         self.api_key_var = tk.StringVar(value=initial_config.api_key or "")
-        self.show_key_var = tk.BooleanVar(value=False)
         self.model_var = tk.StringVar(value=initial_config.model)
         self.reasoning_var = tk.StringVar(value=initial_config.reasoning_effort)
         self.prompt_mode_var = tk.StringVar(value=initial_config.system_prompt_mode)
@@ -94,16 +92,20 @@ class MainView(tk.Tk):
 
         # API Key Section
         ttk.Label(frame, text="OpenAI APIキー:", style="Bold.TLabel").pack(anchor="w")
-        self._entry_key = ttk.Entry(frame, textvariable=self.api_key_var, show="*")
-        self._entry_key.pack(fill="x", pady=(2, 0))
+        
+        # キー入力と登録ボタンを横に並べるためのフレーム
+        key_frame = ttk.Frame(frame)
+        key_frame.pack(fill="x", pady=(2, 0))
+        
+        self._entry_key = ttk.Entry(key_frame, textvariable=self.api_key_var, show="*")
+        self._entry_key.pack(side="left", fill="x", expand=True, padx=(0, 5))
         self._entry_key.bind("<FocusOut>", self._handle_key_update)
 
-        ttk.Checkbutton(
-            frame,
-            text="キーを表示",
-            variable=self.show_key_var,
-            command=self._toggle_key_visibility,
-        ).pack(anchor="w")
+        ttk.Button(
+            key_frame,
+            text="登録",
+            command=self._handle_register_key,
+        ).pack(side="right")
 
         ttk.Separator(frame, orient="horizontal").pack(fill="x", pady=10)
 
@@ -352,11 +354,10 @@ class MainView(tk.Tk):
             self.on_close_callback()
         self.destroy()
 
-    def _toggle_key_visibility(self) -> None:
-        if self.show_key_var.get():
-            self._entry_key.config(show="")
-        else:
-            self._entry_key.config(show="*")
+    def _handle_register_key(self) -> None:
+        if self.on_key_update_callback:
+            self.on_key_update_callback(self.api_key_var.get().strip())
+            self.show_info("設定完了", "APIキーを登録・設定ファイルに保存しました。")
 
     def _handle_key_update(self, event: Any) -> None:
         if self.on_key_update_callback:

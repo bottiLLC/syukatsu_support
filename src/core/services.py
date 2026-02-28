@@ -1,12 +1,13 @@
 """
-Service layer for OpenAI API interactions and cost calculation.
+OpenAI APIとのやり取りおよびコスト計算のためのサービス層。
 
-This module provides the `LLMService` for communicating with the OpenAI Responses API
-and the `CostCalculator` for estimating usage costs. It handles asynchronous streaming responses,
-event processing, and error management for the Job Hunting Support application.
+このモジュールは、OpenAI Responses APIと通信するための `LLMService` と、
+使用コストを見積もるための `CostCalculator` を提供します。非同期ストリーミングレスポンス、
+イベント処理、および就活サポートアプリのためのエラー管理を処理します。
 """
 
 import logging
+import structlog
 from typing import Any, AsyncGenerator, Optional
 
 from openai import (
@@ -14,13 +15,6 @@ from openai import (
     AsyncOpenAI
 )
 from pydantic import ValidationError
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_random_exponential,
-    before_sleep_log,
-)
 
 from src.core.base import BaseOpenAIService
 from src.core.models import (
@@ -32,13 +26,15 @@ from src.core.models import (
     StreamUsage,
 )
 from src.core.pricing import PRICING_TABLE, ModelPricing
+from src.core.errors import translate_api_error
+from src.core.resilience import resilient_api_call
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger()
 
 
 class CostCalculator:
     """
-    Provides utilities to calculate the estimated cost of API usage.
+    API使用量の見積りコストを計算するためのユーティリティを提供します。
     """
 
     _TOKEN_UNIT = 1_000_000
@@ -46,40 +42,56 @@ class CostCalculator:
     @classmethod
     def calculate(cls, model_name: str, usage: StreamUsage) -> str:
         """
-        Calculates the estimated cost for a given model and token usage.
+        指定されたモデルとトークン使用量に対する見積りコストを計算します。
 
         Args:
-            model_name: The identifier of the model used (e.g., "gpt-5.2").
-            usage: The token usage statistics (input, output, cached).
+            model_name: 使用されたモデルの識別子 (例: "gpt-5.2")。
+            usage: トークン使用量の統計 (input, output, cached)。
 
         Returns:
-            A formatted string displaying token counts and estimated cost in USD.
+            トークン数とUSDでの見積りコストを示すフォーマットされた文字列。
         """
         pricing = cls._get_pricing(model_name)
         is_estimate = False
 
-        # Fallback to default pricing if model not found
+        # モデルが見つからない場合はデフォルトの価格設定にフォールバック
         if not pricing:
             pricing = PRICING_TABLE.get("gpt-5.2")
             is_estimate = True
+            log.warning(
+                "モデルの価格設定が見つかりません。デフォルトにフォールバックします。",
+                model_name=model_name,
+                default_model="gpt-5.2",
+            )
 
         if not pricing:
+            log.error("どのモデルに対しても価格情報が利用できません。")
             return "Cost info unavailable"
 
-        # Calculate input cost: (Total Input - Cached) * Input Price
+        # 入力コスト計算: (総入力 - キャッシュ分) * 入力単価
         non_cached_input = max(0, usage.input_tokens - usage.cached_tokens)
         input_cost = (non_cached_input / cls._TOKEN_UNIT) * pricing.input_price
 
-        # Calculate cached input cost
+        # キャッシュされた入力コスト計算
         cached_cost = (
             usage.cached_tokens / cls._TOKEN_UNIT
         ) * pricing.cached_input_price
 
-        # Calculate output cost
+        # 出力コスト計算
         output_cost = (usage.output_tokens / cls._TOKEN_UNIT) * pricing.output_price
 
         total_cost = input_cost + cached_cost + output_cost
         estimate_label = "(Est.)" if is_estimate else ""
+
+        log.info(
+            "コストが計算されました",
+            model_name=model_name,
+            input_tokens=usage.input_tokens,
+            output_tokens=usage.output_tokens,
+            cached_tokens=usage.cached_tokens,
+            total_cost=total_cost,
+            is_estimate=is_estimate,
+        )
 
         return (
             f"Tokens: {usage.total_tokens} "
@@ -90,86 +102,91 @@ class CostCalculator:
     @staticmethod
     def _get_pricing(model_name: str) -> Optional[ModelPricing]:
         """
-        Retrieves the pricing configuration for the specified model.
+        指定されたモデルの価格設定を取得します。
 
-        Matches the model name against the pricing table keys, prioritizing
-        longer (more specific) matches first.
+        モデル名を価格テーブルのキーと照合し、より長い(より具体的な)一致を優先します。
 
         Args:
-            model_name: The model identifier.
+            model_name: モデルの識別子。
 
         Returns:
-            The ModelPricing object if found, otherwise None.
+            見つかった場合は ModelPricing オブジェクト、それ以外は None。
         """
-        # Sort keys by length in descending order to match specific models first
+        # より具体的なモデルを最初に一致させるため、キーを長さの降順にソート
         sorted_keys = sorted(PRICING_TABLE.keys(), key=len, reverse=True)
 
         for key in sorted_keys:
             if key in model_name:
+                log.debug("モデルの価格設定キーに一致しました", model_name=model_name, matched_key=key)
                 return PRICING_TABLE[key]
+        log.warning("モデルの価格設定が見つかりません", model_name=model_name)
         return None
 
 
 class LLMService(BaseOpenAIService):
     """
-    Service for interacting with the OpenAI Responses API.
+    OpenAI Responses API とやり取りするためのサービス。
 
-    Handles the streaming of analysis responses using AsyncOpenAI context managers
-    and converts API events into application-specific domain objects.
+    AsyncOpenAIコンテキストマネージャーを使用して分析レスポンスのストリーミングを処理し、
+    APIイベントをアプリケーション固有のドメインオブジェクトに変換します。
     """
 
     async def stream_analysis(
         self, payload: ResponseRequestPayload
     ) -> AsyncGenerator[StreamResult, None]:
         """
-        Executes an asynchronous streaming request to the Responses API.
+        Responses API への非同期ストリーミングリクエストを実行します。
 
         Args:
-            payload: The request payload containing model, input, and other parameters.
+            payload: モデル、入力、およびその他のパラメータを含むリクエストペイロード。
 
         Yields:
-            StreamResult objects representing text deltas, response metadata,
-            usage statistics, or errors.
+            テキストのデルタ、レスポンスメタデータ、使用量統計、またはエラーを表す
+            StreamResult オブジェクト。
         """
         try:
-            # Convert Pydantic model to dict, excluding None to respect API defaults
+            # Pydantic モデルを辞書に変換。APIのデフォルトを尊重するためNoneは除外
             request_params = payload.model_dump(exclude_none=True)
 
-            logger.info(f"Starting async stream analysis with model: {payload.model}")
+            log.info(
+                "非同期ストリーム分析を開始します",
+                model=payload.model,
+                request_params_keys=list(request_params.keys()),
+            )
 
-            # Yield from async generator
+            # 非同期ジェネレータからyield
             async for result in self._execute_api_call(request_params):
                 yield result
 
         except Exception as e:
-            # Catch-all for any unhandled exceptions during the generator setup
-            logger.exception("Unexpected error in stream_analysis")
+            # ジェネレータのセットアップ中の予期しない例外のキャッチオール
+            log.exception("stream_analysis で予期しないエラーが発生しました", error=str(e))
             yield StreamError(
                 message=f"\n[Unexpected Error] 予期せぬエラーが発生しました: {e}"
             )
 
-    @retry(
-        retry=retry_if_exception_type(OpenAIError),
-        wait=wait_random_exponential(multiplier=1, max=60),
-        stop=stop_after_attempt(3),
-        before_sleep=before_sleep_log(logger, logging.WARNING),
-        reraise=True,
-    )
+    @resilient_api_call()
     async def _create_stream(self, client: AsyncOpenAI, request_params: dict) -> Any:
         """
-        Helper method to initiate the API stream with retry logic.
-        This only retries the *connection* establishment, not the stream iteration.
+        リトライロジックを使用して API ストリームを開始するヘルパーメソッド。
+        これは *接続* の確立のみをリトライし、ストリームのイテレーションはリトライしません。
         """
-        # STRICTLY using client.responses.create per requirements
+        log.info(
+            "APIストリームの作成を試みます",
+            model=request_params.get("model"),
+            attempt_params=request_params,
+        )
+        # 要件に従い厳密に client.responses.create を使用
         return await client.responses.create(**request_params)
 
     async def _execute_api_call(
         self, request_params: dict
     ) -> AsyncGenerator[StreamResult, None]:
         """
-        Executes the API call within an async context manager and yields results.
-        Handles specific API exceptions and converts them to StreamError events.
+        非同期コンテキストマネージャー内で API コールを実行し、結果を yield します。
+        特定の API 例外を処理し、それらを StreamError イベントに変換します。
         """
+        model_name = request_params.get("model", "unknown_model")
         try:
             async with self.get_async_client() as client:
                 stream = await self._create_stream(client, request_params)
@@ -178,34 +195,48 @@ class LLMService(BaseOpenAIService):
                     result = self._process_event(event)
                     if result:
                         yield result
+            log.info("API ストリームが正常に完了しました。", model=model_name)
 
         except OpenAIError as e:
-            logger.error(f"OpenAI API error: {e}")
-            from src.core.errors import translate_api_error
             msg = translate_api_error(e)
+            log.error(
+                "ストリームイテレーション中の OpenAI API エラー",
+                model=model_name,
+                error_type=type(e).__name__,
+                error_message=str(e),
+                translated_message=msg,
+            )
             yield StreamError(message=f"\n[API Error] {msg}")
         except ValidationError as e:
-            logger.error(f"Validation error: {e}")
+            log.error(
+                "ストリーム処理中のバリデーションエラー",
+                model=model_name,
+                error_message=str(e),
+            )
             yield StreamError(
                 message=f"\n[Validation Error] リクエストデータの形式が不正です: {e}"
             )
         except Exception as e:
-            logger.exception("Error during stream iteration")
+            log.exception(
+                "ストリームイテレーション中のエラー",
+                model=model_name,
+                error_message=str(e),
+            )
             yield StreamError(
                 message=f"\n[Stream Error] ストリーム処理中にエラーが発生しました: {e}"
             )
 
     def _process_event(self, event: Any) -> Optional[StreamResult]:
         """
-        Parses a raw API event into a domain object.
+        生の API イベントをドメインオブジェクトに解析します。
 
         Args:
-            event: The event object returned by the OpenAI SDK stream.
+            event: OpenAI SDK ストリームによって返されるイベントオブジェクト。
 
         Returns:
-            A StreamResult object if the event is relevant, otherwise None.
+            イベントが関連する場合は StreamResult オブジェクト、それ以外は None。
         """
-        # Event type checking based on OpenAPI 'ResponseStreamEvent' schema
+        # OpenAPI 'ResponseStreamEvent' スキーマに基づくイベント型のチェック
         event_type = getattr(event, "type", None)
 
         if not event_type:
@@ -226,7 +257,7 @@ class LLMService(BaseOpenAIService):
         return None
 
     def _handle_text_delta(self, event: Any) -> Optional[StreamTextDelta]:
-        """Handles 'response.output_text.delta' events."""
+        """'response.output_text.delta' イベントを処理します。"""
         delta_content = getattr(event, "delta", None)
         if delta_content:
             return StreamTextDelta(delta=delta_content)
@@ -235,7 +266,7 @@ class LLMService(BaseOpenAIService):
     def _handle_response_created(
         self, event: Any
     ) -> Optional[StreamResponseCreated]:
-        """Handles 'response.created' events."""
+        """'response.created' イベントを処理します。"""
         response_obj = getattr(event, "response", None)
         if response_obj and hasattr(response_obj, "id"):
             return StreamResponseCreated(response_id=response_obj.id)
@@ -243,7 +274,7 @@ class LLMService(BaseOpenAIService):
 
     def _handle_response_completed(self, event: Any) -> Optional[StreamUsage]:
         """
-        Handles 'response.completed' events to extract usage statistics.
+        'response.completed' イベントを処理して、使用量統計を抽出します。
         """
         response_obj = getattr(event, "response", None)
         if not response_obj:
@@ -253,12 +284,12 @@ class LLMService(BaseOpenAIService):
         if not usage_obj:
             return None
 
-        # Extract usage fields safely with defaults
+        # デフォルト値を使用して安全に使用量フィールドを抽出
         input_tokens = getattr(usage_obj, "input_tokens", 0)
         output_tokens = getattr(usage_obj, "output_tokens", 0)
         total_tokens = getattr(usage_obj, "total_tokens", 0)
 
-        # Extract cached tokens from input_tokens_details
+        # input_tokens_details からキャッシュされたトークンを抽出
         cached_tokens = 0
         input_details = getattr(usage_obj, "input_tokens_details", None)
         if input_details:
@@ -273,7 +304,7 @@ class LLMService(BaseOpenAIService):
 
     def _handle_error_event(self, event: Any) -> StreamError:
         """
-        Handles 'error' events from the stream.
+        ストリームからの 'error' イベントを処理します。
         """
         error_obj = getattr(event, "error", None)
         message = "Unknown stream error"

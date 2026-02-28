@@ -1,11 +1,11 @@
 """
-RAG Management Window module for the Job Hunting Support Application (MVP Factory).
+就活サポートアプリケーション（MVPファクトリー）のためのRAG管理ウィンドウモジュール。
 
-This module provides a dedicated interface for managing Vector Stores and
-their associated files. Converted to MVP architecture.
+このモジュールは、Vector Storeおよびそれらに関連付けられたファイルを管理するための
+専用インターフェースを提供します。MVPアーキテクチャに変換されています。
 """
 
-import logging
+import structlog
 import tkinter as tk
 
 from src.core.rag_services import FileService, VectorStoreService
@@ -13,13 +13,13 @@ from src.ui.rag_model import RagModel
 from src.ui.rag_view import RagView
 from src.ui.rag_presenter import RagPresenter
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger()
 
 class RAGManagementWindow(RagView):
     """
-    Factory for the RAG Management MVP pattern.
-    Inherits from RagView for backwards compatibility with GUI module calling flow,
-    but internally orchestrates the MVP instances.
+    RAG管理MVPパターンのためのファクトリー。
+    GUIモジュールの呼び出しフローとの後方互換性のためにRagViewを継承していますが、
+    内部的にはMVPインスタンスをオーケストレーションします。
     """
 
     def __init__(
@@ -28,9 +28,9 @@ class RAGManagementWindow(RagView):
         rag_service: VectorStoreService,
         file_service: FileService,
     ) -> None:
-        # Initialize the view
+        # ビューを初期化
         super().__init__(parent)
         
-        # Initialize the model and presenter
+        # モデルとプレゼンターを初期化
         self.model = RagModel(rag_service, file_service)
         self.presenter = RagPresenter(self, self.model)

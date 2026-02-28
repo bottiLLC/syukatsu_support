@@ -138,8 +138,14 @@ Desktop.ini
 # Secret Keys and Configs
 config.json
 .secret.key
-# Logs
+# Logs and Test Outputs
 *.log
+pytest_err*.txt
+pytest_*.txt
+*.pytest_cache/
+test_results/
+*.txt
+
 # Old/Backup folders
 old/
 .web/

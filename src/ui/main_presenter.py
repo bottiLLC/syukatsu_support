@@ -4,7 +4,9 @@ import logging
 import queue
 import threading
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import List
+
+import structlog
 
 from src.core.models import (
     FileSearchTool,
@@ -21,13 +23,13 @@ from src.core.prompts import SYSTEM_PROMPTS
 from src.ui.main_model import MainModel
 from src.ui.main_view import MainView
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger()
 
 class MainPresenter:
     """
-    MVP Presenter for the main application.
-    Orchestrates communication between MainView and MainModel,
-    as well as interacting with backend services.
+    メインアプリケーションのMVP Presenter。
+    MainViewとMainModel間の通信をオーケストレーションし、
+    バックエンドサービスとのやり取りも行います。
     """
 
     def __init__(self, view: MainView, model: MainModel) -> None:
@@ -63,15 +65,21 @@ class MainPresenter:
         try:
             self.model.rag_service = VectorStoreService(api_key)
             self.model.file_service = FileService(api_key)
-            logger.info("Services initialized successfully.")
+            log.info("Services initialized successfully.")
         except Exception as e:
-            logger.error(f"Failed to initialize services: {e}")
+            log.error("Failed to initialize services", error=str(e))
             self.view.show_error("サービスエラー", f"サービスの初期化に失敗しました: {e}")
 
     def handle_key_update(self, api_key: str) -> None:
         if api_key:
-            self._init_services(api_key)
-            self._refresh_vector_stores()
+            self.model.user_config.api_key = api_key
+            try:
+                self.model.save_config()
+                self._init_services(api_key)
+                self._refresh_vector_stores()
+            except Exception as e:
+                log.error("Failed to save API key", error=str(e))
+                self.view.show_error("保存エラー", f"APIキーの保存に失敗しました: {e}")
 
     def handle_apply_prompt_mode(self, mode: str) -> None:
         prompt = SYSTEM_PROMPTS.get(mode, "")
@@ -93,7 +101,7 @@ class MainPresenter:
 
                 self.view.after(0, lambda: self._update_vs_combo(values))
             except Exception as e:
-                logger.error(f"Failed to fetch vector stores: {e}")
+                log.error("Failed to fetch vector stores", error=str(e))
 
         def _thread_target() -> None:
             asyncio.run(_fetch())
@@ -117,7 +125,7 @@ class MainPresenter:
         try:
             from src.ui.rag_window import RAGManagementWindow
         except ImportError as e:
-            logger.error(f"Failed to import RAGManagementWindow: {e}")
+            log.error("Failed to import RAGManagementWindow", error=str(e))
             self.view.show_error("エラー", "RAG管理モジュールを読み込めませんでした。")
             return
 
@@ -222,7 +230,7 @@ class MainPresenter:
                     self.model.message_queue.put(event)
 
             except Exception as e:
-                logger.exception("LLM thread failed")
+                log.exception("LLM thread failed", error=str(e))
                 self.model.message_queue.put(StreamError(message=str(e)))
             finally:
                 self.model.message_queue.put(None)
@@ -231,26 +239,49 @@ class MainPresenter:
 
     def _process_queue(self) -> None:
         try:
-            while True:
+            # Process up to a certain number of events per UI tick to prevent blocking
+            max_events_per_tick = 50
+            events_processed = 0
+            text_buffer: List[str] = []
+
+            while events_processed < max_events_per_tick:
                 event = self.model.message_queue.get_nowait()
+                events_processed += 1
 
                 if event is None:
+                    # Flush any remaining buffer before finishing
+                    if text_buffer:
+                        self.view.append_log("".join(text_buffer), "ai")
+                        text_buffer.clear()
+                        
                     self.model.is_generating = False
                     self.view.set_generation_state(False)
                     self.view.status_var.set("待機中")
+                    # Stop processing when stream ends
+                    self.model.message_queue.task_done()
+                    break
 
                 elif isinstance(event, StreamTextDelta):
-                    self.view.append_log(event.delta, "ai")
+                    text_buffer.append(event.delta)
 
                 elif isinstance(event, StreamResponseCreated):
+                    if text_buffer:
+                        self.view.append_log("".join(text_buffer), "ai")
+                        text_buffer.clear()
                     self.model.user_config.last_response_id = event.response_id
                     self.view.response_id_var.set(event.response_id)
 
                 elif isinstance(event, StreamUsage):
+                    if text_buffer:
+                        self.view.append_log("".join(text_buffer), "ai")
+                        text_buffer.clear()
                     cost_str = CostCalculator.calculate(self.view.model_var.get(), event)
                     self.view.cost_info_var.set(cost_str)
 
                 elif isinstance(event, StreamError):
+                    if text_buffer:
+                        self.view.append_log("".join(text_buffer), "ai")
+                        text_buffer.clear()
                     if "_REASONING_EFFORT_ERROR_" in event.message:
                         model_name = self.view.model_var.get()
                         effort = self.view.reasoning_var.get()
@@ -261,10 +292,18 @@ class MainPresenter:
                         self.view.append_log(event.message, "error")
 
                 self.model.message_queue.task_done()
+                
+            # Flush buffer at the end of the tick
+            if text_buffer:
+                self.view.append_log("".join(text_buffer), "ai")
+
         except queue.Empty:
-            pass
+            # Flush buffer even if queue gets empty
+            if text_buffer:
+                self.view.append_log("".join(text_buffer), "ai")
 
         if self.view.winfo_exists():
+            # Schedule next check
             self.view.after(50, self._process_queue)
 
     def handle_clear_context(self) -> None:
@@ -315,7 +354,7 @@ class MainPresenter:
         try:
             self.model.save_config()
         except Exception as e:
-            logger.error(f"Failed to save configuration on close: {e}")
+            log.error("Failed to save configuration on close", error=str(e))
             self.view.show_warning("保存エラー", f"設定の保存に失敗しました: {e}")
 
         if self.model.is_generating:

@@ -1,13 +1,13 @@
 """
-RAG (Retrieval-Augmented Generation) services module.
+RAG（検索拡張生成）サービスモジュール。
 
-This module handles file uploads and Vector Store management for the RAG feature
-in the Job Hunting Support Application. It adheres to the OpenAI API specifications
-using AsyncOpenAI context managers.
+このモジュールは、就活サポートアプリのRAG機能におけるファイルアップロードと
+Vector Storeの管理を処理します。AsyncOpenAIコンテキストマネージャーを使用し、
+OpenAI API仕様に準拠しています。
 """
 
 import asyncio
-import logging
+import structlog
 from pathlib import Path
 from typing import Any, List, Optional
 
@@ -15,120 +15,128 @@ from openai import NotFoundError
 from openai.types import FileObject
 
 from src.core.base import BaseOpenAIService
+from src.core.resilience import resilient_api_call
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger()
 
 
 class FileService(BaseOpenAIService):
     """
-    Service for managing files via the OpenAI API.
+    OpenAI APIを介してファイルを管理するサービス。
 
-    Handles uploading, retrieving details, and deleting files asynchronously.
+    ファイルのアップロード、詳細情報の取得、削除を非同期で処理します。
     """
 
+    @resilient_api_call()
     async def upload_file(self, file_path: str, purpose: str = "assistants") -> FileObject:
         """
-        Uploads a file to OpenAI asynchronously.
+        ファイルを非同期でOpenAIにアップロードします。
 
         Args:
-            file_path (str): The local path to the file.
-            purpose (str): The purpose of the file. Defaults to "assistants".
+            file_path (str): ファイルへのローカルパス。
+            purpose (str): ファイルの目的。デフォルトは "assistants"。
 
         Returns:
-            FileObject: The uploaded file object from the API.
+            FileObject: APIからアップロードされたファイルオブジェクト。
 
         Raises:
-            FileNotFoundError: If the local file does not exist.
-            Exception: If the API call fails.
+            FileNotFoundError: ローカルファイルが存在しない場合。
+            Exception: API呼び出しが失敗した場合。
         """
         path_obj = Path(file_path)
         if not path_obj.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
 
-        logger.info(f"Uploading file async: {file_path} (purpose={purpose})")
+        log.info("Uploading file async", file_path=file_path, purpose=purpose)
         try:
             async with self.get_async_client() as client:
                 with path_obj.open("rb") as f:
                     response = await client.files.create(file=f, purpose=purpose)
-                logger.info(f"File uploaded successfully: {response.id}")
+                log.info("File uploaded successfully", file_id=response.id)
                 return response
         except Exception as e:
-            logger.error(f"Failed to upload file: {e}")
+            log.error("Failed to upload file", error=str(e), file_path=file_path)
             raise
 
+    @resilient_api_call()
     async def get_file_details(self, file_id: str) -> Optional[FileObject]:
         """
-        Retrieves metadata for a specific file asynchronously.
+        特定のファイルのメタデータを非同期で取得します。
         """
         try:
             async with self.get_async_client() as client:
                 return await client.files.retrieve(file_id=file_id)
         except Exception as e:
-            logger.error(f"Failed to retrieve file details for {file_id}: {e}")
+            log.error("Failed to retrieve file details", error=str(e), file_id=file_id)
             return None
 
+    @resilient_api_call()
     async def delete_file(self, file_id: str) -> bool:
         """
-        Deletes a file from OpenAI asynchronously (permanent deletion).
+        OpenAIからファイルを非同期で削除します（完全削除）。
         """
-        logger.info(f"Deleting file async: {file_id}")
+        log.info("Deleting file async", file_id=file_id)
         try:
             async with self.get_async_client() as client:
                 response = await client.files.delete(file_id=file_id)
                 return response.deleted
         except Exception as e:
-            logger.error(f"Failed to delete file {file_id}: {e}")
+            log.error("Failed to delete file", error=str(e), file_id=file_id)
             raise
 
 
 class VectorStoreService(BaseOpenAIService):
     """
-    Service for managing Vector Stores and file batches using the Async OpenAI API.
+    非同期OpenAI APIを使用して、Vector Storeとファイルバッチを管理するサービス。
     """
 
+    @resilient_api_call()
     async def list_vector_stores(self, limit: int = 20) -> List[Any]:
         """
-        Lists available vector stores asynchronously.
+        利用可能なVector Storeを非同期でリスト化します。
         """
         try:
             async with self.get_async_client() as client:
                 response = await client.vector_stores.list(limit=limit)
                 return list(response.data)
         except Exception as e:
-            logger.error(f"Failed to list vector stores: {e}")
+            log.error("Failed to list vector stores", error=str(e))
             return []
 
+    @resilient_api_call()
     async def create_vector_store(self, name: str) -> Any:
         """
-        Creates a new vector store asynchronously.
+        新しいVector Storeを非同期で作成します。
         """
-        logger.info(f"Creating vector store async: {name}")
+        log.info("Creating vector store async", name=name)
         try:
             async with self.get_async_client() as client:
                 return await client.vector_stores.create(name=name)
         except Exception as e:
-            logger.error(f"Failed to create vector store: {e}")
+            log.error("Failed to create vector store", error=str(e), name=name)
             raise
 
+    @resilient_api_call()
     async def update_vector_store(self, vector_store_id: str, name: str) -> Any:
         """
-        Updates a vector store's name asynchronously.
+        Vector Storeの名前を非同期で更新します。
         """
-        logger.info(f"Updating vector store {vector_store_id} with name: {name}")
+        log.info("Updating vector store", vector_store_id=vector_store_id, name=name)
         try:
             async with self.get_async_client() as client:
                 return await client.vector_stores.update(
                     vector_store_id=vector_store_id, name=name
                 )
         except Exception as e:
-            logger.error(f"Failed to update vector store: {e}")
+            log.error("Failed to update vector store", error=str(e), vector_store_id=vector_store_id)
             raise
 
+    @resilient_api_call()
     async def delete_vector_store(self, vector_store_id: str) -> bool:
         """
-        Deletes a vector store asynchronously.
+        Vector Storeを非同期で削除します。
         """
-        logger.info(f"Deleting vector store async: {vector_store_id}")
+        log.info("Deleting vector store async", vector_store_id=vector_store_id)
         try:
             async with self.get_async_client() as client:
                 response = await client.vector_stores.delete(
@@ -136,25 +144,26 @@ class VectorStoreService(BaseOpenAIService):
                 )
                 return response.deleted
         except Exception as e:
-            logger.error(f"Failed to delete vector store: {e}")
+            log.error("Failed to delete vector store", error=str(e), vector_store_id=vector_store_id)
             raise
 
+    @resilient_api_call()
     async def create_file_batch(self, vector_store_id: str, file_ids: List[str]) -> Any:
         """
-        Creates an asynchronous file batch to add files to a vector store.
+        Vector Storeにファイルを追加するための非同期ファイルバッチを作成します。
         """
-        logger.info(
-            f"Creating async file batch for VS {vector_store_id} with {len(file_ids)} files."
-        )
+        log.info("Creating async file batch", vector_store_id=vector_store_id, file_count=len(file_ids))
         try:
             async with self.get_async_client() as client:
                 return await client.vector_stores.file_batches.create(
                     vector_store_id=vector_store_id, file_ids=file_ids
                 )
         except Exception as e:
-            logger.error(f"Failed to create file batch: {e}")
+            log.error("Failed to create file batch", error=str(e), vector_store_id=vector_store_id)
             raise
 
+    # poll_batch_status handles retries internally through the while loop,
+    # so resilient_api_call might interfere during the polling process.
     async def poll_batch_status(
         self,
         vector_store_id: str,
@@ -163,9 +172,9 @@ class VectorStoreService(BaseOpenAIService):
         max_retries: int = 60,
     ) -> str:
         """
-        Polls the file batch status asynchronously until completion, failure, or timeout.
+        バッチのステータスが完了、失敗、またはタイムアウトになるまで、非同期でポーリングします。
         """
-        logger.info(f"Polling async batch status: {batch_id}...")
+        log.info("Polling async batch status...", batch_id=batch_id)
         for _ in range(max_retries):
             try:
                 async with self.get_async_client() as client:
@@ -175,23 +184,24 @@ class VectorStoreService(BaseOpenAIService):
                     status = batch.status
 
                     if status in ["completed", "failed", "cancelled"]:
-                        logger.info(f"Batch {batch_id} finished with status: {status}")
+                        log.info("Batch finished", batch_id=batch_id, status=status)
                         if status == "completed":
                             counts = getattr(batch, "file_counts", None)
-                            logger.info(f"File counts: {counts}")
+                            log.info("Batch file counts", batch_id=batch_id, counts=counts)
                         return status
 
                 await asyncio.sleep(interval)
             except Exception as e:
-                logger.error(f"Error polling batch status: {e}")
+                log.error("Error polling batch status", error=str(e), batch_id=batch_id)
                 await asyncio.sleep(interval)
 
-        logger.error(f"Polling timed out for batch {batch_id}")
+        log.error("Polling timed out for batch", batch_id=batch_id)
         return "timed_out"
 
+    @resilient_api_call()
     async def list_files_in_store(self, vector_store_id: str) -> List[Any]:
         """
-        Lists files currently in the vector store asynchronously.
+        Vector Store内の現在のファイルを非同期でリスト化します。
         """
         try:
             async with self.get_async_client() as client:
@@ -202,14 +212,15 @@ class VectorStoreService(BaseOpenAIService):
         except NotFoundError:
             return []
         except Exception as e:
-            logger.error(f"Failed to list files in store {vector_store_id}: {e}")
+            log.error("Failed to list files in store", error=str(e), vector_store_id=vector_store_id)
             return []
 
+    @resilient_api_call()
     async def delete_file_from_store(self, vector_store_id: str, file_id: str) -> bool:
         """
-        Removes a file from the vector store asynchronously.
+        Vector Storeからファイルを非同期で削除します。
         """
-        logger.info(f"Removing file {file_id} from store {vector_store_id}")
+        log.info("Removing file from store", file_id=file_id, vector_store_id=vector_store_id)
         try:
             async with self.get_async_client() as client:
                 response = await client.vector_stores.files.delete(
@@ -217,5 +228,5 @@ class VectorStoreService(BaseOpenAIService):
                 )
                 return response.deleted
         except Exception as e:
-            logger.error(f"Failed to remove file from store: {e}")
+            log.error("Failed to remove file from store", error=str(e), file_id=file_id, vector_store_id=vector_store_id)
             raise

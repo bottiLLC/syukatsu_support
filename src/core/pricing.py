@@ -1,8 +1,8 @@
 """
-Pricing model definitions.
+料金モデルの定義。
 
-This module contains the pricing structures and tables for OpenAI models,
-used for cost estimation based on token usage.
+このモジュールには、OpenAIモデルの料金構造とテーブルが含まれており、
+トークン使用量に基づくコスト見積もりに使用されます。
 """
 
 from dataclasses import dataclass
@@ -12,15 +12,15 @@ from typing import Dict
 @dataclass(frozen=True)
 class ModelPricing:
     """
-    Pricing structure for OpenAI models (per 1 Million tokens).
+    OpenAIモデルの料金構造（100万トークンあたり）。
 
-    This class is immutable to prevent accidental modification of pricing constants.
+    料金定数の誤った変更を防ぐため、このクラスはイミュータブル（不変）です。
 
     Attributes:
-        input_price (float): Cost per 1M input tokens in USD.
-        output_price (float): Cost per 1M output tokens in USD.
-        cached_input_price (float): Cost per 1M cached input tokens in USD.
-                                    Defaults to 0.0 if not defined.
+        input_price (float): 100万入力トークンあたりのコスト（USD）。
+        output_price (float): 100万出力トークンあたりのコスト（USD）。
+        cached_input_price (float): 100万キャッシュ済み入力トークンあたりのコスト（USD）。
+                                    未定義の場合はデフォルトで0.0になります。
     """
 
     input_price: float
@@ -28,9 +28,9 @@ class ModelPricing:
     cached_input_price: float = 0.0
 
 
-# Pricing Table based on 'Standard' Tier
-# Prices are in USD per 1 Million Tokens.
-# Note: These values should be updated to match the latest OpenAI pricing page.
+# 'Standard' ティアに基づく料金テーブル
+# 価格は100万トークンあたりのUSDです。
+# Note: これらの値は、最新のOpenAIの料金ページに合わせて更新する必要があります。
 PRICING_TABLE: Dict[str, ModelPricing] = {
     # GPT-5 Series
     "gpt-5.2-pro": ModelPricing(

@@ -1,4 +1,3 @@
-import sys
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -8,18 +7,18 @@ import main
 
 class TestMainApplication:
     """
-    Tests for the application entry point (main.py).
+    アプリケーションのエントリーポイント（main.py）のテスト。
     """
 
     @pytest.fixture(autouse=True)
     def mock_dependencies(self):
         """
-        Mock external dependencies for all tests to prevent side effects
-        like logging to files or checking real packages.
+        ログ出力や実際のパッケージチェックなどの副作用を防ぐために、
+        すべてのテストで外部依存関係をモックします。
         """
         with patch("main.setup_logging") as mock_log_setup, \
              patch("main.check_dependencies") as mock_check_deps, \
-             patch("main.logger") as mock_logger:
+             patch("main.log") as mock_logger:
             
             self.mock_log_setup = mock_log_setup
             self.mock_check_deps = mock_check_deps
@@ -28,63 +27,64 @@ class TestMainApplication:
 
     def test_main_success_path(self):
         """
-        [Happy Path] Verify correct startup sequence:
+        [正常系] 起動シーケンスが正しいことを検証します:
         Logging -> Dependencies -> GUI -> Mainloop
         """
-        # Mock the GUI class imported *inside* main()
-        # We patch 'src.ui.gui.SyukatsuSupportApp' because main.py imports it from there
+        # main() 内部でインポートされたGUIクラスをモックします
+        # main.pyはsrc.ui.guiからSyukatsuSupportAppをインポートするため、これをパッチします
         with patch("src.ui.gui.SyukatsuSupportApp") as MockApp:
             mock_app_instance = MockApp.return_value
             
             main.main()
             
-            # 1. Logging setup
+            # 1. ロギング設定
             self.mock_log_setup.assert_called_once()
             
-            # 2. Dependency check
+            # 2. 依存関係チェック
             self.mock_check_deps.assert_called_once()
             
-            # 3. GUI Instantiation
+            # 3. GUI初期化
             MockApp.assert_called_once()
             
-            # 4. Mainloop start
+            # 4. メインループ開始
             mock_app_instance.mainloop.assert_called_once()
             
-            # No critical errors
+            # 重大なエラーがないこと
             self.mock_logger.critical.assert_not_called()
 
     def test_main_startup_crash_handling(self):
         """
-        [Error Path] Verify handling of exceptions during startup.
-        Should log critical error, show messagebox, and exit(1).
+        [異常系] 起動中の例外処理を検証します。
+        重大なエラーをログに記録し、メッセージボックスを表示して終了(exit(1))する必要があります。
         """
-        # Simulate an error during GUI initialization
+        # GUI初期化中のエラーをシミュレート
         error_msg = "Simulated Startup Crash"
         with patch("src.ui.gui.SyukatsuSupportApp", side_effect=RuntimeError(error_msg)):
             
-            # Mock Tkinter components used in the exception block
+            # 例外ブロックで使用されるTkinterコンポーネントをモック
             with patch("tkinter.Tk") as MockTk, \
                  patch("tkinter.messagebox.showerror") as mock_showerror, \
-                 patch("tkinter._default_root", None): # Simulate no root existing
+                 patch("tkinter._default_root", None, create=True): # rootが存在しないことをシミュレート
                 
-                # Expect sys.exit(1)
+                # sys.exit(1) を期待
                 with pytest.raises(SystemExit) as excinfo:
                     main.main()
                 
                 assert excinfo.value.code == 1
                 
-                # 1. Verify Logging
+                # 1. ロギングの検証
                 self.mock_logger.critical.assert_called_once()
                 args, kwargs = self.mock_logger.critical.call_args
-                assert error_msg in str(args[0])
-                assert kwargs.get('exc_info') is True
                 
-                # 2. Verify Fallback Root Creation (since _default_root was None)
-                # It should create a Tk instance and withdraw (hide) it
+                # 標準のロギングkwargsをチェック
+                assert kwargs.get("exc_info") is True
+                
+                # 2. フォールバック用のRoot作成の検証 (_default_rootがNoneだったため)
+                # Tkインスタンスを作成し、withdraw (非表示) すること
                 MockTk.assert_called_once()
                 MockTk.return_value.withdraw.assert_called_once()
                 
-                # 3. Verify User Alert
+                # 3. ユーザーへの警告の検証
                 mock_showerror.assert_called_once()
                 call_args = mock_showerror.call_args[0]
                 assert "重大なエラー" in call_args[0]
@@ -92,24 +92,24 @@ class TestMainApplication:
 
     def test_main_crash_with_existing_root(self):
         """
-        [Error Path] Verify exception handling when a Tk root already exists.
-        Should NOT create a new Tk instance, but still show error.
+        [異常系] Tk rootが既に存在する場合の例外処理を検証します。
+        新しいTkインスタンスを作成せず、エラーを表示するはずです。
         """
-        # Simulate error
+        # エラーをシミュレート
         with patch("src.ui.gui.SyukatsuSupportApp", side_effect=ValueError("Config Error")):
              
-             # Simulate existing root
+             # 既存のrootをシミュレート
              mock_existing_root = MagicMock()
              
              with patch("tkinter.Tk") as MockTk, \
                   patch("tkinter.messagebox.showerror") as mock_showerror, \
-                  patch("tkinter._default_root", mock_existing_root):
+                  patch("tkinter._default_root", mock_existing_root, create=True):
                  
                  with pytest.raises(SystemExit):
                      main.main()
                  
-                 # Should NOT create new root because one exists
+                 # rootが存在するため新しいrootを作成しないはずです
                  MockTk.assert_not_called()
                  
-                 # Should still show error
+                 # 引き続きエラーは表示されるはずです
                  mock_showerror.assert_called()

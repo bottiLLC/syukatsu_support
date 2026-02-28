@@ -1,19 +1,19 @@
 """
-UI Styles configuration module for the Job Hunting Support Application.
+就活サポートアプリのUIスタイル設定モジュール。
 
-This module defines constants for fonts, colors, and window settings
-used across the GUI application to maintain consistent styling.
+このモジュールは、GUIアプリケーション全体で使用される一貫したスタイリングを維持するための
+フォント、色、およびウィンドウ設定の定数を定義します。
 """
 
 from typing import Dict, Tuple, Union
 
-# Type alias for Tkinter font definitions: (Family, Size) or (Family, Size, Style)
+# Tkinterフォント定義の型エイリアス: (Family, Size) または (Family, Size, Style)
 FontDef = Union[Tuple[str, int], Tuple[str, int, str]]
 
-# Window Settings
+# ウィンドウ設定
 WINDOW_SIZE: str = "1400x900"
 
-# Font Configurations
+# フォント設定
 UI_FONTS: Dict[str, FontDef] = {
     "BOLD": ("Segoe UI", 9, "bold"),
     "TITLE": ("Segoe UI", 11, "bold"),
@@ -26,7 +26,7 @@ UI_FONTS: Dict[str, FontDef] = {
     "STATUS_MONO": ("Consolas", 9, "bold"),
 }
 
-# Color Palette
+# カラーパレット
 UI_COLORS: Dict[str, str] = {
     "TITLE": "#2c3e50",
     "USER_BG": "#ecf0f1",

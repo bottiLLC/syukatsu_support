@@ -1,15 +1,15 @@
 """
-Configuration module for the Job Hunting Support Application.
+就活サポートアプリの設定（Configuration）モジュール。
 
-This module handles:
-1. Secure management of API keys using local encryption (Fernet).
-2. Loading and saving user configuration via JSON and Environment Variables.
-3. Defining application constants and default settings.
+このモジュールは以下を処理します：
+1. ローカル暗号化（Fernet）を使用したAPIキーの安全な管理。
+2. JSONおよび環境変数を経由したユーザー設定の読み込みと保存。
+3. アプリケーションの定数およびデフォルト設定の定義。
 """
 
 import json
-import logging
 import os
+import structlog
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -19,33 +19,33 @@ from pydantic import BaseModel, Field, ValidationError
 
 from src.types import ReasoningEffort
 
-# Load environment variables from .env file (if present)
+# .envファイルから環境変数を読み込む（存在する場合）
 load_dotenv()
 
-# Setup Logger
-logger = logging.getLogger(__name__)
+# ロガーのセットアップ
+log = structlog.get_logger()
 
-# Constants
-# Paths are relative to the Current Working Directory
+# 定数
+# パスは現在の作業ディレクトリ（CWD）からの相対パス
 CONFIG_FILE = Path("config.json")
 KEY_FILE = Path(".secret.key")
 
 
 class AppConfig:
     """
-    Defines global application configuration constants.
+    グローバルなアプリケーション設定の定数を定義します。
 
     Attributes:
-        APP_VERSION (str): The current version of the application.
-        DEFAULT_MODEL (str): The default OpenAI model (targeting gpt-5.2).
-        DEFAULT_REASONING (ReasoningEffort): Default reasoning effort level.
-        API_TIMEOUT (float): Global timeout for API calls in seconds.
-        API_MAX_RETRIES (int): Number of retries for failed API calls.
+        APP_VERSION (str): アプリケーションの現在のバージョン。
+        DEFAULT_MODEL (str): デフォルトのOpenAIモデル（gpt-5.2をターゲット）。
+        DEFAULT_REASONING (ReasoningEffort): デフォルトの推論エフォートレベル（reasoning effort）。
+        API_TIMEOUT (float): API呼び出しのグローバルタイムアウト（秒）。
+        API_MAX_RETRIES (int): 失敗したAPI呼び出しのリトライ回数。
     """
 
     APP_VERSION: str = "v1.0.0"
 
-    # Default settings to enforce on startup (Safety & Cost management)
+    # 起動時に強制するデフォルト設定（安全性とコスト管理のため）
     DEFAULT_MODEL: str = "gpt-5.2"
     DEFAULT_REASONING: ReasoningEffort = "high"
 
@@ -55,89 +55,89 @@ class AppConfig:
 
 class UserConfig(BaseModel):
     """
-    Pydantic model representing the runtime user configuration.
+    実行時のユーザー設定を表すPydanticモデル。
 
-    This model holds the *decrypted* API key in memory.
-    It is NOT dumped directly to disk to prevent plain-text leakage.
+    このモデルはメモリ内に*復号化された*APIキーを保持します。
+    プレーンテキストの漏洩を防ぐため、直接ディスクにはダンプ（保存）されません。
     """
 
     model_config = {"populate_by_name": True}
 
     api_key: Optional[str] = Field(
-        default=None, description="The decrypted OpenAI API Key."
+        default=None, description="復号化されたOpenAI APIキー。"
     )
     model: str = Field(
-        default=AppConfig.DEFAULT_MODEL, description="The selected OpenAI model ID."
+        default=AppConfig.DEFAULT_MODEL, description="選択されたOpenAIモデルのID。"
     )
     reasoning_effort: ReasoningEffort = Field(
         default=AppConfig.DEFAULT_REASONING,
-        description="The reasoning effort level for the model.",
+        description="モデルの推論エフォート（reasoning effort）レベル。",
     )
     # FIX: Corrected string to match src/core/prompts.py (Added space)
     system_prompt_mode: str = Field(
         default="有価証券報告書 -財務分析-",
-        description="The currently selected analysis strategy mode.",
+        description="現在選択されている分析戦略モード。",
     )
     last_response_id: Optional[str] = Field(
         default=None,
-        description="The ID of the last response for context continuity.",
+        description="コンテキストの継続性を保つための最後のレスポンスID。",
     )
 
-    # --- RAG Configuration ---
+    # --- RAG設定 ---
     current_vector_store_id: Optional[str] = Field(
-        default=None, description="The ID of the currently selected Vector Store."
+        default=None, description="現在選択されているVector StoreのID。"
     )
     use_file_search: bool = Field(
-        default=False, description="Whether to enable File Search (RAG) tool."
+        default=False, description="File Search (RAG) ツールを有効にするかどうか。"
     )
 
 
 class SecurityManager:
     """
-    Handles local encryption and decryption of sensitive data using Fernet.
+    Fernetを使用して、機密データのローカル暗号化および復号化を処理します。
     """
 
     @staticmethod
     def _get_or_create_key() -> bytes:
         """
-        Retrieves the encryption key from disk or generates a new one.
+        ディスクから暗号化キーを取得するか、新しいキーを生成します。
 
         Returns:
-            bytes: The Fernet encryption key.
+            bytes: Fernetの暗号化キー。
 
         Raises:
-            IOError: If reading or writing the key file fails.
+            IOError: キーファイルの読み書きに失敗した場合。
         """
         if KEY_FILE.exists():
             try:
                 return KEY_FILE.read_bytes()
             except IOError as e:
-                logger.error(f"Failed to read key file: {e}")
+                log.error("キーファイルの読み込みに失敗しました", error=str(e), path=str(KEY_FILE))
                 raise
 
-        # Generate new key if it doesn't exist
-        logger.info("Generating new encryption key.")
+        # 存在しない場合は新しいキーを生成
+        log.info("新しい暗号化キーを生成しています。")
         key = Fernet.generate_key()
         try:
             KEY_FILE.write_bytes(key)
-            # Set restrictive permissions on POSIX systems (Read/Write by owner only)
+            # POSIXシステムでは制限の厳しい権限（オーナーのみ読み書き可能）を設定
             if os.name == "posix":
                 KEY_FILE.chmod(0o600)
         except IOError as e:
-            logger.critical(f"Failed to save encryption key: {e}")
+            log.critical("暗号化キーの保存に失敗しました", error=str(e), path=str(KEY_FILE))
             raise
         return key
 
     @classmethod
     def encrypt(cls, plain_text: str) -> str:
         """
-        Encrypts a string.
+        文字列を暗号化します。
 
         Args:
-            plain_text: The text to encrypt.
+            plain_text: 暗号化するテキスト。
 
         Returns:
-            The encrypted text string, or empty string if input is empty/error.
+            暗号化されたテキスト文字列。入力が空またはエラーの場合は空文字列。
         """
         if not plain_text:
             return ""
@@ -145,19 +145,19 @@ class SecurityManager:
             fernet = Fernet(cls._get_or_create_key())
             return fernet.encrypt(plain_text.encode("utf-8")).decode("utf-8")
         except Exception as e:
-            logger.error(f"Encryption failed: {e}")
+            log.error("暗号化に失敗しました", error=str(e))
             return ""
 
     @classmethod
     def decrypt(cls, cipher_text: str) -> Optional[str]:
         """
-        Decrypts a string.
+        文字列を復号化します。
 
         Args:
-            cipher_text: The encrypted text string.
+            cipher_text: 暗号化されたテキスト文字列。
 
         Returns:
-            The decrypted text, or None if decryption fails.
+            復号化されたテキスト。復号化に失敗した場合は None。
         """
         if not cipher_text:
             return None
@@ -165,112 +165,112 @@ class SecurityManager:
             fernet = Fernet(cls._get_or_create_key())
             return fernet.decrypt(cipher_text.encode("utf-8")).decode("utf-8")
         except (InvalidToken, Exception) as e:
-            logger.warning(
-                f"Decryption failed. The secret key might have been regenerated "
-                f"or the data is corrupted. Details: {e}"
+            log.warning(
+                "復号化に失敗しました。シークレットキーが再生成されたか、データが破損している可能性があります。",
+                error=str(e)
             )
             return None
 
 
 class ConfigManager:
     """
-    Service for loading and saving application configuration.
+    アプリケーション設定の読み込みおよび保存のためのサービス。
 
-    Ensures API keys are encrypted on disk and decrypted in memory.
-    Enforces default settings on load to prevent expensive model usage across sessions.
+    APIキーがディスク上では暗号化され、メモリ内では復号化されていることを保証します。
+    複数セッションにわたる高価なモデルの使用を防ぐため、ロード時にデフォルト設定を強制します。
     """
 
     @staticmethod
     def load() -> UserConfig:
         """
-        Loads configuration from disk and environment variables.
+        ディスクおよび環境変数から設定を読み込みます。
 
-        Priority:
-        1. Environment Variable (OPENAI_API_KEY) - Highest security priority.
-        2. Config File (Encrypted API Key) - Persistence for GUI users.
+        優先順位:
+        1. 環境変数 (OPENAI_API_KEY) - 最も高いセキュリティ優先度。
+        2. 設定ファイル (暗号化されたAPIキー) - GUIユーザーのための永続化。
 
-        Safety:
-            Model and Reasoning Effort are ALWAYS reset to defaults on load
-            to prevent expensive model usage across sessions.
+        安全性:
+            複数セッションにわたる高価なモデルの使用を防ぐため、
+            モデルと推論エフォート（Reasoning Effort）はロード時に常にデフォルトにリセットされます。
 
         Returns:
-            UserConfig: The loaded configuration object.
+            UserConfig: 読み込まれた設定オブジェクト。
         """
         config_data: Dict[str, Any] = {}
 
-        # 1. Load from JSON file (mainly for API Key persistence)
+        # 1. JSONファイルからの読み込み（主にAPIキーの永続化のため）
         if CONFIG_FILE.exists():
             try:
                 with CONFIG_FILE.open("r", encoding="utf-8") as f:
                     file_data = json.load(f)
 
-                # Decrypt API Key if 'encrypted_api_key' is present
+                # 'encrypted_api_key' が存在する場合はAPIキーを復号化
                 encrypted_key = file_data.get("encrypted_api_key")
                 if encrypted_key:
                     decrypted_key = SecurityManager.decrypt(encrypted_key)
                     if decrypted_key:
                         file_data["api_key"] = decrypted_key
                     else:
-                        # Decryption failed; ensure we don't pass garbage
-                        logger.warning("Resetting API key due to decryption failure.")
+                        # 復号化に失敗した場合、不正なデータを渡さないようにする
+                        log.warning("復号化に失敗したため、APIキーをリセットしています。")
                         file_data["api_key"] = None
 
-                # Remove encrypted field from the dict used for Pydantic init
+                # Pydanticの初期化に使用される辞書から暗号化されたフィールドを削除
                 file_data.pop("encrypted_api_key", None)
                 config_data = file_data
 
             except (json.JSONDecodeError, IOError, Exception) as e:
-                logger.error(f"Failed to load config file: {e}")
+                log.error("設定ファイルの読み込みに失敗しました", error=str(e), path=str(CONFIG_FILE))
 
-        # 2. Environment override (overwrites file-based key if present)
+        # 2. 環境変数による上書き（ファイルベースのキーが存在する場合は上書き）
         env_key = os.getenv("OPENAI_API_KEY")
         if env_key:
             config_data["api_key"] = env_key
 
-        # 3. Enforce Safety Defaults (Ignore saved model/reasoning settings)
+        # 3. 安全性に基づくデフォルト値の強制（保存されているモデル/推論設定を無視）
         config_data["model"] = AppConfig.DEFAULT_MODEL
         config_data["reasoning_effort"] = AppConfig.DEFAULT_REASONING
 
-        # Reset prompt mode and context for a fresh start
+        # 新規スタートのためにプロンプトモードとコンテキストをリセット
         # FIX: Ensure consistency with prompts.py
         config_data["system_prompt_mode"] = "有価証券報告書 -財務分析-"
         config_data["last_response_id"] = None
 
-        # RAG settings (use_file_search, current_vector_store_id) are preserved if loaded
+        # RAG設定（use_file_search、current_vector_store_id）は読み込まれた場合保持される
 
-        # Validate and return
+        # バリデーションと返却
         try:
             return UserConfig(**config_data)
         except ValidationError as e:
-            logger.error(f"Configuration validation failed: {e}")
-            # Fallback to default configuration
+            log.error("設定のバリデーションに失敗しました", error=str(e))
+            # デフォルト設定にフォールバック
             return UserConfig()
 
     @staticmethod
     def save(config: UserConfig) -> None:
         """
-        Saves the configuration to disk.
+        設定をディスクに保存します。
 
-        The 'api_key' field is explicitly excluded from the plain text dump
-        and stored securely in 'encrypted_api_key'.
+        'api_key' フィールドはプレーンテキストのダンプから明示的に除外され、
+        'encrypted_api_key' 内に安全に保存されます。
 
         Args:
-            config: The current configuration state to save.
+            config: 保存する現在の設定状態。
         """
         try:
-            # 1. Convert to dict, explicitly excluding sensitive fields
+            # 1. 辞書に変換し、機密フィールドを明示的に除外
             data = config.model_dump(exclude={"api_key"})
 
-            # 2. Encrypt and add the API key manually
+            # 2. APIキーを暗号化して手動で追加
             if config.api_key:
                 encrypted = SecurityManager.encrypt(config.api_key)
                 if encrypted:
                     data["encrypted_api_key"] = encrypted
 
-            # 3. Write to disk
+            # 3. ディスクへ書き出し
             with CONFIG_FILE.open("w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
 
-            logger.info("Configuration saved successfully.")
+            log.info("設定が正常に保存されました。", path=str(CONFIG_FILE))
         except IOError as e:
-            logger.error(f"Failed to save configuration: {e}")
+            log.error("設定の保存に失敗しました", error=str(e), path=str(CONFIG_FILE))

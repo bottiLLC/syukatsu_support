@@ -8,7 +8,7 @@ from src.core.rag_services import FileService, VectorStoreService
 
 class MainModel:
     """
-    Main application model holding state and business data.
+    状態とビジネスデータを保持するメインアプリケーションモデル。
     """
 
     def __init__(self) -> None:
@@ -26,5 +26,5 @@ class MainModel:
         self.file_service: Optional[FileService] = None
 
     def save_config(self) -> None:
-        """Saves current configuration to persistent storage."""
+        """現在の設定を永続ストレージに保存します。"""
         ConfigManager.save(self.user_config)

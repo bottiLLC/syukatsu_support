@@ -1,11 +1,10 @@
 """
-Base service module for OpenAI API interactions.
+OpenAI APIとの通信を管理する基底サービスモジュール。
 
-This module provides the abstract base class for all services that require
-access to the OpenAI API, ensuring consistent configuration management.
+このモジュールは、OpenAI APIへのアクセスを必要とするすべてのサービスに対する抽象基底クラスを提供し、一貫した設定管理を保証します。
 """
 
-import logging
+import structlog
 
 from openai import AsyncOpenAI
 from typing import AsyncGenerator
@@ -13,45 +12,44 @@ from contextlib import asynccontextmanager
 
 from src.config.app_config import AppConfig
 
-# Setup logger
-logger = logging.getLogger(__name__)
+# ロガーのセットアップ
+log = structlog.get_logger()
 
 
 class BaseOpenAIService:
     """
-    Base class for services interacting with the OpenAI API.
+    OpenAI APIとやり取りするサービスの基底クラス。
 
-    Enforces the use of AsyncOpenAI within an async context manager
-    to prevent resource leaks, per the application's global rules.
+    アプリケーションの全体規則に従い、リソースリークを防ぐために非同期コンテキストマネージャー内でAsyncOpenAIを使用することを強制します。
 
     Attributes:
-        _api_key (str): The decrypted OpenAI API key.
+        _api_key (str): 復号化されたOpenAI APIキー。
     """
 
     def __init__(self, api_key: str) -> None:
         """
-        Initializes the OpenAI service with the provided API key.
+        指定されたAPIキーでOpenAIサービスを初期化します。
 
         Args:
-            api_key (str): The decrypted OpenAI API key.
+            api_key (str): 復号化されたOpenAI APIキー。
 
         Raises:
-            ValueError: If the provided API key is empty or None.
+            ValueError: 提供されたAPIキーが空またはNoneの場合。
         """
         if not api_key:
-            logger.error("Attempted to initialize BaseOpenAIService without an API key.")
-            raise ValueError("API Key is required to initialize the OpenAI service.")
+            log.error("APIキーなしでBaseOpenAIServiceを初期化しようとしました。")
+            raise ValueError("OpenAIサービスを初期化するにはAPIキーが必要です。")
 
         self._api_key = api_key
 
     @asynccontextmanager
     async def get_async_client(self) -> AsyncGenerator[AsyncOpenAI, None]:
         """
-        Context manager that yields an AsyncOpenAI client.
-        Ensures proper creation and cleanup of the async HTTP session.
+        AsyncOpenAIクライアントを生成するコンテキストマネージャー。
+        非同期HTTPセッションの適切な作成とクリーンアップを保証します。
 
         Yields:
-            AsyncOpenAI: A configured asynchronous OpenAI client.
+            AsyncOpenAI: 設定済みの非同期OpenAIクライアント。
         """
         client = AsyncOpenAI(
             api_key=self._api_key,
