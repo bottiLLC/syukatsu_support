@@ -248,10 +248,15 @@ class SyukatsuSupportApp(tk.Tk):
         text = self._log_view.get("1.0", tk.END).strip()
         if not text:
             return
+            
+        import datetime
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+        default_filename = f"{timestamp}_分析レポート.txt"
+        
         path_str = filedialog.asksaveasfilename(
             defaultextension=".txt",
             filetypes=[("Text Files", "*.txt")],
-            initialfile="分析レポート.txt"
+            initialfile=default_filename
         )
         if path_str:
             with open(path_str, "w", encoding="utf-8") as f:
