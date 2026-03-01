@@ -117,27 +117,38 @@ class RAGManagementWindow(tk.Toplevel):
 
     def _refresh_stores_async(self):
         self.set_status("Loading Vector Stores...", busy=True)
+        prev_id = self.current_store_id
         self.store_tree.delete(*self.store_tree.get_children())
-        self.file_tree.delete(*self.file_tree.get_children())
-        self.current_store_id = None
-        self.current_store_file_count = 0
-        self._update_store_buttons()
 
         async def _fetch():
             try:
                 stores = await self.client.list_vector_stores()
-                self.after(0, lambda: self._render_stores(stores))
+                self.after(0, lambda: self._render_stores(stores, prev_id))
             except Exception as e:
                 self.after(0, lambda err=e: self.set_status(f"Error: {err}"))
 
         self._run_thread(_fetch())
 
-    def _render_stores(self, stores: List[Any]):
+    def _render_stores(self, stores: List[Any], select_id: Optional[str] = None):
+        found_item = None
         for s in stores:
             name = getattr(s, "name", "(No Name)")
             usage = f"{getattr(s, 'usage_bytes', 0):,}"
             files_count = getattr(getattr(s, "file_counts", None), "total", 0)
-            self.store_tree.insert("", "end", values=(name, s.id, getattr(s, "status", ""), files_count, usage))
+            item = self.store_tree.insert("", "end", values=(name, s.id, getattr(s, "status", ""), files_count, usage))
+            if select_id and str(s.id) == select_id:
+                found_item = item
+
+        if found_item:
+            self.store_tree.selection_set(found_item)
+            self.store_tree.focus(found_item)
+            self._on_store_select(None)
+        else:
+            self.current_store_id = None
+            self.current_store_file_count = 0
+            self.file_tree.delete(*self.file_tree.get_children())
+            self._update_store_buttons()
+
         self.set_status(f"Loaded {len(stores)} Vector Stores.")
 
     def _on_store_select(self, event):
@@ -265,7 +276,6 @@ class RAGManagementWindow(tk.Toplevel):
                 self.after(0, lambda: self.set_status("Indexing file..."))
                 batch = await self.client.create_file_batch(self.current_store_id, [f_obj.id]) # type: ignore
                 await self.client.poll_batch_status(self.current_store_id, batch.id) # type: ignore
-                self.after(0, lambda: self._refresh_files_async(self.current_store_id)) # type: ignore
                 self.after(0, self._refresh_stores_async)
             except Exception as e:
                 self.after(0, lambda err=e: messagebox.showerror("Error", str(err)))
@@ -289,7 +299,6 @@ class RAGManagementWindow(tk.Toplevel):
             try:
                 await self.client.delete_file_from_store(self.current_store_id, f_id) # type: ignore
                 await self.client.delete_file(f_id)
-                self.after(0, lambda s=self.current_store_id: self._refresh_files_async(s)) # type: ignore
                 self.after(0, self._refresh_stores_async)
             except Exception as e:
                 self.after(0, lambda err=e: messagebox.showerror("Error", str(err)))
