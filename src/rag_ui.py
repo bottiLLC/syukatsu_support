@@ -253,6 +253,7 @@ class RAGManagementWindow(tk.Toplevel):
         self._run_thread(_fetch())
 
     def _render_files(self, files: List[dict]):
+        self.file_tree.delete(*self.file_tree.get_children())
         files.sort(key=lambda x: x["created_at"], reverse=True)
         for f in files:
             dt_str = datetime.datetime.fromtimestamp(f["created_at"]).strftime("%Y-%m-%d %H:%M")
