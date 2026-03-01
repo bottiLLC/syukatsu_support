@@ -20,7 +20,7 @@ class SyukatsuSupportApp(tk.Tk):
     def __init__(self, state: AppState):
         super().__init__()
         self.state = state
-        self.title("SYUKATSU Support - 合同会社ぼっち (v1.10)")
+        self.title("SYUKATSU Support - 合同会社ぼっち (v1.1.2)")
         self.geometry(WINDOW_SIZE)
 
         # UI State Variables
