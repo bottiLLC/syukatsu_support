@@ -278,7 +278,7 @@ class SyukatsuSupportApp(tk.Tk):
     def _on_open_rag_manager(self):
         from src.rag_ui import RAGManagementWindow
         
-        self.state.update_api_key(self.api_key_var.get().strip())
+        self.state.update_api_key(self.api_key_var.get().strip(), silent=True)
         if not self.state.config.api_key or not self.state.client:
             messagebox.showwarning("エラー", "API Keyを登録してください。")
             return

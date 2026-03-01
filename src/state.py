@@ -72,12 +72,12 @@ class AppState:
     def save_config(self):
         ConfigManager.save(self.config)
 
-    def update_api_key(self, api_key: str):
+    def update_api_key(self, api_key: str, silent: bool = False):
         if api_key:
             self.config.api_key = api_key
             self.save_config()
             self.init_client()
-            if self.on_info:
+            if not silent and self.on_info:
                 self.on_info("設定完了", "APIキーを登録し保存しました。")
 
     def get_system_prompt(self, mode_name: str) -> str:
