@@ -211,6 +211,8 @@ class AppState:
 
                 elif isinstance(event, StreamUsage):
                     self.cost_info = CostCalculator.calculate(self.config.model, event)
+                    if self.on_text_delta:
+                        self.on_text_delta(f"\n\n[{self.cost_info}]\n", "info")
                     self._notify()
 
                 elif isinstance(event, StreamError):

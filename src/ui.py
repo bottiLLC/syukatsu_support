@@ -174,6 +174,7 @@ class SyukatsuSupportApp(tk.Tk):
         self._log_view.tag_config("user", foreground=UI_COLORS["USER_FG"], background=UI_COLORS["USER_BG"], font=UI_FONTS["NORMAL_BOLD"], lmargin1=10, lmargin2=10, rmargin=10)
         self._log_view.tag_config("ai", foreground=UI_COLORS["AI_FG"], lmargin1=10, lmargin2=10, rmargin=10)
         self._log_view.tag_config("error", foreground=UI_COLORS["ERROR_FG"])
+        self._log_view.tag_config("info", foreground="#888888", font=UI_FONTS["SMALL_MONO"], justify="right")
 
     # --- Bindings to AppState ---
     def _bind_state_callbacks(self):
