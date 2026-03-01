@@ -19,3 +19,8 @@ dev = [
     "pytest",
     "pytest-asyncio"
 ]
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.19.0",
+]
