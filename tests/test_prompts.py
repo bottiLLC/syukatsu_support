@@ -5,7 +5,7 @@ from src.core.prompts import (
     MODE_HUMAN_CAPITAL,
     MODE_ENTRY_SHEET
 )
-from src.config.app_config import UserConfig
+from src.models import UserConfig
 
 def test_prompts_structure():
     """

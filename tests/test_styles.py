@@ -3,7 +3,7 @@ UIスタイル（src/ui/styles.py）のユニットテスト。
 必須のスタイル定数が定義され、有効であることを保証します。
 """
 
-from src.ui.styles import UI_COLORS, UI_FONTS, WINDOW_SIZE
+from src.styles import UI_COLORS, UI_FONTS, WINDOW_SIZE
 
 def test_window_size_format():
     """WINDOW_SIZE文字列フォーマット（WxH）を検証します。"""

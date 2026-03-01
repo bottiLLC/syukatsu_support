@@ -75,15 +75,10 @@ class CostCalculator:
             return f"Cost: $0.00000 | {usage_event}"
 
         try:
-            prompt_tokens = getattr(usage_event, "prompt_tokens", getattr(getattr(usage_event, "usage", None), "prompt_tokens", 0))
-            completion_tokens = getattr(usage_event, "completion_tokens", getattr(getattr(usage_event, "usage", None), "completion_tokens", 0))
-            
-            # Additional cached tokens parsing
-            cached_tokens = 0
-            if hasattr(usage_event, "prompt_tokens_details"):
-                cached_tokens = getattr(usage_event.prompt_tokens_details, "cached_tokens", 0)
-            elif hasattr(getattr(usage_event, "usage", None), "prompt_tokens_details"):
-                cached_tokens = getattr(usage_event.usage.prompt_tokens_details, "cached_tokens", 0)
+            # We expect a StreamUsage object which has our defined keys
+            prompt_tokens = getattr(usage_event, "input_tokens", 0)
+            completion_tokens = getattr(usage_event, "output_tokens", 0)
+            cached_tokens = getattr(usage_event, "cached_tokens", 0)
 
             pricing = PRICING_TABLE.get(model_name)
             if not pricing:

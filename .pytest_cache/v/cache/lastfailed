@@ -11,9 +11,7 @@
   "tests/test_logging_config.py": true,
   "tests/test_main.py": true,
   "tests/test_mvp_presenters.py": true,
-  "tests/test_prompts.py": true,
   "tests/test_rag_services.py": true,
   "tests/test_services.py": true,
-  "tests/test_styles.py": true,
   "tests/test_types.py": true
 }

@@ -1,6 +1,6 @@
 import asyncio
 from openai import AsyncOpenAI
-from src.config.app_config import ConfigManager
+from src.infrastructure.security import ConfigManager
 
 async def main():
     config = ConfigManager.load()
