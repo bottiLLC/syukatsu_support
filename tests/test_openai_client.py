@@ -9,23 +9,16 @@ from src.models import ResponseRequestPayload, StreamResponseCreated
 async def test_openai_client_resilience():
     client = OpenAIClient("test-key")
 
-    mock_create = AsyncMock()
-    # First call raises RateLimitError, second succeeds
-    response_request = MagicMock()
-    
-    mock_create.side_effect = [
+    mock_client = MagicMock()
+    mock_client.responses.create = AsyncMock()
+    mock_client.responses.create.side_effect = [
         RateLimitError(message="Rate limit", response=MagicMock(), body=None),
-        MagicMock() # Success object
+        "Success object"
     ]
-
-    with patch('openai.resources.responses.AsyncResponses.create', new=mock_create):
-        # We need to test _create_stream specifically, as it carries the resilient decorator
-        # Actually in our code, the _create_stream method wraps `client.responses.create`
-        # Using a dummy async client that intercepts responses.create
-        
-        # In OpenAI SDK v2.15, client.responses.create might not be directly mockable this way 
-        # so let's mock the internal _create_stream itself or the underlying client.
-        pass
+    
+    stream_res = await client._create_stream(mock_client, {})
+    assert stream_res == "Success object"
+    assert mock_client.responses.create.call_count == 2
 
     # For a robust test without depending on complex SDK internals, we test the event parsing:
     event_created = MagicMock()
@@ -43,7 +36,13 @@ async def test_stream_analysis_validation_error():
     
     # Send a formally invalid payload model that causes ValidationError in pydantic
     # Wait, pydantic checks at instantiation.
-    pass
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        ResponseRequestPayload(
+            model="gpt-5.4",
+            input="Test",
+            invalid_field="should fail" # type: ignore
+        )
 
 @pytest.mark.asyncio
 async def test_process_text_delta():
@@ -55,4 +54,15 @@ async def test_process_text_delta():
     
     result = client._process_event(event_delta)
     assert result.delta == "Hello"
+
+@pytest.mark.asyncio
+async def test_process_reasoning_text_delta():
+    client = OpenAIClient("test-key")
+    
+    event_delta = MagicMock()
+    event_delta.type = "response.reasoning_text.delta"
+    event_delta.delta = " Thinking..."
+    
+    result = client._process_event(event_delta)
+    assert result.delta == " Thinking..."
 

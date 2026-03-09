@@ -87,7 +87,7 @@ class SyukatsuSupportApp(tk.Tk):
         
         ttk.Label(grid, text="モデル:").grid(row=0, column=0, sticky="w")
         ttk.Combobox(
-            grid, textvariable=self.model_var, values=["gpt-5.2-pro", "gpt-5.2", "gpt-5-mini"], state="readonly"
+            grid, textvariable=self.model_var, values=["gpt-5.4-pro", "gpt-5.4"], state="readonly"
         ).grid(row=0, column=1, sticky="ew", padx=5)
 
         ttk.Label(grid, text="推論強度:").grid(row=1, column=0, sticky="w", pady=5)

@@ -32,21 +32,16 @@ class ModelPricing:
 # 価格は100万トークンあたりのUSDです。
 # Note: これらの値は、最新のOpenAIの料金ページに合わせて更新する必要があります。
 PRICING_TABLE: Dict[str, ModelPricing] = {
-    # GPT-5 Series
-    "gpt-5.2-pro": ModelPricing(
-        input_price=21.00,
-        output_price=168.00,
+    # GPT-5.4 Series
+    "gpt-5.4-pro": ModelPricing(
+        input_price=30.00,
+        output_price=180.00,
         cached_input_price=0.0
     ),
-    "gpt-5.2": ModelPricing(
-        input_price=1.75,
-        output_price=14.00,
-        cached_input_price=0.175
-    ),
-    "gpt-5-mini": ModelPricing(
-        input_price=0.25,
-        output_price=2.00,
-        cached_input_price=0.025
+    "gpt-5.4": ModelPricing(
+        input_price=2.50,
+        output_price=15.00,
+        cached_input_price=0.25
     ),
     # Legacy Fallbacks
     "gpt-4o": ModelPricing(

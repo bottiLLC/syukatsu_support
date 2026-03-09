@@ -41,9 +41,8 @@ class TestPricingTable:
             assert isinstance(pricing, ModelPricing)
 
     @pytest.mark.parametrize("model_key", [
-        "gpt-5.2",
-        "gpt-5.2-pro",
-        "gpt-5-mini"
+        "gpt-5.4",
+        "gpt-5.4-pro",
     ])
     def test_essential_models_exist(self, model_key):
         """[コンテンツ] 仕様で定義された主要なモデルがテーブルに存在することを検証します。"""
@@ -51,14 +50,11 @@ class TestPricingTable:
 
     @pytest.mark.parametrize("model, expected_input, expected_output, expected_cached", [
         # Based on Pricing.txt (Source of Truth)
-        # gpt-5.2: In $1.75, Out $14.00, Cached $0.175
-        ("gpt-5.2", 1.75, 14.00, 0.175),
+        # gpt-5.4: In $2.50, Out $15.00, Cached $0.25
+        ("gpt-5.4", 2.50, 15.00, 0.25),
         
-        # gpt-5-mini: In $0.25, Out $2.00, Cached $0.025
-        ("gpt-5-mini", 0.25, 2.00, 0.025),
-        
-        # gpt-5.2-pro: In $21.00, Out $168.00, Cached 0.0 (implied)
-        ("gpt-5.2-pro", 21.00, 168.00, 0.0)
+        # gpt-5.4-pro: In $30.00, Out $180.00, Cached 0.0 (implied)
+        ("gpt-5.4-pro", 30.00, 180.00, 0.0)
     ])
     def test_price_accuracy(self, model, expected_input, expected_output, expected_cached):
         """

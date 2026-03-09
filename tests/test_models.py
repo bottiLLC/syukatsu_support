@@ -11,7 +11,7 @@ from src.models import (
 
 def test_user_config_defaults():
     config = UserConfig()
-    assert config.model == "gpt-5.2"
+    assert config.model == "gpt-5.4"
     assert config.reasoning_effort == "high"
     assert config.use_file_search is False
     assert config.api_key is None
@@ -19,7 +19,7 @@ def test_user_config_defaults():
 def test_response_request_payload_normalization():
     # String input should be normalized to InputMessage
     payload = ResponseRequestPayload(
-        model="gpt-5.2",
+        model="gpt-5.4",
         input="Hello World" # type: ignore
     )
     assert len(payload.input) == 1
@@ -31,7 +31,7 @@ def test_forbid_extra_fields():
     # extra fields should be forbidden in request payload
     with pytest.raises(ValidationError):
         ResponseRequestPayload(
-            model="gpt-5.2",
+            model="gpt-5.4",
             input="Test", # type: ignore
             invalid_field="should fail" # type: ignore
         )

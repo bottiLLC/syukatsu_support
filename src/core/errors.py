@@ -34,7 +34,7 @@ def translate_api_error(e: Exception) -> str:
             return (
                 "【リソース未発見】 (NotFoundError)\n"
                 "要求されたリソース（指定したモデルやファイルなど）が見つかりません。\n"
-                "対策: 設定されているモデル名(gpt-5.2等)や、読み込み対象のファイルが存在しているか確認してください。"
+                "対策: 設定されているモデル名(gpt-5.4等)や、読み込み対象のファイルが存在しているか確認してください。"
             )
         case openai.ConflictError:
             return (

@@ -84,6 +84,11 @@ class OpenAIClient:
             delta_content = getattr(event, "delta", None)
             return StreamTextDelta(delta=delta_content) if delta_content else None
             
+        elif event_type == "response.reasoning_text.delta":
+            delta_content = getattr(event, "delta", None)
+            # Display reasoning text with a subtle marker or just as normal text
+            return StreamTextDelta(delta=delta_content) if delta_content else None
+            
         elif event_type == "response.created":
             response_obj = getattr(event, "response", None)
             if response_obj and hasattr(response_obj, "id"):
