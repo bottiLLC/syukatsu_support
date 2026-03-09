@@ -13,16 +13,16 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 from typing import Any, List, Optional
 import structlog
 
-from src.infrastructure.openai_client import OpenAIClient
+from src.application.usecases.rag_usecase import RAGUseCase
 from src.styles import UI_FONTS
 
 log = structlog.get_logger()
 
 
 class RAGManagementWindow(tk.Toplevel):
-    def __init__(self, parent: tk.Tk, client: OpenAIClient) -> None:
+    def __init__(self, parent: tk.Tk, rag_usecase: RAGUseCase) -> None:
         super().__init__(parent)
-        self.client = client
+        self.rag_usecase = rag_usecase
         self.title("ナレッジベース管理 (RAG Management)")
         self.geometry("1100x750")
         self.transient(parent)
@@ -122,7 +122,7 @@ class RAGManagementWindow(tk.Toplevel):
 
         async def _fetch():
             try:
-                stores = await self.client.list_vector_stores()
+                stores = await self.rag_usecase.list_vector_stores()
                 self.after(0, lambda: self._render_stores(stores, prev_id))
             except Exception as e:
                 self.after(0, lambda err=e: self.set_status(f"Error: {err}"))
@@ -175,12 +175,13 @@ class RAGManagementWindow(tk.Toplevel):
 
     def _on_create_store(self):
         name = simpledialog.askstring("新規作成", "Vector Storeの名前を入力してください:")
-        if not name: return
+        if not name:
+            return
         self.set_status("Creating store...", busy=True)
 
         async def _create():
             try:
-                await self.client.create_vector_store(name)
+                await self.rag_usecase.create_vector_store(name)
                 self.after(0, lambda: self.set_status(f"Created store '{name}'."))
                 self.after(0, self._refresh_stores_async)
             except Exception as e:
@@ -191,19 +192,16 @@ class RAGManagementWindow(tk.Toplevel):
 
     def _on_rename_store(self):
         sel = self.store_tree.selection()
-        if not sel: return
+        if not sel:
+            return
         cur_name = self.store_tree.item(sel[0])["values"][0]
         new_name = simpledialog.askstring("名前変更", "新しい名前を入力してください:", initialvalue=cur_name)
         
-        # Async client wrap doesnt have update_vector_store implemented correctly yet in my stub so I will use direct if possible:
-        # Actually client.vector_stores.update is real API. Let's add it to wrapper or call direct
         if new_name and new_name != cur_name and self.current_store_id:
             self.set_status("Renaming...", busy=True)
             async def _rename():
                 try:
-                    # Calling internal directly for speed
-                    async with self.client._get_client() as ac:
-                        await ac.vector_stores.update(vector_store_id=self.current_store_id, name=new_name) # type: ignore
+                    await self.rag_usecase.update_vector_store_name(self.current_store_id, new_name)
                     self.after(0, self._refresh_stores_async)
                 except Exception as e:
                     self.after(0, lambda err=e: messagebox.showerror("Error", str(err)))
@@ -219,7 +217,7 @@ class RAGManagementWindow(tk.Toplevel):
         self.set_status("Deleting store...", busy=True)
         async def _del():
             try:
-                await self.client.delete_vector_store(self.current_store_id) # type: ignore
+                await self.rag_usecase.delete_vector_store(self.current_store_id)
                 self.after(0, self._refresh_stores_async)
             except Exception as e:
                 self.after(0, lambda err=e: messagebox.showerror("Error", str(err)))
@@ -233,19 +231,10 @@ class RAGManagementWindow(tk.Toplevel):
 
         async def _fetch():
             try:
-                vs_files = await self.client.list_files_in_store(store_id)
-                if not vs_files:
+                file_details = await self.rag_usecase.list_files_in_store(store_id)
+                if not file_details:
                     self.after(0, lambda: self.set_status("No files found."))
                     return
-                # Display files 
-                file_details = []
-                async with self.client._get_client() as ac:
-                    for vf in vs_files:
-                        try:
-                            f = await ac.files.retrieve(vf.id)
-                            file_details.append({"id": f.id, "filename": f.filename, "created_at": f.created_at})
-                        except Exception:
-                            continue
 
                 self.after(0, lambda: self._render_files(file_details))
             except Exception as e:
@@ -264,19 +253,19 @@ class RAGManagementWindow(tk.Toplevel):
         self.del_file_btn.config(state="normal" if self.file_tree.selection() else "disabled")
 
     def _on_upload_file(self):
-        if not self.current_store_id: return
+        if not self.current_store_id:
+            return
         file_path = filedialog.askopenfilename(filetypes=[("All Files", "*.*"), ("PDF", "*.pdf"), ("Text", "*.txt")])
-        if not file_path: return
+        if not file_path:
+            return
 
-        self.set_status(f"Uploading...", busy=True)
+        self.set_status("Uploading...", busy=True)
         self.upload_btn.config(state="disabled")
 
         async def _up():
             try:
-                f_obj = await self.client.upload_file(file_path)
-                self.after(0, lambda: self.set_status("Indexing file..."))
-                batch = await self.client.create_file_batch(self.current_store_id, [f_obj.id]) # type: ignore
-                await self.client.poll_batch_status(self.current_store_id, batch.id) # type: ignore
+                self.after(0, lambda: self.set_status("Uploading and Indexing file..."))
+                await self.rag_usecase.upload_and_index_file(file_path, self.current_store_id)
                 self.after(0, self._refresh_stores_async)
             except Exception as e:
                 self.after(0, lambda err=e: messagebox.showerror("Error", str(err)))
@@ -286,7 +275,8 @@ class RAGManagementWindow(tk.Toplevel):
 
     def _on_delete_file(self):
         sel = self.file_tree.selection()
-        if not sel or not self.current_store_id: return
+        if not sel or not self.current_store_id:
+            return
         vals = self.file_tree.item(sel[0])["values"]
         f_name, f_id = vals[0], vals[1]
 
@@ -298,8 +288,7 @@ class RAGManagementWindow(tk.Toplevel):
 
         async def _delf():
             try:
-                await self.client.delete_file_from_store(self.current_store_id, f_id) # type: ignore
-                await self.client.delete_file(f_id)
+                await self.rag_usecase.delete_file_from_store_and_storage(self.current_store_id, f_id)
                 self.after(0, self._refresh_stores_async)
             except Exception as e:
                 self.after(0, lambda err=e: messagebox.showerror("Error", str(err)))

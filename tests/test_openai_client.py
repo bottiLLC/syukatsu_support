@@ -1,6 +1,5 @@
 import pytest
-import asyncio
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock
 from openai import RateLimitError
 from src.infrastructure.openai_client import OpenAIClient
 from src.models import ResponseRequestPayload, StreamResponseCreated
@@ -32,8 +31,6 @@ async def test_openai_client_resilience():
 
 @pytest.mark.asyncio
 async def test_stream_analysis_validation_error():
-    client = OpenAIClient("test-key")
-    
     # Send a formally invalid payload model that causes ValidationError in pydantic
     # Wait, pydantic checks at instantiation.
     from pydantic import ValidationError

@@ -22,15 +22,19 @@ OpenAIの最新API (`/responses` エンドポイント) と連携し、履歴書
 ```text
 src/
 ├── app.py              # アプリケーションのエントリーポイント
-├── state.py            # (AppState) アプリケーションの状態管理、ビジネスロジック、非同期スレッド管理
+├── state.py            # (AppState) ViewModel: アプリケーションの状態管理、UseCaseレイヤーへの処理移譲
 ├── ui.py               # メインウィンドウ (Tkinter) の純粋なUIレイアウト宣言
 ├── rag_ui.py           # RAG管理画面 (Tkinter) の純粋なUIレイアウト宣言
 ├── models.py           # Pydantic V2 スキーマ (ユーザー設定、API入出力の厳密な型定義)
 ├── styles.py           # UIフォントやカラー設定
+├── application/        # アプリケーション層 (Use Cases)
+│   └── usecases/       # UIやインフラに依存しないビジネスロジック群
+│       ├── llm_usecase.py # LLM分析の独立実行とストリーミングの一元管理
+│       └── rag_usecase.py # ナレッジベース(Vector Store/File)の操作カプセル化
 ├── infrastructure/     # インフラ層 (外部依存関係)
-│   ├── openai_client.py # AsyncOpenAI を用いたAPI通信、ストリーミング、RAG管理
+│   ├── openai_client.py # AsyncOpenAI を用いたAPI通信実装
 │   └── security.py      # Fernet を用いた API Key の暗号化・復号、設定の永続化
-├── core/               # コアロジック (UI/インフラに依存しない)
+├── core/               # コアロジック・ドメイン層 (UI/インフラに依存しない)
 │   ├── errors.py       # APIエラーハンドリング・ユーザー向けメッセージ変換
 │   ├── pricing.py      # トークン単価算定のロジック
 │   ├── prompts.py      # システムプロンプト定義
@@ -39,10 +43,11 @@ src/
 └── tests/              # pytest / pytest-asyncio による各コンポーネントのテスト
 ```
 
-### 重要な設計原則
+### 重要な設計原則 (Clean Architecture)
+- **Separation of Concerns (関心事の分離)**: `application` 層 (UseCase) を設けることで、`ui` 層が直接 `infrastructure` 層 (OpenAI API等) に依存することを防ぎます。
 - **Trinitarian Integrity**: ビジネスロジックと外部通信はすべて `pydantic` モデルを用いた強固な検証を経由します。
 - **Resilience**: 一過性のネットワークエラーやレートリミットに対しては `@resilient_api_call` により自動指数バックオフが行われます。
-- **No Blocking**: API通信はすべて `asyncio` を用いた別スレッドから実行され、TkinterのメインUIループを決してブロックしません。
+- **No Blocking**: API通信はすべて `asyncio` を用いた別スレッド (UseCase内) から実行され、TkinterのメインUIループを決してブロックしません。
 
 ## 必要要件
 

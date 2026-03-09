@@ -6,7 +6,7 @@ Tkinter UI コンポーネント。
 
 import tkinter as tk
 from tkinter import messagebox, scrolledtext, ttk, filedialog
-from typing import Optional, List
+from typing import List
 
 from src.state import AppState
 from src.core.prompts import SYSTEM_PROMPTS
@@ -20,7 +20,7 @@ class SyukatsuSupportApp(tk.Tk):
     def __init__(self, state: AppState):
         super().__init__()
         self.state = state
-        self.title("SYUKATSU Support - 合同会社ぼっち (v1.1.2)")
+        self.title("SYUKATSU Support - 合同会社ぼっち (v1.2.0)")
         self.geometry(WINDOW_SIZE)
 
         # UI State Variables
@@ -285,11 +285,11 @@ class SyukatsuSupportApp(tk.Tk):
         from src.rag_ui import RAGManagementWindow
         
         self.state.update_api_key(self.api_key_var.get().strip(), silent=True)
-        if not self.state.config.api_key or not self.state.client:
+        if not self.state.config.api_key or not self.state.client or not self.state.rag_usecase:
             messagebox.showwarning("エラー", "API Keyを登録してください。")
             return
             
-        window = RAGManagementWindow(self, self.state.client)
+        window = RAGManagementWindow(self, self.state.rag_usecase)
         self.wait_window(window)
         self.state.refresh_vector_stores()
 

@@ -58,7 +58,6 @@ class OpenAIClient:
         return await client.responses.create(**request_params)
 
     async def _execute_stream(self, request_params: dict) -> AsyncGenerator[StreamResult, None]:
-        model_name = request_params.get("model", "unknown")
         try:
             async with self._get_client() as client:
                 stream = await self._create_stream(client, request_params)
@@ -96,9 +95,11 @@ class OpenAIClient:
             
         elif event_type == "response.completed":
             response_obj = getattr(event, "response", None)
-            if not response_obj: return None
+            if not response_obj:
+                return None
             usage_obj = getattr(response_obj, "usage", None)
-            if not usage_obj: return None
+            if not usage_obj:
+                return None
             
             input_tokens = getattr(usage_obj, "input_tokens", 0)
             output_tokens = getattr(usage_obj, "output_tokens", 0)
@@ -141,6 +142,11 @@ class OpenAIClient:
     async def create_vector_store(self, name: str) -> Any:
         async with self._get_client() as client:
             return await client.vector_stores.create(name=name)
+
+    @resilient_api_call()
+    async def update_vector_store(self, vector_store_id: str, name: str) -> Any:
+        async with self._get_client() as client:
+            return await client.vector_stores.update(vector_store_id=vector_store_id, name=name)
 
     @resilient_api_call()
     async def delete_vector_store(self, vector_store_id: str) -> bool:

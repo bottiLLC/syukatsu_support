@@ -26,6 +26,8 @@ from src.core.pricing import CostCalculator
 from src.infrastructure.security import ConfigManager
 from src.infrastructure.openai_client import OpenAIClient
 from src.core.prompts import SYSTEM_PROMPTS
+from src.application.usecases.llm_usecase import LLMUseCase
+from src.application.usecases.rag_usecase import RAGUseCase
 
 log = structlog.get_logger()
 
@@ -53,6 +55,8 @@ class AppState:
         
         # --- Internal ---
         self.client: Optional[OpenAIClient] = None
+        self.llm_usecase: Optional[LLMUseCase] = None
+        self.rag_usecase: Optional[RAGUseCase] = None
         self.message_queue: queue.Queue = queue.Queue()
         self.cancel_event: threading.Event = threading.Event()
         self.active_thread: Optional[threading.Thread] = None
@@ -67,6 +71,8 @@ class AppState:
     def init_client(self):
         if self.config.api_key:
             self.client = OpenAIClient(self.config.api_key)
+            self.llm_usecase = LLMUseCase(self.client, self.message_queue, self.cancel_event)
+            self.rag_usecase = RAGUseCase(self.client)
             self.refresh_vector_stores()
 
     def save_config(self):
@@ -84,12 +90,12 @@ class AppState:
         return SYSTEM_PROMPTS.get(mode_name, "")
 
     def refresh_vector_stores(self):
-        if not self.client:
+        if not self.rag_usecase:
             return
 
         async def _fetch():
             try:
-                stores = await self.client.list_vector_stores()
+                stores = await self.rag_usecase.list_vector_stores()
                 values = [f"{s.name} ({s.id})" if getattr(s, "name", None) else getattr(s, "id", "") for s in stores]
                 if self.on_vs_updated:
                     self.on_vs_updated(values)
@@ -160,32 +166,8 @@ class AppState:
             self._notify()
             return
 
-        self.active_thread = threading.Thread(
-            target=self._run_llm_thread,
-            args=(payload,),
-            daemon=True,
-        )
-        self.active_thread.start()
-
-    def _run_llm_thread(self, payload: ResponseRequestPayload):
-        async def _async_run():
-            try:
-                start_msg = f"\n[AI ({payload.model})] analyzing...\n（数分から10分程度の時間を要する場合があります。）\n\n"
-                self.message_queue.put(StreamTextDelta(delta=start_msg))
-
-                stream = self.client.stream_analysis(payload)
-                async for event in stream:
-                    if self.cancel_event.is_set():
-                        break
-                    self.message_queue.put(event)
-
-            except Exception as e:
-                log.exception("LLM thread failed", error=str(e))
-                self.message_queue.put(StreamError(message=str(e)))
-            finally:
-                self.message_queue.put(None)
-
-        asyncio.run(_async_run())
+        if self.llm_usecase:
+            self.active_thread = self.llm_usecase.execute_analysis_thread(payload)
 
     def process_queue_events(self):
         """

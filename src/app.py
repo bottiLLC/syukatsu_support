@@ -13,12 +13,12 @@ project_root = str(Path(__file__).resolve().parent.parent)
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-import tkinter as tk
-from tkinter import messagebox
-import structlog
+import tkinter as tk  # noqa: E402
+from tkinter import messagebox  # noqa: E402
+import structlog  # noqa: E402
 
 # Initialize logger
-from src.core.logger import setup_logging
+from src.core.logger import setup_logging  # noqa: E402
 # Using fallback since it might not exist yet, ignoring for now
 try:
     setup_logging()
