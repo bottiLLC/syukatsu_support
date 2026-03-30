@@ -39,7 +39,6 @@ class AppState:
         # --- State Variables ---
         self.config: UserConfig = ConfigManager.load()
         self.is_processing: bool = False
-        self.result_text: str = ""
         self.status_message: str = "待機中"
         self.cost_info: str = "Cost: $0.00000"
         

@@ -12,7 +12,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # --- Constants / App Config Defaults ---
 class AppConfigDefaults:
-    APP_VERSION: str = "v1.0.0"
     DEFAULT_MODEL: str = "gpt-5.4"
     DEFAULT_REASONING: Literal["none", "minimal", "low", "medium", "high", "xhigh"] = "high"
 

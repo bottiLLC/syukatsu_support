@@ -13,6 +13,7 @@ dependencies = [
     "tenacity",
     "structlog>=25.5.0",
     "flet>=0.82.2",
+    "vulture>=2.16",
 ]
 
 [project.optional-dependencies]
