@@ -51,18 +51,18 @@ class SyukatsuSupportApp:
         )
         
         self.vs_combo = ft.Dropdown(
-            label="Vector Store", options=[], value=self.state.config.current_vector_store_id, dense=True
+            label="Vector Store", options=[], value=self.state.config.current_vector_store_id, dense=True, width=330
         )
         self.use_file_search_cb = ft.Checkbox(label="ファイル検索(RAG)を使用", value=self.state.config.use_file_search)
         self.rag_btn = ft.ElevatedButton("🛠️ ナレッジベース管理", on_click=self._on_open_rag_manager)
 
         self.mode_combo = ft.Dropdown(
             label="モード選択", options=[ft.dropdown.Option(k) for k in SYSTEM_PROMPTS.keys()],
-            value=self.state.config.system_prompt_mode, dense=True, on_select=self._on_prompt_mode_select
+            value=self.state.config.system_prompt_mode, dense=True, on_select=self._on_prompt_mode_select, width=330
         )
         
         self.sys_prompt_field = ft.TextField(
-            label="システムプロンプト", multiline=True, width=300, height=200,
+            label="システムプロンプト", multiline=True, width=330, height=200,
             value=self.state.get_system_prompt(self.state.config.system_prompt_mode), text_size=12
         )
         self.clear_btn = ft.ElevatedButton("🧹 コンテキスト消去", on_click=self._on_clear_context)
