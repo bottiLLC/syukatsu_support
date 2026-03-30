@@ -1,7 +1,4 @@
 import pytest
-import tempfile
-import json
-from pathlib import Path
 from src.core.prompts import (
     PromptManager,
     MODE_FINANCIAL,
@@ -12,15 +9,12 @@ from src.models import UserConfig
 
 def test_prompts_structure():
     """
-    [構造] PromptManager が生成する辞書は空ではない必要があります。
+    [構造] 本番の system_prompts.json が生成する辞書は空ではない必要があります。
     """
-    manager = PromptManager(filepath="dummy_test_prompts.json")
+    manager = PromptManager()
     prompts = manager.prompts
     assert isinstance(prompts, dict), "prompts must be a dict"
-    assert len(prompts) > 0, "prompts cannot be empty"
-    # cleanup
-    if Path("dummy_test_prompts.json").exists():
-        Path("dummy_test_prompts.json").unlink()
+    assert len(prompts) > 0, "prompts cannot be empty (Ensure system_prompts.json exists in root)"
 
 @pytest.mark.parametrize("required_key", [
     MODE_FINANCIAL,
@@ -31,8 +25,8 @@ def test_prompts_keys_exist(required_key):
     """
     [整合性] 必須の分析モードがキーとして存在することを検証します。
     """
-    manager = PromptManager(filepath=":memory:")  # default fallback
-    assert required_key in manager.prompts, f"Missing required key: {required_key}"
+    manager = PromptManager()
+    assert required_key in manager.prompts, f"Missing required key in JSON: {required_key}"
 
 @pytest.mark.parametrize("mode, expected_keywords", [
     (MODE_FINANCIAL, ["表の顔", "裏の顔", "投資対効果"]),
@@ -43,7 +37,7 @@ def test_prompts_content_integrity(mode, expected_keywords):
     """
     [コンテンツ] プロンプトの内容が有効な文字列であり、重要なドメインタームが含まれているか検証します。
     """
-    manager = PromptManager(filepath=":memory:")
+    manager = PromptManager()
     prompt_text = manager.get_prompt(mode)
     
     # 1. Type check
@@ -65,7 +59,7 @@ def test_prompts_contain_required_sections():
     """
     [構造] プロンプトにはAIのための重要な構造的ヘッダーが含まれている必要があります。
     """
-    manager = PromptManager(filepath=":memory:")
+    manager = PromptManager()
     for mode, prompt_text in manager.prompts.items():
         if not prompt_text:
             continue
@@ -82,7 +76,7 @@ def test_default_config_key_exists_in_prompts():
     config = UserConfig()
     default_mode = config.system_prompt_mode
     
-    manager = PromptManager(filepath=":memory:")
+    manager = PromptManager()
     assert default_mode in manager.prompts, (
         f"Default config mode '{default_mode}' is not defined in manager"
     )
