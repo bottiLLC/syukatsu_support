@@ -6,8 +6,6 @@ Syukatsu Support アプリのエントリーポイント。
 
 import sys
 from pathlib import Path
-import os
-import asyncio
 
 # uv run src/app.py 等で直接起動した場合でも 'src' モジュールが解決できるように
 # sys.path にプロジェクトのルートディレクトリを動的に追加します。

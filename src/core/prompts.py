@@ -1,12 +1,16 @@
 """
 システムプロンプト定義モジュール。
 
-このモジュールには、AIモデルが各種分析モードで使用する静的なシステム指示文が含まれています。
-財務分析、人的資本分析、エントリーシート（ES）戦略、
-および競合・経年比較分析シナリオのための特定のプロンプトを定義します。
+このモジュールには、AIモデルが各種分析モードで使用する想定のシステム指示文と、
+外部ファイル(system_prompts.json)から動的に読み込むための管理クラスが含まれています。
 """
 
+import json
+import structlog
+from pathlib import Path
 from typing import Dict, Final
+
+log = structlog.get_logger()
 
 # --- Analysis Mode Constants ---
 MODE_FINANCIAL: Final[str] = "有価証券報告書 -財務分析-"
@@ -217,12 +221,56 @@ Your mission is to compare the specific companies (or specific years of the same
 - Provide a strategic interview question (逆質問) based on the differences found.
 """
 
-# --- Exported Configuration ---
+# --- Exported Configuration / Prompt Manager ---
 
-SYSTEM_PROMPTS: Final[Dict[str, str]] = {
+_DEFAULT_PROMPTS: Final[Dict[str, str]] = {
     MODE_FINANCIAL: _PROMPT_FINANCIAL,
     MODE_HUMAN_CAPITAL: _PROMPT_HUMAN_CAPITAL,
     MODE_COMPETITOR_ANALYSIS: _PROMPT_COMPETITOR_ANALYSIS,
     MODE_ENTRY_SHEET: _PROMPT_ENTRY_SHEET,
     MODE_NO_PROMPT: "",
 }
+
+# 既存テストコード向けの互換性エイリアス
+SYSTEM_PROMPTS = _DEFAULT_PROMPTS.copy()
+
+class PromptManager:
+    """
+    外部の JSON ファイル (system_prompts.json) とプロンプトを同期・管理するクラス。
+    ファイルが存在しなければデフォルト値から生成します。
+    """
+    def __init__(self, filepath: str = "system_prompts.json"):
+        # アプリ起動ディレクトリ(プロジェクトルート)に対する相対または絶対パス
+        self.filepath = Path(filepath)
+        self._prompts: Dict[str, str] = {}
+        self._load_or_create()
+
+    def _load_or_create(self):
+        if self.filepath.exists():
+            try:
+                with self.filepath.open("r", encoding="utf-8") as f:
+                    self._prompts = json.load(f)
+                return
+            except Exception as e:
+                log.error("Failed to read prompt JSON", error=str(e))
+        
+        # 存在しない、またはエラーの場合はデフォルト構成で新規作成
+        self._prompts = _DEFAULT_PROMPTS.copy()
+        self.save()
+
+    def save(self):
+        try:
+            with self.filepath.open("w", encoding="utf-8") as f:
+                json.dump(self._prompts, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            log.error("Failed to save prompt JSON", error=str(e))
+
+    def get_prompt(self, mode_name: str) -> str:
+        return self._prompts.get(mode_name, "")
+
+    def get_all_modes(self) -> list[str]:
+        return list(self._prompts.keys())
+
+    @property
+    def prompts(self) -> dict:
+            return self._prompts

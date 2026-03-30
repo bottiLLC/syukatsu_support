@@ -2,7 +2,6 @@ import flet as ft
 import datetime
 from typing import List
 from src.state import AppState
-from src.core.prompts import SYSTEM_PROMPTS
 from src.styles import UI_COLORS
 
 class SyukatsuSupportApp:
@@ -56,9 +55,13 @@ class SyukatsuSupportApp:
         self.use_file_search_cb = ft.Checkbox(label="ファイル検索(RAG)を使用", value=self.state.config.use_file_search)
         self.rag_btn = ft.ElevatedButton("🛠️ ナレッジベース管理", on_click=self._on_open_rag_manager)
 
+        # --- Prompt Mode Selection (Dynamically loaded from JSON) ---
+        prompt_options = [ft.dropdown.Option(m) for m in self.state.available_prompt_modes]
+        valid_val = self.state.config.system_prompt_mode if self.state.config.system_prompt_mode in self.state.available_prompt_modes else None
+        
         self.mode_combo = ft.Dropdown(
-            label="モード選択", options=[ft.dropdown.Option(k) for k in SYSTEM_PROMPTS.keys()],
-            value=self.state.config.system_prompt_mode, dense=True, on_select=self._on_prompt_mode_select, width=330
+            label="分析モード選択", options=prompt_options,
+            value=valid_val, dense=True, on_select=self._on_prompt_mode_select, width=330
         )
         
         self.sys_prompt_field = ft.TextField(

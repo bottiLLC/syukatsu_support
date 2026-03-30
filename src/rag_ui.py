@@ -1,9 +1,7 @@
 import flet as ft
 import datetime
 import structlog
-from typing import Any, List, Optional
 from src.application.usecases.rag_usecase import RAGUseCase
-from src.styles import UI_FONTS
 
 log = structlog.get_logger()
 
@@ -285,7 +283,7 @@ async def show_rag_manager(page: ft.Page, rag_usecase: RAGUseCase, on_close_refr
         if not current_store_id: return
         
         async def _do_upload(file_path):
-            set_status(f"Uploading file...")
+            set_status("Uploading file...")
             try:
                 await rag_usecase.upload_and_index_file(file_path, current_store_id)
                 await _refresh_stores()

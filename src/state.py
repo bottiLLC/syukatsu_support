@@ -23,7 +23,7 @@ from src.models import (
 from src.core.pricing import CostCalculator
 from src.infrastructure.security import ConfigManager
 from src.infrastructure.openai_client import OpenAIClient
-from src.core.prompts import SYSTEM_PROMPTS
+from src.core.prompts import PromptManager
 from src.application.usecases.llm_usecase import LLMUseCase
 from src.application.usecases.rag_usecase import RAGUseCase
 
@@ -43,7 +43,11 @@ class AppState:
         self.status_message: str = "待機中"
         self.cost_info: str = "Cost: $0.00000"
         
-        # UI Callbacks for Reactive Updates (can be sync or async)
+        # --- Prompt Management ---
+        self.prompt_manager = PromptManager()
+        self.available_prompt_modes = self.prompt_manager.get_all_modes()
+        
+        # UI Callbacks for Reactive Updates
         self.on_state_change: Optional[Callable[[], Union[None, Awaitable[None]]]] = None
         self.on_text_delta: Optional[Callable[[str, str], Union[None, Awaitable[None]]]] = None # (text, tag)
         self.on_clear_text: Optional[Callable[[], Union[None, Awaitable[None]]]] = None
@@ -103,7 +107,7 @@ class AppState:
                 await self._notify_info("設定完了", "APIキーを登録し保存しました。")
 
     def get_system_prompt(self, mode_name: str) -> str:
-        return SYSTEM_PROMPTS.get(mode_name, "")
+        return self.prompt_manager.get_prompt(mode_name)
 
     async def refresh_vector_stores(self):
         if not self.rag_usecase:

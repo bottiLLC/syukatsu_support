@@ -1,6 +1,9 @@
 import pytest
+import tempfile
+import json
+from pathlib import Path
 from src.core.prompts import (
-    SYSTEM_PROMPTS,
+    PromptManager,
     MODE_FINANCIAL,
     MODE_HUMAN_CAPITAL,
     MODE_ENTRY_SHEET
@@ -9,10 +12,15 @@ from src.models import UserConfig
 
 def test_prompts_structure():
     """
-    [構造] SYSTEM_PROMPTS は空ではない辞書である必要があります。
+    [構造] PromptManager が生成する辞書は空ではない必要があります。
     """
-    assert isinstance(SYSTEM_PROMPTS, dict), "SYSTEM_PROMPTS must be a dict"
-    assert len(SYSTEM_PROMPTS) > 0, "SYSTEM_PROMPTS cannot be empty"
+    manager = PromptManager(filepath="dummy_test_prompts.json")
+    prompts = manager.prompts
+    assert isinstance(prompts, dict), "prompts must be a dict"
+    assert len(prompts) > 0, "prompts cannot be empty"
+    # cleanup
+    if Path("dummy_test_prompts.json").exists():
+        Path("dummy_test_prompts.json").unlink()
 
 @pytest.mark.parametrize("required_key", [
     MODE_FINANCIAL,
@@ -23,7 +31,8 @@ def test_prompts_keys_exist(required_key):
     """
     [整合性] 必須の分析モードがキーとして存在することを検証します。
     """
-    assert required_key in SYSTEM_PROMPTS, f"Missing required key: {required_key}"
+    manager = PromptManager(filepath=":memory:")  # default fallback
+    assert required_key in manager.prompts, f"Missing required key: {required_key}"
 
 @pytest.mark.parametrize("mode, expected_keywords", [
     (MODE_FINANCIAL, ["表の顔", "裏の顔", "投資対効果"]),
@@ -34,7 +43,8 @@ def test_prompts_content_integrity(mode, expected_keywords):
     """
     [コンテンツ] プロンプトの内容が有効な文字列であり、重要なドメインタームが含まれているか検証します。
     """
-    prompt_text = SYSTEM_PROMPTS.get(mode)
+    manager = PromptManager(filepath=":memory:")
+    prompt_text = manager.get_prompt(mode)
     
     # 1. Type check
     assert isinstance(prompt_text, str), f"Prompt for {mode} must be a string"
@@ -55,7 +65,8 @@ def test_prompts_contain_required_sections():
     """
     [構造] プロンプトにはAIのための重要な構造的ヘッダーが含まれている必要があります。
     """
-    for mode, prompt_text in SYSTEM_PROMPTS.items():
+    manager = PromptManager(filepath=":memory:")
+    for mode, prompt_text in manager.prompts.items():
         if not prompt_text:
             continue
         assert "### ROLE" in prompt_text, f"{mode} missing ROLE section"
@@ -71,6 +82,7 @@ def test_default_config_key_exists_in_prompts():
     config = UserConfig()
     default_mode = config.system_prompt_mode
     
-    assert default_mode in SYSTEM_PROMPTS, (
-        f"Default config mode '{default_mode}' is not defined in prompts.py"
+    manager = PromptManager(filepath=":memory:")
+    assert default_mode in manager.prompts, (
+        f"Default config mode '{default_mode}' is not defined in manager"
     )
