@@ -284,11 +284,6 @@ async def show_rag_manager(page: ft.Page, rag_usecase: RAGUseCase, on_close_refr
     async def _on_upload_file(e):
         if not current_store_id: return
         
-        def on_result(e):
-            if e.files:
-                for f in e.files:
-                    page.run_task(_do_upload, f.path)
-
         async def _do_upload(file_path):
             set_status(f"Uploading file...")
             try:
@@ -298,15 +293,13 @@ async def show_rag_manager(page: ft.Page, rag_usecase: RAGUseCase, on_close_refr
             except Exception as err:
                 set_status(f"Error: {err}")
 
+        # In Flet 0.8x, pick_files returns the result directly. No overlay required.
         file_picker = ft.FilePicker()
-        file_picker.on_result = on_result
-        page.overlay.append(file_picker)
-        page.update()
+        files = await file_picker.pick_files(allow_multiple=False)
         
-        import asyncio
-        await asyncio.sleep(0.1)
-        
-        await file_picker.pick_files(allow_multiple=False)
+        if files:
+            for f in files:
+                page.run_task(_do_upload, f.path)
 
     async def _on_delete_file(e):
         if not current_store_id or not selected_file_id: return

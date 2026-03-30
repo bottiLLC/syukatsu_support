@@ -16,7 +16,7 @@ class SyukatsuSupportApp:
         # Set default window size to fit layout without scrolling
         self.page.window.width = 1250
         self.page.window.height = 850
-        
+
         # State Binding Setup
         self.state.on_state_change = self._sync_from_state
         self.state.on_text_delta = self._append_log
@@ -261,30 +261,27 @@ class SyukatsuSupportApp:
         self.page.update()
 
     async def _on_save_log(self, e):
-        # FilePicker logic in flet requires adding it to page.overlay
-        def on_result(e):
-            if e.path:
-                text_content = ""
-                for control in self.chat_list.controls:
-                    if hasattr(control, "content") and hasattr(control.content, "value"):
-                        text_content += control.content.value + "\n\n"
-                    elif hasattr(control, "value"):
-                        text_content += control.value + "\n\n"
-                        
-                with open(e.path, "w", encoding="utf-8") as f:
-                    f.write(text_content.strip())
-                self.page.run_task(self._show_info, "保存", f"保存しました: {e.path}")
-
+        """「保存 💾」ボタンが押されたときにダイアログを開く処理"""
+        # Instantiate FilePicker dynamically (do NOT append to overlay)
         file_picker = ft.FilePicker()
-        file_picker.on_result = on_result
-        self.page.overlay.append(file_picker)
-        self.page.update()
-        
-        import asyncio
-        await asyncio.sleep(0.1)
         
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
-        await file_picker.save_file(file_name=f"{timestamp}_分析レポート.txt", allowed_extensions=["txt"])
+        path = await file_picker.save_file(
+            file_name=f"{timestamp}_分析レポート.txt", 
+            allowed_extensions=["txt"]
+        )
+        
+        if path:
+            text_content = ""
+            for control in self.chat_list.controls:
+                if hasattr(control, "content") and hasattr(control.content, "value"):
+                    text_content += control.content.value + "\n\n"
+                elif hasattr(control, "value"):
+                    text_content += control.value + "\n\n"
+                    
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(text_content.strip())
+            self.page.run_task(self._show_info, "保存", f"保存しました: {path}")
 
     async def _start_generation(self):
         if self.state.is_processing:
