@@ -1,301 +1,322 @@
-"""
-Tkinter UI コンポーネント。
-
-ビジネスロジックを持たず、レイアウトの定義と AppState とのバインド（同期）のみを行います。
-"""
-
-import tkinter as tk
-from tkinter import messagebox, scrolledtext, ttk, filedialog
+import flet as ft
+import datetime
 from typing import List
-
 from src.state import AppState
 from src.core.prompts import SYSTEM_PROMPTS
-from src.styles import UI_COLORS, UI_FONTS, WINDOW_SIZE
+from src.styles import UI_COLORS
 
-
-class SyukatsuSupportApp(tk.Tk):
-    """
-    Tkinterのメインウィンドウ。AppStateを監視し、イベントをルーティングします。
-    """
-    def __init__(self, state: AppState):
-        super().__init__()
+class SyukatsuSupportApp:
+    def __init__(self, page: ft.Page, state: AppState):
+        self.page = page
         self.state = state
-        self.title("SYUKATSU Support - 合同会社ぼっち (v1.2.0)")
-        self.geometry(WINDOW_SIZE)
-
-        # UI State Variables
-        self.api_key_var = tk.StringVar(value=self.state.config.api_key or "")
-        self.model_var = tk.StringVar(value=self.state.config.model)
-        self.reasoning_var = tk.StringVar(value=self.state.config.reasoning_effort)
-        self.prompt_mode_var = tk.StringVar(value=self.state.config.system_prompt_mode)
-        self.status_var = tk.StringVar(value=self.state.status_message)
-        self.cost_info_var = tk.StringVar(value=self.state.cost_info)
-        self.response_id_var = tk.StringVar(value=self.state.config.last_response_id or "None")
-
-        self.vs_id_var = tk.StringVar(value=self.state.config.current_vector_store_id or "")
-        self.use_file_search_var = tk.BooleanVar(value=self.state.config.use_file_search)
-
-        self.protocol("WM_DELETE_WINDOW", self._on_close)
-        self._setup_ui()
-        self._bind_state_callbacks()
-
-        # Update loop
-        self.after(100, self._process_events)
-
-    def _setup_ui(self):
-        try:
-            from ctypes import windll
-            windll.shcore.SetProcessDpiAwareness(1)
-        except Exception:
-            pass
-
-        self._setup_styles()
-
-        paned_window = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashwidth=6, sashrelief=tk.RAISED)
-        paned_window.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-
-        paned_window.add(self._create_left_panel(paned_window), width=380, stretch="never")
-        paned_window.add(self._create_right_panel(paned_window), stretch="always")
-
-        self._create_status_bar()
-
-        # 初期モードの適用
-        mode = self.prompt_mode_var.get()
-        self._sys_prompt_view.insert("1.0", self.state.get_system_prompt(mode))
-
-    def _setup_styles(self):
-        style = ttk.Style()
-        style.configure("Bold.TLabel", font=UI_FONTS["BOLD"])
-        style.configure("Title.TLabel", font=UI_FONTS["TITLE"], foreground=UI_COLORS["TITLE"])
-
-    def _create_left_panel(self, parent) -> ttk.LabelFrame:
-        frame = ttk.LabelFrame(parent, text=" 企業分析設定", padding=10)
-
-        # API Key
-        ttk.Label(frame, text="OpenAI APIキー:", style="Bold.TLabel").pack(anchor="w")
-        key_frame = ttk.Frame(frame)
-        key_frame.pack(fill="x")
-        self._entry_key = ttk.Entry(key_frame, textvariable=self.api_key_var, show="*")
-        self._entry_key.pack(side="left", fill="x", expand=True, padx=(0, 5))
-        ttk.Button(key_frame, text="登録", command=self._on_register_key).pack(side="right")
-        ttk.Separator(frame, orient="horizontal").pack(fill="x", pady=10)
-
-        # Model Config
-        ttk.Label(frame, text="モデル設定:", style="Bold.TLabel").pack(anchor="w")
-        grid = ttk.Frame(frame)
-        grid.pack(fill="x", pady=5)
+        self.page.title = "SYUKATSU Support - 合同会社ぼっち (v1.2.0)"
+        self.page.padding = 20
+        self.page.theme_mode = ft.ThemeMode.LIGHT
         
-        ttk.Label(grid, text="モデル:").grid(row=0, column=0, sticky="w")
-        ttk.Combobox(
-            grid, textvariable=self.model_var, values=["gpt-5.4-pro", "gpt-5.4"], state="readonly"
-        ).grid(row=0, column=1, sticky="ew", padx=5)
-
-        ttk.Label(grid, text="推論強度:").grid(row=1, column=0, sticky="w", pady=5)
-        ttk.Combobox(
-            grid, textvariable=self.reasoning_var, values=["none", "minimal", "low", "medium", "high", "xhigh"], state="readonly"
-        ).grid(row=1, column=1, sticky="ew", padx=5, pady=5)
-
-        ttk.Separator(frame, orient="horizontal").pack(fill="x", pady=10)
-
-        # RAG Section
-        ttk.Label(frame, text="ナレッジベース (RAG):", style="Bold.TLabel").pack(anchor="w")
-        rag_frame = ttk.Frame(frame)
-        rag_frame.pack(fill="x", pady=5)
-
-        self._vs_combo = ttk.Combobox(rag_frame, textvariable=self.vs_id_var, state="readonly")
-        self._vs_combo.pack(fill="x", pady=(0, 5))
-        ttk.Button(rag_frame, text="🛠️ ナレッジベース管理", command=self._on_open_rag_manager).pack(fill="x")
-        ttk.Checkbutton(rag_frame, text="ファイル検索(RAG)を使用", variable=self.use_file_search_var).pack(anchor="w", pady=(5, 0))
-
-        ttk.Separator(frame, orient="horizontal").pack(fill="x", pady=10)
-
-        # Prompt Mode
-        ttk.Label(frame, text="モード選択:", style="Bold.TLabel").pack(anchor="w")
-        cb_prompt = ttk.Combobox(frame, textvariable=self.prompt_mode_var, values=list(SYSTEM_PROMPTS.keys()), state="readonly")
-        cb_prompt.pack(fill="x", pady=(2, 5))
-        cb_prompt.bind("<<ComboboxSelected>>", self._on_prompt_mode_select)
-
-        ttk.Label(frame, text="システムプロンプト:", style="Bold.TLabel").pack(anchor="w", pady=(5, 0))
-        self._sys_prompt_view = scrolledtext.ScrolledText(frame, height=10, width=30, font=UI_FONTS["MONO"], wrap=tk.WORD)
-        self._sys_prompt_view.pack(fill="both", expand=True, pady=5)
-
-        ttk.Button(frame, text="🧹 コンテキスト消去 (新規セッション)", command=self._on_clear_context).pack(fill="x", pady=10)
-
-        return frame
-
-    def _create_right_panel(self, parent) -> ttk.Frame:
-        frame = ttk.Frame(parent)
-
-        # Info Header
-        info_frame = ttk.Frame(frame)
-        info_frame.pack(fill="x", pady=5, padx=5)
-        ttk.Label(info_frame, text="レポート (応答履歴)", style="Title.TLabel").pack(side="left")
-
-        id_display = ttk.Frame(info_frame)
-        id_display.pack(side="right")
-        ttk.Label(id_display, textvariable=self.response_id_var, font=UI_FONTS["SMALL_BOLD"], foreground=UI_COLORS["ID_FG"]).pack(side="right")
-        ttk.Label(id_display, text="前回レスポンスID: ", font=UI_FONTS["SMALL_MONO"], foreground=UI_COLORS["LABEL_FG"]).pack(side="right")
-
-        # Log
-        self._log_view = scrolledtext.ScrolledText(frame, state="disabled", font=UI_FONTS["NORMAL"], wrap=tk.WORD)
-        self._log_view.pack(fill="both", expand=True, padx=5)
-        self._configure_log_tags()
-
-        # Input
-        input_frame = ttk.LabelFrame(frame, text=" リクエスト入力 (Ctrl+Enterで送信) ", padding=5)
-        input_frame.pack(fill="x", padx=5, pady=5)
-
-        self._input_view = scrolledtext.ScrolledText(input_frame, height=4, font=UI_FONTS["NORMAL"], undo=True)
-        self._input_view.pack(fill="x", side="left", expand=True)
-        self._input_view.bind("<Control-Return>", lambda e: self._on_start_generation())
-        self._input_view.bind("<Command-Return>", lambda e: self._on_start_generation())
-
-        # Buttons
-        btn_frame = ttk.Frame(input_frame)
-        btn_frame.pack(side="right", fill="y", padx=(5, 0))
-
-        self._send_btn = ttk.Button(btn_frame, text="分析開始 🚀", command=self._on_start_generation)
-        self._send_btn.pack(fill="x", pady=(0, 2))
+        # Set default window size to fit layout without scrolling
+        self.page.window.width = 1250
+        self.page.window.height = 850
         
-        self._stop_btn = ttk.Button(btn_frame, text="停止 ⏹️", command=self._on_stop_generation, state="disabled")
-        self._stop_btn.pack(fill="x", pady=(2, 2))
-        
-        ttk.Button(btn_frame, text="保存 💾", command=self._on_save_log).pack(fill="x", pady=(2, 0))
-
-        return frame
-
-    def _create_status_bar(self):
-        bar = ttk.Frame(self, relief=tk.SUNKEN)
-        bar.pack(side=tk.BOTTOM, fill=tk.X)
-        ttk.Label(bar, textvariable=self.status_var, font=UI_FONTS["STATUS"]).pack(side=tk.LEFT, padx=5)
-        ttk.Label(bar, textvariable=self.cost_info_var, font=UI_FONTS["STATUS_MONO"]).pack(side=tk.RIGHT, padx=5)
-
-    def _configure_log_tags(self):
-        self._log_view.tag_config("user", foreground=UI_COLORS["USER_FG"], background=UI_COLORS["USER_BG"], font=UI_FONTS["NORMAL_BOLD"], lmargin1=10, lmargin2=10, rmargin=10)
-        self._log_view.tag_config("ai", foreground=UI_COLORS["AI_FG"], lmargin1=10, lmargin2=10, rmargin=10)
-        self._log_view.tag_config("error", foreground=UI_COLORS["ERROR_FG"])
-        self._log_view.tag_config("info", foreground="#888888", font=UI_FONTS["SMALL_MONO"], justify="right")
-
-    # --- Bindings to AppState ---
-    def _bind_state_callbacks(self):
+        # State Binding Setup
         self.state.on_state_change = self._sync_from_state
         self.state.on_text_delta = self._append_log
-        self.state.on_error = lambda title, msg: messagebox.showerror(title, msg)
-        self.state.on_info = lambda title, msg: messagebox.showinfo(title, msg)
         self.state.on_clear_text = self._clear_log
+        self.state.on_error = self._show_error
+        self.state.on_info = self._show_info
         self.state.on_vs_updated = self._update_vs_combo
-
-    def _sync_from_state(self):
-        # Sync simple scalar variables
-        self.status_var.set(self.state.status_message)
-        self.cost_info_var.set(self.state.cost_info)
-        self.response_id_var.set(self.state.config.last_response_id or "None")
         
-        # UI controls
-        if self.state.is_processing:
-            self._send_btn.config(state="disabled")
-            self._stop_btn.config(state="normal")
-        else:
-            self._send_btn.config(state="normal")
-            self._stop_btn.config(state="disabled")
+        self.chat_list = ft.ListView(expand=True, spacing=10, auto_scroll=True)
+        self.current_ai_message = None
+        self.current_ai_text = ""
 
-    def _sync_to_state(self):
-        # UI -> AppState config write-back
-        self.state.config.model = self.model_var.get()
-        self.state.config.reasoning_effort = self.reasoning_var.get()
-        self.state.config.system_prompt_mode = self.prompt_mode_var.get()
-        self.state.config.use_file_search = self.use_file_search_var.get()
-        self.state.config.current_vector_store_id = self.vs_id_var.get()
+        self._build_ui()
+        # Initialize UI with current state values
+        self.page.run_task(self._sync_from_state)
 
-    def _append_log(self, text: str, tag: str):
-        self._log_view.config(state="normal")
-        self._log_view.insert(tk.END, text, tag)
-        self._log_view.see(tk.END)
-        self._log_view.config(state="disabled")
+    def _build_ui(self):
+        # --- Left Panel ---
+        self.api_key_field = ft.TextField(
+            label="OpenAI APIキー", password=True, can_reveal_password=True, 
+            value=self.state.config.api_key, expand=True, dense=True
+        )
+        self.api_key_btn = ft.ElevatedButton("登録", on_click=self._on_register_key)
+        
+        self.model_combo = ft.Dropdown(
+            label="モデル", options=[ft.dropdown.Option("gpt-5.4-pro"), ft.dropdown.Option("gpt-5.4")],
+            value=self.state.config.model, expand=True, dense=True
+        )
+        self.reasoning_combo = ft.Dropdown(
+            label="推論強度", options=[ft.dropdown.Option(o) for o in ["none", "minimal", "low", "medium", "high", "xhigh"]],
+            value=self.state.config.reasoning_effort, expand=True, dense=True
+        )
+        
+        self.vs_combo = ft.Dropdown(
+            label="Vector Store", options=[], value=self.state.config.current_vector_store_id, dense=True
+        )
+        self.use_file_search_cb = ft.Checkbox(label="ファイル検索(RAG)を使用", value=self.state.config.use_file_search)
+        self.rag_btn = ft.ElevatedButton("🛠️ ナレッジベース管理", on_click=self._on_open_rag_manager)
 
-    def _clear_log(self):
-        self._log_view.config(state="normal")
-        self._log_view.delete("1.0", tk.END)
-        self._log_view.config(state="disabled")
+        self.mode_combo = ft.Dropdown(
+            label="モード選択", options=[ft.dropdown.Option(k) for k in SYSTEM_PROMPTS.keys()],
+            value=self.state.config.system_prompt_mode, dense=True, on_select=self._on_prompt_mode_select
+        )
+        
+        self.sys_prompt_field = ft.TextField(
+            label="システムプロンプト", multiline=True, width=300, height=200,
+            value=self.state.get_system_prompt(self.state.config.system_prompt_mode), text_size=12
+        )
+        self.clear_btn = ft.ElevatedButton("🧹 コンテキスト消去", on_click=self._on_clear_context)
 
-    def _update_vs_combo(self, values: List[str]):
-        self._vs_combo["values"] = values
-        current = self.vs_id_var.get()
-        for i, val in enumerate(values):
-            if current in val:
-                self._vs_combo.current(i)
-                return
+        left_column = ft.Column([
+            ft.Text("企業分析設定", size=18, weight="bold"),
+            ft.Divider(),
+            ft.Row([self.api_key_field, self.api_key_btn]),
+            ft.Row([self.model_combo, self.reasoning_combo]),
+            ft.Divider(),
+            ft.Text("ナレッジベース (RAG)", weight="bold"),
+            self.vs_combo,
+            self.rag_btn,
+            self.use_file_search_cb,
+            ft.Divider(),
+            self.mode_combo,
+            self.sys_prompt_field,
+            self.clear_btn
+        ], width=350, scroll=ft.ScrollMode.ADAPTIVE)
 
-    def _process_events(self):
-        self.state.process_queue_events()
-        self.after(50, self._process_events)
+        # --- Right Panel ---
+        self.response_id_text = ft.Text(f"前回レスポンスID: {self.state.config.last_response_id or 'None'}", size=12, color=ft.Colors.GREY_600)
+        
+        # Log view container
+        log_container = ft.Container(
+            content=self.chat_list,
+            border=ft.border.all(1, ft.Colors.GREY_400),
+            border_radius=5,
+            padding=10,
+            expand=True,
+            bgcolor=ft.Colors.WHITE
+        )
+
+        self.input_field = ft.TextField(
+            label="リクエスト入力 (Shift+Enterで改行)", multiline=True, min_lines=3, max_lines=5, 
+            expand=True, on_submit=self._on_submit_text, shift_enter=True
+        )
+        self.send_btn = ft.ElevatedButton("分析開始 🚀", on_click=self._on_submit_button)
+        self.stop_btn = ft.ElevatedButton("停止 ⏹️", on_click=self._on_stop_generation, disabled=True)
+        self.save_btn = ft.ElevatedButton("保存 💾", on_click=self._on_save_log)
+        
+        input_row = ft.Row([
+            self.input_field,
+            ft.Column([self.send_btn, self.stop_btn, self.save_btn], alignment=ft.MainAxisAlignment.START)
+        ])
+
+        right_column = ft.Column([
+            ft.Row([ft.Text("レポート (応答履歴)", size=18, weight="bold"), self.response_id_text], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            log_container,
+            input_row
+        ], expand=True)
+
+        # Main Layout
+        main_row = ft.Row([left_column, ft.VerticalDivider(), right_column], expand=True)
+
+        # Status Bar
+        self.status_text = ft.Text(self.state.status_message, size=12)
+        self.cost_text = ft.Text(self.state.cost_info, size=12)
+        bottom_bar = ft.Container(
+            content=ft.Row([self.status_text, self.cost_text], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            padding=5,
+            bgcolor=ft.Colors.GREY_200,
+            border_radius=5
+        )
+
+        self.page.add(
+            ft.Column([
+                main_row,
+                bottom_bar
+            ], expand=True)
+        )
+
+    # --- Callbacks from State ---
+    async def _sync_from_state(self):
+        self.status_text.value = self.state.status_message
+        self.cost_text.value = self.state.cost_info
+        self.response_id_text.value = f"前回レスポンスID: {self.state.config.last_response_id or 'None'}"
+        
+        is_proc = self.state.is_processing
+        self.send_btn.disabled = is_proc
+        self.stop_btn.disabled = not is_proc
+        self.input_field.disabled = is_proc
+        
+        self.page.update()
+
+    async def _append_log(self, text: str, tag: str):
+        if tag == "user":
+            self.chat_list.controls.append(
+                ft.Container(
+                    content=ft.Text(text, color=ft.Colors.WHITE, selectable=True),
+                    bgcolor=UI_COLORS["USER_BG"],
+                    border_radius=5,
+                    padding=10,
+                    margin=ft.margin.symmetric(vertical=5)
+                )
+            )
+            self.current_ai_message = None
+        elif tag == "ai":
+            if not self.current_ai_message:
+                self.current_ai_text = text
+                self.current_ai_message = ft.Text(self.current_ai_text, color=UI_COLORS["AI_FG"], selectable=True)
+                self.chat_list.controls.append(self.current_ai_message)
+            else:
+                self.current_ai_text += text
+                self.current_ai_message.value = self.current_ai_text
+        elif tag == "error":
+            self.chat_list.controls.append(ft.Text(text, color=ft.Colors.RED, selectable=True))
+            self.current_ai_message = None
+        elif tag == "info":
+            self.chat_list.controls.append(ft.Text(text, size=11, color=ft.Colors.GREY_600, selectable=True))
+            self.current_ai_message = None
+            
+        self.page.update()
+
+    async def _clear_log(self):
+        self.chat_list.controls.clear()
+        self.current_ai_message = None
+        self.page.update()
+
+    async def _show_error(self, title: str, msg: str):
+        self._show_dialog(title, msg, is_error=True)
+
+    async def _show_info(self, title: str, msg: str):
+        self._show_dialog(title, msg, is_error=False)
+
+    def _show_dialog(self, title: str, msg: str, is_error: bool = False):
+        def close_dlg(e):
+            dlg.open = False
+            self.page.update()
+
+        dlg = ft.AlertDialog(
+            title=ft.Text(title, color=ft.Colors.RED if is_error else ft.Colors.BLUE),
+            content=ft.Text(msg),
+            actions=[ft.TextButton("OK", on_click=close_dlg)],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        self.page.overlay.append(dlg)
+        dlg.open = True
+        self.page.update()
+
+    async def _update_vs_combo(self, values: List[str]):
+        self.vs_combo.options = [ft.dropdown.Option(val) for val in values]
+        current = self.state.config.current_vector_store_id
+        
+        # Preserve selection if it still exists
+        found = False
+        if current:
+            for val in values:
+                if current in val:
+                    self.vs_combo.value = val
+                    found = True
+                    break
+        if not found and values:
+            self.vs_combo.value = None
+            
+        self.page.update()
 
     # --- User Interactions ---
-    def _on_register_key(self):
-        self.state.update_api_key(self.api_key_var.get().strip())
+    async def _sync_to_state(self):
+        self.state.config.model = self.model_combo.value or "gpt-5.4"
+        self.state.config.reasoning_effort = self.reasoning_combo.value or "medium"
+        self.state.config.system_prompt_mode = self.mode_combo.value or "standard"
+        self.state.config.use_file_search = self.use_file_search_cb.value or False
+        self.state.config.current_vector_store_id = self.vs_combo.value
 
-    def _on_prompt_mode_select(self, event=None):
-        mode = self.prompt_mode_var.get()
-        self._sys_prompt_view.delete("1.0", tk.END)
-        self._sys_prompt_view.insert("1.0", self.state.get_system_prompt(mode))
-        self._sync_to_state()
+    async def _on_register_key(self, e):
+        await self.state.update_api_key(self.api_key_field.value.strip())
 
-    def _on_clear_context(self):
-        if messagebox.askyesno("確認", "セッションをリセットしますか？"):
-            self.state.clear_context()
+    async def _on_prompt_mode_select(self, e):
+        mode = self.mode_combo.value
+        self.sys_prompt_field.value = self.state.get_system_prompt(mode)
+        await self._sync_to_state()
+        self.page.update()
 
-    def _on_save_log(self):
-        text = self._log_view.get("1.0", tk.END).strip()
-        if not text:
-            return
+    async def _on_clear_context(self, e):
+        def confirm_clear(e):
+            self.page.run_task(self.state.clear_context)
+            dlg.open = False
+            self.page.update()
             
-        import datetime
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
-        default_filename = f"{timestamp}_分析レポート.txt"
-        
-        path_str = filedialog.asksaveasfilename(
-            defaultextension=".txt",
-            filetypes=[("Text Files", "*.txt")],
-            initialfile=default_filename
-        )
-        if path_str:
-            with open(path_str, "w", encoding="utf-8") as f:
-                f.write(text)
-            messagebox.showinfo("保存", "保存しました。")
+        def cancel_clear(e):
+            dlg.open = False
+            self.page.update()
 
-    def _on_start_generation(self) -> str:
+        dlg = ft.AlertDialog(
+            title=ft.Text("確認"),
+            content=ft.Text("セッションをリセットしますか？"),
+            actions=[
+                ft.TextButton("はい", on_click=confirm_clear),
+                ft.TextButton("いいえ", on_click=cancel_clear),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        self.page.overlay.append(dlg)
+        dlg.open = True
+        self.page.update()
+
+    async def _on_save_log(self, e):
+        # FilePicker logic in flet requires adding it to page.overlay
+        def on_result(e):
+            if e.path:
+                text_content = ""
+                for control in self.chat_list.controls:
+                    if hasattr(control, "content") and hasattr(control.content, "value"):
+                        text_content += control.content.value + "\n\n"
+                    elif hasattr(control, "value"):
+                        text_content += control.value + "\n\n"
+                        
+                with open(e.path, "w", encoding="utf-8") as f:
+                    f.write(text_content.strip())
+                self.page.run_task(self._show_info, "保存", f"保存しました: {e.path}")
+
+        file_picker = ft.FilePicker()
+        file_picker.on_result = on_result
+        self.page.overlay.append(file_picker)
+        self.page.update()
+        
+        import asyncio
+        await asyncio.sleep(0.1)
+        
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+        await file_picker.save_file(file_name=f"{timestamp}_分析レポート.txt", allowed_extensions=["txt"])
+
+    async def _start_generation(self):
         if self.state.is_processing:
-            return "break"
+            return
         
-        self._sync_to_state()
+        await self._sync_to_state()
         
-        user_input = self._input_view.get("1.0", tk.END).strip()
-        system_prompt = self._sys_prompt_view.get("1.0", tk.END).strip()
+        user_input = self.input_field.value.strip()
+        system_prompt = self.sys_prompt_field.value.strip()
         
         if user_input:
-            self._input_view.delete("1.0", tk.END)
-            self.state.handle_submit(user_input, system_prompt)
-            
-        return "break"
+            self.input_field.value = ""
+            self.page.update()
+            # Flet run_task is used to not block the current UI event
+            self.page.run_task(self.state.handle_submit, user_input, system_prompt)
 
-    def _on_stop_generation(self):
-        self.state.cancel_generation()
+    async def _on_submit_text(self, e):
+        await self._start_generation()
 
-    def _on_open_rag_manager(self):
-        from src.rag_ui import RAGManagementWindow
+    async def _on_submit_button(self, e):
+        await self._start_generation()
+
+    async def _on_stop_generation(self, e):
+        await self.state.cancel_generation()
+
+    async def _on_open_rag_manager(self, e):
+        from src.rag_ui import show_rag_manager
         
-        self.state.update_api_key(self.api_key_var.get().strip(), silent=True)
-        if not self.state.config.api_key or not self.state.client or not self.state.rag_usecase:
-            messagebox.showwarning("エラー", "API Keyを登録してください。")
+        await self.state.update_api_key(self.api_key_field.value.strip(), silent=True)
+        if not self.state.config.api_key or not getattr(self.state, "client", None) or not getattr(self.state, "rag_usecase", None):
+            await self._show_error("エラー", "API Keyを登録してください。")
             return
             
-        window = RAGManagementWindow(self, self.state.rag_usecase)
-        self.wait_window(window)
-        self.state.refresh_vector_stores()
-
-    def _on_close(self):
-        self._sync_to_state()
-        self.state.save_config()
-        if self.state.is_processing:
-            self.state.cancel_generation()
-        self.destroy()
+        # Call RAG Manager
+        await show_rag_manager(self.page, self.state.rag_usecase, self.state.refresh_vector_stores)

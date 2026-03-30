@@ -1,299 +1,399 @@
-"""
-RAG管理用Tkinterサブウィンドウ。
-
-Vector Storeおよびファイルの管理UIを提供します。
-UI内で直接 `OpenAIClient` を非同期実行タスクとして呼び出します。
-"""
-
-import asyncio
+import flet as ft
 import datetime
-import threading
-import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog, ttk
-from typing import Any, List, Optional
 import structlog
-
+from typing import Any, List, Optional
 from src.application.usecases.rag_usecase import RAGUseCase
 from src.styles import UI_FONTS
 
 log = structlog.get_logger()
 
+async def show_rag_manager(page: ft.Page, rag_usecase: RAGUseCase, on_close_refresh=None):
+    """
+    RAG管理ダイアログを表示します。
+    """
+    
+    current_store_id = None
+    current_store_file_count = 0
+    selected_file_id = None
+    
+    status_text = ft.Text("Ready", size=12)
+    
+    # --- UI Components ---
+    
+    store_table = ft.DataTable(
+        columns=[
+            ft.DataColumn(ft.Text("Name")),
+            ft.DataColumn(ft.Text("ID")),
+            ft.DataColumn(ft.Text("Status")),
+            ft.DataColumn(ft.Text("Files")),
+            ft.DataColumn(ft.Text("Bytes")),
+        ],
+        rows=[],
+        show_checkbox_column=True,
+    )
+    
+    file_table = ft.DataTable(
+        columns=[
+            ft.DataColumn(ft.Text("Filename")),
+            ft.DataColumn(ft.Text("ID")),
+            ft.DataColumn(ft.Text("Created")),
+        ],
+        rows=[],
+        show_checkbox_column=True,
+    )
+    
+    rename_store_btn = ft.ElevatedButton("✏️ 名前変更", disabled=True)
+    del_store_btn = ft.ElevatedButton("🗑️ 削除", disabled=True)
+    upload_file_btn = ft.ElevatedButton("📂 アップロード", disabled=True)
+    del_file_btn = ft.ElevatedButton("🗑️ ファイル削除", disabled=True)
+    create_store_btn = ft.ElevatedButton("➕ 新規作成", expand=True)
+    
+    def set_status(msg: str):
+        status_text.value = msg
+        page.update()
 
-class RAGManagementWindow(tk.Toplevel):
-    def __init__(self, parent: tk.Tk, rag_usecase: RAGUseCase) -> None:
-        super().__init__(parent)
-        self.rag_usecase = rag_usecase
-        self.title("ナレッジベース管理 (RAG Management)")
-        self.geometry("1100x750")
-        self.transient(parent)
-        self.grab_set()
-
-        self.status_var = tk.StringVar(value="Ready")
-        self.current_store_id: Optional[str] = None
-        self.current_store_file_count: int = 0
-
-        self._setup_ui()
+    async def _on_store_select(e):
+        nonlocal current_store_id, current_store_file_count
         
-        # Initial Load
-        self._refresh_stores_async()
-
-    def _setup_ui(self) -> None:
-        paned = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashwidth=4, sashrelief=tk.RAISED)
-        paned.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-
-        # Left Panel (Stores)
-        left_frame = ttk.LabelFrame(paned, text=" Vector Stores ", padding=5)
-        paned.add(left_frame, width=450, stretch="never")
-
-        self.store_tree = ttk.Treeview(left_frame, columns=("name", "id", "status", "files", "usage"), show="headings", selectmode="browse")
-        for col, text, width, anchor in [
-            ("name", "Name", 140, "w"), ("id", "ID", 90, "w"), 
-            ("status", "Status", 70, "w"), ("files", "Files", 50, "center"), 
-            ("usage", "Bytes", 70, "e")
-        ]:
-            self.store_tree.heading(col, text=text)
-            self.store_tree.column(col, width=width, anchor=anchor)
-
-        self.store_tree.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        self.store_tree.bind("<<TreeviewSelect>>", self._on_store_select)
-
-        store_scroll = ttk.Scrollbar(left_frame, orient="vertical", command=self.store_tree.yview)
-        store_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        self.store_tree.configure(yscrollcommand=store_scroll.set)
-
-        btn_left = ttk.Frame(left_frame)
-        btn_left.pack(fill=tk.X, pady=(5, 0))
+        selected_row = e.control
+        is_selected = (str(e.data).lower() == "true")
         
-        row1 = ttk.Frame(btn_left)
-        row1.pack(fill=tk.X, pady=(0, 2))
-        ttk.Button(row1, text="➕ 新規作成", command=self._on_create_store).pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self.rename_btn = ttk.Button(row1, text="✏️ 名前変更", command=self._on_rename_store, state="disabled")
-        self.rename_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
-
-        row2 = ttk.Frame(btn_left)
-        row2.pack(fill=tk.X)
-        self.del_store_btn = ttk.Button(row2, text="🗑️ 削除", command=self._on_delete_store, state="disabled")
-        self.del_store_btn.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Button(row2, text="🔄 更新", command=self._refresh_stores_async).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
-
-        # Right Panel (Files)
-        right_frame = ttk.LabelFrame(paned, text=" Files in Selected Store ", padding=5)
-        paned.add(right_frame, stretch="always")
-
-        self.file_tree = ttk.Treeview(right_frame, columns=("filename", "id", "created"), show="headings", selectmode="browse")
-        for col, text, width in [("filename", "Filename", 250), ("id", "File ID", 120), ("created", "Created", 120)]:
-            self.file_tree.heading(col, text=text)
-            self.file_tree.column(col, width=width)
-
-        self.file_tree.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        self.file_tree.bind("<<TreeviewSelect>>", self._on_file_select)
-        
-        file_scroll = ttk.Scrollbar(right_frame, orient="vertical", command=self.file_tree.yview)
-        file_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        self.file_tree.configure(yscrollcommand=file_scroll.set)
-
-        btn_right = ttk.Frame(right_frame)
-        btn_right.pack(fill=tk.X, pady=(5, 0))
-
-        self.upload_btn = ttk.Button(btn_right, text="📂 ファイルアップロード", command=self._on_upload_file, state="disabled")
-        self.upload_btn.pack(side=tk.LEFT, padx=(0, 5))
-        self.del_file_btn = ttk.Button(btn_right, text="🗑️ ファイル削除", command=self._on_delete_file, state="disabled")
-        self.del_file_btn.pack(side=tk.RIGHT)
-        ttk.Label(btn_right, text="⚠️ StoreとStorageの両方から削除されます", font=UI_FONTS["SMALL_MONO"], foreground="gray").pack(side=tk.RIGHT, padx=5)
-
-        ttk.Label(self, textvariable=self.status_var, relief=tk.SUNKEN, font=UI_FONTS["STATUS"], padding=(5, 2)).pack(side=tk.BOTTOM, fill=tk.X)
-
-    # --- UI Helpers ---
-
-    def set_status(self, msg: str, busy: bool = False):
-        self.status_var.set(msg)
-        self.config(cursor="watch" if busy else "")
-        self.update_idletasks()
-
-    def _run_thread(self, coro):
-        threading.Thread(target=lambda: asyncio.run(coro), daemon=True).start()
-
-    # --- Logic: Stores ---
-
-    def _refresh_stores_async(self):
-        self.set_status("Loading Vector Stores...", busy=True)
-        prev_id = self.current_store_id
-        self.store_tree.delete(*self.store_tree.get_children())
-
-        async def _fetch():
-            try:
-                stores = await self.rag_usecase.list_vector_stores()
-                self.after(0, lambda: self._render_stores(stores, prev_id))
-            except Exception as e:
-                self.after(0, lambda err=e: self.set_status(f"Error: {err}"))
-
-        self._run_thread(_fetch())
-
-    def _render_stores(self, stores: List[Any], select_id: Optional[str] = None):
-        found_item = None
-        for s in stores:
-            name = getattr(s, "name", "(No Name)")
-            usage = f"{getattr(s, 'usage_bytes', 0):,}"
-            files_count = getattr(getattr(s, "file_counts", None), "total", 0)
-            item = self.store_tree.insert("", "end", values=(name, s.id, getattr(s, "status", ""), files_count, usage))
-            if select_id and str(s.id) == select_id:
-                found_item = item
-
-        if found_item:
-            self.store_tree.selection_set(found_item)
-            self.store_tree.focus(found_item)
-            self._on_store_select(None)
-        else:
-            self.current_store_id = None
-            self.current_store_file_count = 0
-            self.file_tree.delete(*self.file_tree.get_children())
-            self._update_store_buttons()
-
-        self.set_status(f"Loaded {len(stores)} Vector Stores.")
-
-    def _on_store_select(self, event):
-        sel = self.store_tree.selection()
-        if not sel:
-            self.current_store_id = None
-            self._update_store_buttons()
-            return
-        
-        vals = self.store_tree.item(sel[0])["values"]
-        self.current_store_id = str(vals[1])
-        self.current_store_file_count = int(vals[3]) if vals[3] else 0
-        self._update_store_buttons()
-        self._refresh_files_async(self.current_store_id)
-
-    def _update_store_buttons(self):
-        st = "normal" if self.current_store_id else "disabled"
-        self.rename_btn.config(state=st)
-        self.del_store_btn.config(state=st)
-        self.upload_btn.config(state=st)
-        if not self.current_store_id:
-            self.file_tree.delete(*self.file_tree.get_children())
-            self.del_file_btn.config(state="disabled")
-
-    def _on_create_store(self):
-        name = simpledialog.askstring("新規作成", "Vector Storeの名前を入力してください:")
-        if not name:
-            return
-        self.set_status("Creating store...", busy=True)
-
-        async def _create():
-            try:
-                await self.rag_usecase.create_vector_store(name)
-                self.after(0, lambda: self.set_status(f"Created store '{name}'."))
-                self.after(0, self._refresh_stores_async)
-            except Exception as e:
-                self.after(0, lambda err=e: messagebox.showerror("Error", str(err)))
-                self.after(0, lambda: self.set_status("Create failed."))
+        for row in store_table.rows:
+            if row == selected_row:
+                row.selected = is_selected
+            else:
+                row.selected = False
                 
-        self._run_thread(_create())
+        if is_selected:
+            current_store_id = selected_row.cells[1].content.value
+            current_store_file_count = int(selected_row.cells[3].content.value)
+        else:
+            current_store_id = None
+            current_store_file_count = 0
+            
+        _update_store_buttons()
+        if current_store_id:
+            await _refresh_files(current_store_id)
+        else:
+            file_table.rows.clear()
+        page.update()
 
-    def _on_rename_store(self):
-        sel = self.store_tree.selection()
-        if not sel:
-            return
-        cur_name = self.store_tree.item(sel[0])["values"][0]
-        new_name = simpledialog.askstring("名前変更", "新しい名前を入力してください:", initialvalue=cur_name)
+    async def _on_file_select(e):
+        nonlocal selected_file_id
+        selected_row = e.control
+        is_selected = (str(e.data).lower() == "true")
         
-        if new_name and new_name != cur_name and self.current_store_id:
-            self.set_status("Renaming...", busy=True)
-            async def _rename():
-                try:
-                    await self.rag_usecase.update_vector_store_name(self.current_store_id, new_name)
-                    self.after(0, self._refresh_stores_async)
-                except Exception as e:
-                    self.after(0, lambda err=e: messagebox.showerror("Error", str(err)))
-            self._run_thread(_rename())
+        for row in file_table.rows:
+            if row == selected_row:
+                row.selected = is_selected
+            else:
+                row.selected = False
+                
+        if is_selected:
+            selected_file_id = selected_row.cells[1].content.value
+        else:
+            selected_file_id = None
+            
+        del_file_btn.disabled = selected_file_id is None
+        page.update()
 
-    def _on_delete_store(self):
-        if self.current_store_file_count > 0:
-            messagebox.showwarning("削除できません", f"このStoreには {self.current_store_file_count} 個のファイルが含まれています。\n削除する前にファイルを削除してください。")
-            return
-        if not messagebox.askyesno("削除確認", f"Vector Store '{self.current_store_id}' を削除しますか？"):
+    def _update_store_buttons():
+        has_sel = current_store_id is not None
+        rename_store_btn.disabled = not has_sel
+        del_store_btn.disabled = not has_sel
+        upload_file_btn.disabled = not has_sel
+        if not has_sel:
+            del_file_btn.disabled = True
+
+    async def _refresh_stores(e=None):
+        nonlocal current_store_id, current_store_file_count
+        set_status("Loading Vector Stores...")
+        try:
+            stores = await rag_usecase.list_vector_stores()
+            rows = []
+            found_current = False
+            for s in stores:
+                name = getattr(s, "name", "(No Name)")
+                usage = f"{getattr(s, 'usage_bytes', 0):,}"
+                files_count = getattr(getattr(s, "file_counts", None), "total", 0)
+                is_sel = (str(s.id) == current_store_id)
+                if is_sel: found_current = True
+                
+                rows.append(
+                    ft.DataRow(
+                        cells=[
+                            ft.DataCell(ft.Text(name)),
+                            ft.DataCell(ft.Text(s.id)),
+                            ft.DataCell(ft.Text(getattr(s, "status", ""))),
+                            ft.DataCell(ft.Text(str(files_count))),
+                            ft.DataCell(ft.Text(usage)),
+                        ],
+                        selected=is_sel,
+                        on_select_change=_on_store_select
+                    )
+                )
+            store_table.rows = rows
+            if not found_current:
+                current_store_id = None
+                current_store_file_count = 0
+                file_table.rows.clear()
+            _update_store_buttons()
+            set_status(f"Loaded {len(stores)} Vector Stores.")
+        except Exception as err:
+            set_status(f"Error: {err}")
+        page.update()
+
+    async def _refresh_files(store_id: str):
+        nonlocal selected_file_id
+        set_status(f"Loading files for {store_id}...")
+        try:
+            files = await rag_usecase.list_files_in_store(store_id)
+            if not files:
+                set_status("No files found.")
+                file_table.rows.clear()
+            else:
+                files.sort(key=lambda x: x["created_at"], reverse=True)
+                rows = []
+                for f in files:
+                    dt_str = datetime.datetime.fromtimestamp(f["created_at"]).strftime("%Y-%m-%d %H:%M")
+                    rows.append(
+                        ft.DataRow(
+                            cells=[
+                                ft.DataCell(ft.Text(f["filename"])),
+                                ft.DataCell(ft.Text(f["id"])),
+                                ft.DataCell(ft.Text(dt_str)),
+                            ],
+                            on_select_change=_on_file_select
+                        )
+                    )
+                file_table.rows = rows
+                set_status(f"Loaded {len(files)} files.")
+        except Exception as err:
+            set_status(f"Error loading files: {err}")
+        
+        selected_file_id = None
+        del_file_btn.disabled = True
+        page.update()
+
+    async def _on_delete_store(e):
+        if not current_store_id: return
+        if current_store_file_count > 0:
+            set_status("ファイルが登録されているVector Storeは削除できません。")
             return
             
-        self.set_status("Deleting store...", busy=True)
-        async def _del():
+        def confirm_del(e):
+            page.run_task(_do_delete, dlg_modal)
+
+        async def _do_delete(dlg_modal):
+            dlg_modal.open = False
+            page.update()
+            set_status("Deleting Vector Store...")
             try:
-                await self.rag_usecase.delete_vector_store(self.current_store_id)
-                self.after(0, self._refresh_stores_async)
-            except Exception as e:
-                self.after(0, lambda err=e: messagebox.showerror("Error", str(err)))
-        self._run_thread(_del())
-
-    # --- Logic: Files ---
-
-    def _refresh_files_async(self, store_id: str):
-        self.file_tree.delete(*self.file_tree.get_children())
-        self.set_status(f"Loading files for {store_id}...", busy=True)
-
-        async def _fetch():
-            try:
-                file_details = await self.rag_usecase.list_files_in_store(store_id)
-                if not file_details:
-                    self.after(0, lambda: self.set_status("No files found."))
-                    return
-
-                self.after(0, lambda: self._render_files(file_details))
-            except Exception as e:
-                self.after(0, lambda err=e: self.set_status(f"Error loading files: {err}"))
-        self._run_thread(_fetch())
-
-    def _render_files(self, files: List[dict]):
-        self.file_tree.delete(*self.file_tree.get_children())
-        files.sort(key=lambda x: x["created_at"], reverse=True)
-        for f in files:
-            dt_str = datetime.datetime.fromtimestamp(f["created_at"]).strftime("%Y-%m-%d %H:%M")
-            self.file_tree.insert("", "end", values=(f["filename"], f["id"], dt_str))
-        self.set_status(f"Loaded {len(files)} files.")
-
-    def _on_file_select(self, event):
-        self.del_file_btn.config(state="normal" if self.file_tree.selection() else "disabled")
-
-    def _on_upload_file(self):
-        if not self.current_store_id:
-            return
-        file_path = filedialog.askopenfilename(filetypes=[("All Files", "*.*"), ("PDF", "*.pdf"), ("Text", "*.txt")])
-        if not file_path:
-            return
-
-        self.set_status("Uploading...", busy=True)
-        self.upload_btn.config(state="disabled")
-
-        async def _up():
-            try:
-                self.after(0, lambda: self.set_status("Uploading and Indexing file..."))
-                await self.rag_usecase.upload_and_index_file(file_path, self.current_store_id)
-                self.after(0, self._refresh_stores_async)
-            except Exception as e:
-                self.after(0, lambda err=e: messagebox.showerror("Error", str(err)))
-            finally:
-                self.after(0, lambda: self.upload_btn.config(state="normal"))
-        self._run_thread(_up())
-
-    def _on_delete_file(self):
-        sel = self.file_tree.selection()
-        if not sel or not self.current_store_id:
-            return
-        vals = self.file_tree.item(sel[0])["values"]
-        f_name, f_id = vals[0], vals[1]
-
-        if not messagebox.askyesno("削除確認", f"{f_name} を完全に削除しますか？"):
-            return
-
-        self.set_status("Deleting...", busy=True)
-        self.del_file_btn.config(state="disabled")
-
-        async def _delf():
-            try:
-                await self.rag_usecase.delete_file_from_store_and_storage(self.current_store_id, f_id)
-                self.after(0, self._refresh_stores_async)
-            except Exception as e:
-                self.after(0, lambda err=e: messagebox.showerror("Error", str(err)))
-            finally:
-                self.after(0, lambda: self.del_file_btn.config(state="normal"))
+                await rag_usecase.delete_vector_store(current_store_id)
+                await _refresh_stores()
+                set_status("Deleted Vector Store.")
+            except Exception as err:
+                set_status(f"Error: {err}")
                 
-        self._run_thread(_delf())
+        def cancel_del(e):
+            dlg_modal.open = False
+            page.update()
 
+        dlg_modal = ft.AlertDialog(
+            title=ft.Text("確認"),
+            content=ft.Text("本当にこのVector Storeを削除しますか？"),
+            actions=[
+                ft.TextButton("はい", on_click=confirm_del),
+                ft.TextButton("いいえ", on_click=cancel_del),
+            ]
+        )
+        page.overlay.append(dlg_modal)
+        dlg_modal.open = True
+        page.update()
+
+    async def _on_rename_store(e):
+        if not current_store_id: return
+        
+        name_field = ft.TextField(label="新しい名前", autofocus=True)
+        
+        def save_name(e):
+            page.run_task(_do_rename, dlg_modal, name_field.value)
+
+        async def _do_rename(dlg_modal, new_name):
+            dlg_modal.open = False
+            page.update()
+            if not new_name.strip(): return
+            set_status("Renaming Vector Store...")
+            try:
+                await rag_usecase.update_vector_store_name(current_store_id, new_name.strip())
+                await _refresh_stores()
+                set_status("Renamed Vector Store.")
+            except Exception as err:
+                set_status(f"Error: {err}")
+                
+        def cancel_dlg(e):
+            dlg_modal.open = False
+            page.update()
+
+        dlg_modal = ft.AlertDialog(
+            title=ft.Text("名前変更"),
+            content=name_field,
+            actions=[
+                ft.TextButton("保存", on_click=save_name),
+                ft.TextButton("キャンセル", on_click=cancel_dlg),
+            ]
+        )
+        page.overlay.append(dlg_modal)
+        dlg_modal.open = True
+        page.update()
+
+    async def _on_create_store(e):
+        name_field = ft.TextField(label="Vector Store名", autofocus=True)
+        
+        def save_name(e):
+            page.run_task(_do_create, dlg_modal, name_field.value)
+
+        async def _do_create(dlg_modal, new_name):
+            dlg_modal.open = False
+            page.update()
+            if not new_name.strip(): return
+            set_status("Creating Vector Store...")
+            try:
+                await rag_usecase.create_vector_store(new_name.strip())
+                await _refresh_stores()
+                set_status("Created Vector Store.")
+            except Exception as err:
+                set_status(f"Error: {err}")
+                
+        def cancel_dlg(e):
+            dlg_modal.open = False
+            page.update()
+
+        dlg_modal = ft.AlertDialog(
+            title=ft.Text("新規作成"),
+            content=name_field,
+            actions=[
+                ft.TextButton("作成", on_click=save_name),
+                ft.TextButton("キャンセル", on_click=cancel_dlg),
+            ]
+        )
+        page.overlay.append(dlg_modal)
+        dlg_modal.open = True
+        page.update()
+
+    async def _on_upload_file(e):
+        if not current_store_id: return
+        
+        def on_result(e):
+            if e.files:
+                for f in e.files:
+                    page.run_task(_do_upload, f.path)
+
+        async def _do_upload(file_path):
+            set_status(f"Uploading file...")
+            try:
+                await rag_usecase.upload_and_index_file(file_path, current_store_id)
+                await _refresh_stores()
+                set_status("File uploaded.")
+            except Exception as err:
+                set_status(f"Error: {err}")
+
+        file_picker = ft.FilePicker()
+        file_picker.on_result = on_result
+        page.overlay.append(file_picker)
+        page.update()
+        
+        import asyncio
+        await asyncio.sleep(0.1)
+        
+        await file_picker.pick_files(allow_multiple=False)
+
+    async def _on_delete_file(e):
+        if not current_store_id or not selected_file_id: return
+        
+        def confirm_del(e):
+            page.run_task(_do_delete, dlg_modal)
+
+        async def _do_delete(dlg_modal):
+            dlg_modal.open = False
+            page.update()
+            set_status("Deleting file...")
+            try:
+                await rag_usecase.delete_file_from_store_and_storage(current_store_id, selected_file_id)
+                await _refresh_stores()
+                set_status("Deleted file.")
+            except Exception as err:
+                set_status(f"Error: {err}")
+                
+        def cancel_del(e):
+            dlg_modal.open = False
+            page.update()
+
+        dlg_modal = ft.AlertDialog(
+            title=ft.Text("確認"),
+            content=ft.Text("本当にこのファイルを削除しますか？"),
+            actions=[
+                ft.TextButton("はい", on_click=confirm_del),
+                ft.TextButton("いいえ", on_click=cancel_del),
+            ]
+        )
+        page.overlay.append(dlg_modal)
+        dlg_modal.open = True
+        page.update()
+
+    rename_store_btn.on_click = _on_rename_store
+    del_store_btn.on_click = _on_delete_store
+    upload_file_btn.on_click = _on_upload_file
+    del_file_btn.on_click = _on_delete_file
+    create_store_btn.on_click = _on_create_store
+    
+
+    # Layout Construction
+    left_panel = ft.Column([
+        ft.Row([
+            ft.Text("Vector Stores", size=16, weight="bold"),
+            ft.IconButton(icon=ft.Icons.REFRESH, on_click=_refresh_stores)
+        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+        ft.Container(content=ft.Column([ft.Row([store_table], scroll="always")], scroll="always"), expand=True, border=ft.border.all(1, ft.Colors.GREY_300)),
+        ft.Row([
+            create_store_btn,
+            rename_store_btn,
+            del_store_btn
+        ])
+    ], expand=True)
+
+    right_panel = ft.Column([
+        ft.Text("Files in Selected Store", size=16, weight="bold"),
+        ft.Container(content=ft.Column([ft.Row([file_table], scroll="always")], scroll="always"), expand=True, border=ft.border.all(1, ft.Colors.GREY_300)),
+        ft.Row([
+            upload_file_btn,
+            del_file_btn
+        ])
+    ], expand=True)
+
+    content = ft.Container(
+        width=1000, height=600,
+        content=ft.Column([
+            ft.Row([left_panel, ft.VerticalDivider(), right_panel], expand=True),
+            ft.Divider(),
+            status_text
+        ])
+    )
+
+    def close_dlg(e):
+        dlg.open = False
+        page.update()
+        if on_close_refresh:
+            page.run_task(on_close_refresh)
+
+    dlg = ft.AlertDialog(
+        title=ft.Row([ft.Text("ナレッジベース管理 (RAG Management)"), ft.IconButton(icon=ft.Icons.CLOSE, on_click=close_dlg)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+        content=content,
+    )
+
+    page.overlay.append(dlg)
+    dlg.open = True
+    page.update()
+    
+    # Initial load
+    await _refresh_stores()
