@@ -100,7 +100,7 @@ class SyukatsuSupportApp:
             label="リクエスト入力 (Shift+Enterで改行)", multiline=True, min_lines=3, max_lines=5, 
             expand=True, on_submit=self._on_submit_text, shift_enter=True
         )
-        self.send_btn = ft.ElevatedButton("分析開始 🚀", on_click=self._on_submit_button)
+        self.send_btn = ft.ElevatedButton("送信 🚀", on_click=self._on_submit_button)
         self.stop_btn = ft.ElevatedButton("停止 ⏹️", on_click=self._on_stop_generation, disabled=True)
         self.save_btn = ft.ElevatedButton("保存 💾", on_click=self._on_save_log)
         
