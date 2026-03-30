@@ -8,7 +8,7 @@ class SyukatsuSupportApp:
     def __init__(self, page: ft.Page, state: AppState):
         self.page = page
         self.state = state
-        self.page.title = "SYUKATSU Support - 合同会社ぼっち (v2.0.0)"
+        self.page.title = "SYUKATSU Support - 合同会社ぼっち (v2.1.0)"
         self.page.padding = 20
         self.page.theme_mode = ft.ThemeMode.LIGHT
         
