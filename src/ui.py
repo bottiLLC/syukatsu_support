@@ -1,5 +1,6 @@
 import flet as ft
 import datetime
+import re
 from typing import List
 from src.state import AppState
 from src.styles import UI_COLORS
@@ -166,11 +167,16 @@ class SyukatsuSupportApp:
         elif tag == "ai":
             if not self.current_ai_message:
                 self.current_ai_text = text
-                self.current_ai_message = ft.Text(self.current_ai_text, color=UI_COLORS["AI_FG"], selectable=True)
+                self.current_ai_message = ft.Text("", color=UI_COLORS["AI_FG"], selectable=True)
                 self.chat_list.controls.append(self.current_ai_message)
             else:
                 self.current_ai_text += text
-                self.current_ai_message.value = self.current_ai_text
+            
+            # LLMの出力結果(response_text)から <thought>～</thought> ブロックを削除
+            final_report = re.sub(r'<thought>.*?</thought>', '', self.current_ai_text, flags=re.DOTALL)
+            # ストリーミング中でまだ閉じていない <thought> ブロックも非表示化
+            final_report = re.sub(r'<thought>.*', '', final_report, flags=re.DOTALL).strip()
+            self.current_ai_message.value = final_report
         elif tag == "error":
             self.chat_list.controls.append(ft.Text(text, color=ft.Colors.RED, selectable=True))
             self.current_ai_message = None
