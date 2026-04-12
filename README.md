@@ -1,5 +1,7 @@
 # 就職活動サポートアプリ (SYUKATSU Support)
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
 合同会社ぼっちが開発した、就職活動・企業分析用のデスクトップアプリケーションです。
 最新の **OpenAI API (`/responses` エンドポイント)** とネイティブ連携し、履歴書作成支援、面接対策、技術面接シミュレーション、および企業レポート(PDF等)の解析（RAG）を直感的なGUIから行えます。
 
