@@ -82,22 +82,24 @@ uv run src/app.py
 uv run pytest tests/ -v
 ```
 
-### 3. 単一実行ファイル (exe) のビルド
-PyInstaller を用いて、Python環境が不要な単一の実行可能アプリを作成します。
+### 3. アプリケーションのビルド (MSIX配信・VFS対応向け)
+PyInstaller を用いて、Python環境が不要な実行可能アプリ（フォルダ構成）を作成します。Windowsストア（MSIX形式）での配信要件と高速化を考慮し、展開遅延を防ぐため `--onedir` モードでビルドしてください。
 
 ```powershell
-uv run pyinstaller --noconsole --onefile --name syukatsu-support --collect-all src src/app.py -y
+uv run pyinstaller --noconsole --onedir --name syukatsu-support --collect-all src --add-data "system_prompts.json;." src/app.py -y
 ```
-※ ビルド完了後、`dist` フォルダに `syukatsu-support.exe` が生成されます。ローカルに依存する鍵ファイル(`.secret.key`)等と共に利用してください。
+※ ビルド完了後、`dist/syukatsu-support/` フォルダ内に `syukatsu-support.exe` と関連リソース群が生成されます。MSIX化する際はこのフォルダ全体をパッケージします。
 
 ---
 
-## ロギングとデータ保存
+## ロギング・データ保存・サポート
 
-- **セキュアな設定管理**:
-    APIキーなどの機密情報は内蔵されたFernet方式で暗号化処理され、ローカルの `config.json` と `.secret.key` に安全に保持されます。
+- **セキュアな設定管理 (LocalAppdata連携)**:
+    APIキーなどの機密設定は内蔵されたFernet方式で暗号化処理され、クラウドドキュメント等の同期エラーを防ぐため、OS標準の `%LOCALAPPDATA%\SYUKATSU_Support` 配下 (`config.json`, `.secret.key`) に安全に保持されます。
 - **レポートのエクスポート**:
-    画面上の「保存 💾」ボタンから、AIの推論・回答履歴のすべてをタイムスタンプ付きのテキストファイルとしてローカルへ書き出すことができます。
+    画面上の「保存 💾」ボタンから、AIの推論・回答履歴のすべてをタイムスタンプ付きのテキストファイルとして書き出すことができます。
+- **エラーハンドリングと開発者向けサポート**:
+    エラー発生時にはダイアログが起動し、ログを即座にローカルに保存したり、メーラー（mailto）を直接起動して開発者に報告するためのアクションボタンをご利用いただけます。
 - **構造化ロギング (Structlog)**:
     コンソールには、障害調査が容易なStructlogによるコンテキスト付きログ（変数状態・タイムスタンプ）が出力されます。
 
@@ -112,6 +114,12 @@ uv run pyinstaller --noconsole --onefile --name syukatsu-support --collect-all s
 > 本アプリは**従量課金制**です。特に上位モデル（例: `gpt-5.4-pro`等）を選択して**巨大なPDF（有価証券報告書など）** を分析した場合、膨大なトークンが消費され、**高額なAPI費用が発生するリスク**があります。
 > 
 > アプリの使用によって生じたAPIの課金額や、実行時のいかなる損害・エラーに対しても、**開発者（合同会社ぼっち / bottiLLC）は一切の責任を負いません。完全に「自己責任」でのご利用**となりますので、トークンの使用量やモデル選択には十分ご注意ください。
+
+---
+
+## プライバシーポリシー (Privacy Policy)
+
+本アプリ内でのデータは全て利用者のデバイス上で暗号化して管理され、OpenAIとの直接通信のみに用いられます。送信されるデータはモデルの学習に利用されません。詳細についてはリポジトリ内の [PRIVACY_POLICY.md](./PRIVACY_POLICY.md) をご確認ください。
 
 ---
 

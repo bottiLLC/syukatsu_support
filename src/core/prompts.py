@@ -40,7 +40,13 @@ class PromptManager:
     """
     def __init__(self, filepath: str = "system_prompts.json"):
         # アプリ起動ディレクトリ(プロジェクトルート)に対する相対または絶対パス
-        self.filepath = Path(filepath)
+        import sys
+        import os
+        if getattr(sys, 'frozen', False):
+            base_path = sys._MEIPASS
+        else:
+            base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        self.filepath = Path(base_path) / filepath
         self._prompts: Dict[str, str] = {}
         self._load()
 

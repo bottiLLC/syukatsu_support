@@ -20,10 +20,8 @@
 フォント、色、およびウィンドウ設定の定数を定義します。
 """
 
-from typing import Dict, Tuple, Union
+from typing import Dict
 
-# Tkinter等のため定義したフォントの型エイリアス（将来の拡張用）
-FontDef = Union[Tuple[str, int], Tuple[str, int, str]]
 
 # カラーパレット
 UI_COLORS: Dict[str, str] = {

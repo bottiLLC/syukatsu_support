@@ -56,9 +56,14 @@ class SyukatsuSupportApp:
         )
         self.api_key_btn = ft.ElevatedButton("登録", on_click=self._on_register_key)
         
+        self.api_key_disclaimer = ft.Text(
+            "※入力されたAPIキーは本PC内にのみ暗号化保存され、アプリ削除時に完全に消去されます。再発行の手間を省くため、必ずご自身でキーの控えを保管してください。",
+            color=ft.Colors.RED_700, size=11, weight="bold"
+        )
+        
         self.model_combo = ft.Dropdown(
             label="モデル", options=[ft.dropdown.Option("gpt-5.4-pro"), ft.dropdown.Option("gpt-5.4")],
-            value=self.state.config.model, expand=True, dense=True
+            value=self.state.config.model, expand=True, dense=True, on_select=self._on_model_change
         )
         self.reasoning_combo = ft.Dropdown(
             label="推論強度", options=[ft.dropdown.Option(o) for o in ["none", "minimal", "low", "medium", "high", "xhigh"]],
@@ -81,7 +86,7 @@ class SyukatsuSupportApp:
         )
         
         self.sys_prompt_field = ft.TextField(
-            label="システムプロンプト", multiline=True, width=330, height=200,
+            label="システムプロンプト", multiline=True, width=330, min_lines=8, max_lines=10,
             value=self.state.get_system_prompt(self.state.config.system_prompt_mode), text_size=12
         )
         self.clear_btn = ft.ElevatedButton("🧹 コンテキスト消去", on_click=self._on_clear_context)
@@ -90,6 +95,7 @@ class SyukatsuSupportApp:
             ft.Text("企業分析設定", size=18, weight="bold"),
             ft.Divider(),
             ft.Row([self.api_key_field, self.api_key_btn]),
+            self.api_key_disclaimer,
             ft.Row([self.model_combo, self.reasoning_combo]),
             ft.Divider(),
             ft.Text("ナレッジベース (RAG)", weight="bold"),
@@ -135,7 +141,7 @@ class SyukatsuSupportApp:
         ], expand=True)
 
         # Main Layout
-        main_row = ft.Row([left_column, ft.VerticalDivider(), right_column], expand=True)
+        main_row = ft.Row([left_column, ft.VerticalDivider(), right_column], expand=True, vertical_alignment=ft.CrossAxisAlignment.START)
 
         # Status Bar
         self.status_text = ft.Text(self.state.status_message, size=12)
@@ -217,10 +223,28 @@ class SyukatsuSupportApp:
             dlg.open = False
             self.page.update()
 
+        async def save_error(e):
+            file_picker = ft.FilePicker()
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+            path = await file_picker.save_file(
+                file_name=f"{timestamp}_error_log.txt",
+                allowed_extensions=["txt"]
+            )
+            if path:
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(f"[{datetime.datetime.now()}] {title}\n{msg}")
+                self.page.run_task(self._show_info, "保存完了", f"エラーログを保存しました:\n{path}")
+
+        actions = [ft.TextButton("OK", on_click=close_dlg)]
+        
+        if is_error:
+            actions.insert(0, ft.TextButton("開発者にメールで連絡", url="mailto:info@botti.yokohama?subject=SYUKATSU Support エラー報告&body=※先ほど保存したエラーログを添付してください / アプリVer: 最新 / OS: Windows"))
+            actions.insert(0, ft.TextButton("エラーログをローカルに保存", on_click=save_error))
+
         dlg = ft.AlertDialog(
             title=ft.Text(title, color=ft.Colors.RED if is_error else ft.Colors.BLUE),
             content=ft.Text(msg),
-            actions=[ft.TextButton("OK", on_click=close_dlg)],
+            actions=actions,
             actions_alignment=ft.MainAxisAlignment.END,
         )
         self.page.overlay.append(dlg)
@@ -245,6 +269,30 @@ class SyukatsuSupportApp:
         self.page.update()
 
     # --- User Interactions ---
+    async def _on_model_change(self, e):
+        if self.model_combo.value == "gpt-5.4-pro":
+            def confirm_change(_e):
+                dlg.open = False
+                self.page.update()
+                
+            def cancel_change(_e):
+                self.model_combo.value = "gpt-5.4"
+                dlg.open = False
+                self.page.update()
+
+            dlg = ft.AlertDialog(
+                title=ft.Text("確認"),
+                content=ft.Text("gpt-5.4-proは最高度の推論を行うモデルですが、gpt-5.4と比較し、約15倍の費用が発生します。モデルを変更しますか？"),
+                actions=[
+                    ft.TextButton("はい", on_click=confirm_change),
+                    ft.TextButton("いいえ", on_click=cancel_change),
+                ],
+                actions_alignment=ft.MainAxisAlignment.END,
+            )
+            self.page.overlay.append(dlg)
+            dlg.open = True
+            self.page.update()
+
     async def _sync_to_state(self):
         self.state.config.model = self.model_combo.value or "gpt-5.4"
         self.state.config.reasoning_effort = self.reasoning_combo.value or "medium"

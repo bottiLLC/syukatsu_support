@@ -130,7 +130,8 @@ async def show_rag_manager(page: ft.Page, rag_usecase: RAGUseCase, on_close_refr
                 usage = f"{getattr(s, 'usage_bytes', 0):,}"
                 files_count = getattr(getattr(s, "file_counts", None), "total", 0)
                 is_sel = (str(s.id) == current_store_id)
-                if is_sel: found_current = True
+                if is_sel:
+                    found_current = True
                 
                 rows.append(
                     ft.DataRow(
@@ -150,6 +151,8 @@ async def show_rag_manager(page: ft.Page, rag_usecase: RAGUseCase, on_close_refr
                 current_store_id = None
                 current_store_file_count = 0
                 file_table.rows.clear()
+            else:
+                await _refresh_files(current_store_id)
             _update_store_buttons()
             set_status(f"Loaded {len(stores)} Vector Stores.")
         except Exception as err:
@@ -189,7 +192,8 @@ async def show_rag_manager(page: ft.Page, rag_usecase: RAGUseCase, on_close_refr
         page.update()
 
     async def _on_delete_store(e):
-        if not current_store_id: return
+        if not current_store_id:
+            return
         if current_store_file_count > 0:
             set_status("ファイルが登録されているVector Storeは削除できません。")
             return
@@ -225,7 +229,8 @@ async def show_rag_manager(page: ft.Page, rag_usecase: RAGUseCase, on_close_refr
         page.update()
 
     async def _on_rename_store(e):
-        if not current_store_id: return
+        if not current_store_id:
+            return
         
         name_field = ft.TextField(label="新しい名前", autofocus=True)
         
@@ -235,7 +240,8 @@ async def show_rag_manager(page: ft.Page, rag_usecase: RAGUseCase, on_close_refr
         async def _do_rename(dlg_modal, new_name):
             dlg_modal.open = False
             page.update()
-            if not new_name.strip(): return
+            if not new_name.strip():
+                return
             set_status("Renaming Vector Store...")
             try:
                 await rag_usecase.update_vector_store_name(current_store_id, new_name.strip())
@@ -269,7 +275,8 @@ async def show_rag_manager(page: ft.Page, rag_usecase: RAGUseCase, on_close_refr
         async def _do_create(dlg_modal, new_name):
             dlg_modal.open = False
             page.update()
-            if not new_name.strip(): return
+            if not new_name.strip():
+                return
             set_status("Creating Vector Store...")
             try:
                 await rag_usecase.create_vector_store(new_name.strip())
@@ -295,7 +302,8 @@ async def show_rag_manager(page: ft.Page, rag_usecase: RAGUseCase, on_close_refr
         page.update()
 
     async def _on_upload_file(e):
-        if not current_store_id: return
+        if not current_store_id:
+            return
         
         async def _do_upload(file_path):
             set_status("Uploading file...")
@@ -315,7 +323,8 @@ async def show_rag_manager(page: ft.Page, rag_usecase: RAGUseCase, on_close_refr
                 page.run_task(_do_upload, f.path)
 
     async def _on_delete_file(e):
-        if not current_store_id or not selected_file_id: return
+        if not current_store_id or not selected_file_id:
+            return
         
         def confirm_del(e):
             page.run_task(_do_delete, dlg_modal)

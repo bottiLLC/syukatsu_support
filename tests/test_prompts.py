@@ -44,9 +44,9 @@ def test_prompts_keys_exist(required_key):
     assert required_key in manager.prompts, f"Missing required key in JSON: {required_key}"
 
 @pytest.mark.parametrize("mode, expected_keywords", [
-    (MODE_FINANCIAL, ["表の顔", "裏の顔", "投資対効果"]),
-    (MODE_HUMAN_CAPITAL, ["男女の賃金の差異", "育児休業取得率", "離職率"]),
-    (MODE_ENTRY_SHEET, ["志望動機", "解決したい悩み", "キラーワード"]),
+    (MODE_FINANCIAL, ["表の顔", "裏の顔", "キャッシュ・フロー"]),
+    (MODE_HUMAN_CAPITAL, ["男女間賃金格差", "表の顔", "離職率"]),
+    (MODE_ENTRY_SHEET, ["志望動機", "泥臭い課題", "キラーワード"]),
 ])
 def test_prompts_content_integrity(mode, expected_keywords):
     """

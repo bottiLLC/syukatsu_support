@@ -32,9 +32,11 @@ from src.models import UserConfig, AppConfigDefaults
 
 log = structlog.get_logger()
 
-# パス設定（CWDからの相対パス）
-CONFIG_FILE = Path("config.json")
-KEY_FILE = Path(".secret.key")
+# パス設定（LOCALAPPDATA基準に変更）
+_app_data_dir = os.path.expandvars(r'%LOCALAPPDATA%\SYUKATSU_Support')
+os.makedirs(_app_data_dir, exist_ok=True)
+CONFIG_FILE = Path(_app_data_dir) / "config.json"
+KEY_FILE = Path(_app_data_dir) / ".secret.key"
 
 
 class SecurityManager:
