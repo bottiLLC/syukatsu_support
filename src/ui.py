@@ -24,13 +24,13 @@ class SyukatsuSupportApp:
     def __init__(self, page: ft.Page, state: AppState):
         self.page = page
         self.state = state
-        self.page.title = "SYUKATSU Support - 合同会社ぼっち (v2.1.0)"
+        self.page.title = "SYUKATSU Support - 合同会社ぼっち (v2.2.0)"
         self.page.padding = 20
         self.page.theme_mode = ft.ThemeMode.LIGHT
         
         # Set default window size to fit layout without scrolling
-        self.page.window.width = 1250
-        self.page.window.height = 850
+        self.page.window.width = 1350
+        self.page.window.height = 980
 
         # State Binding Setup
         self.state.on_state_change = self._sync_from_state
@@ -57,8 +57,8 @@ class SyukatsuSupportApp:
         self.api_key_btn = ft.ElevatedButton("登録", on_click=self._on_register_key)
         
         self.api_key_disclaimer = ft.Text(
-            "※入力されたAPIキーは本PC内にのみ暗号化保存され、アプリ削除時に完全に消去されます。再発行の手間を省くため、必ずご自身でキーの控えを保管してください。",
-            color=ft.Colors.RED_700, size=11, weight="bold"
+            "※入力されたAPIキーは本PC内にのみ暗号化保存され、アプリ削除時に完全に消去されます。",
+            color=ft.Colors.RED_700, size=10.5, weight="bold", no_wrap=True
         )
         
         self.model_combo = ft.Dropdown(
@@ -66,8 +66,6 @@ class SyukatsuSupportApp:
                 ft.dropdown.Option("gpt-5.6-terra"),
                 ft.dropdown.Option("gpt-5.6-sol"),
                 ft.dropdown.Option("gpt-5.6-luna"),
-                ft.dropdown.Option("gpt-5.4-pro"),
-                ft.dropdown.Option("gpt-5.4"),
             ],
             value=self.state.config.model, expand=True, dense=True, on_select=self._on_model_change
         )
@@ -77,7 +75,7 @@ class SyukatsuSupportApp:
         )
         
         self.vs_combo = ft.Dropdown(
-            label="Vector Store", options=[], value=self.state.config.current_vector_store_id, dense=True, width=330
+            label="Vector Store", options=[], value=self.state.config.current_vector_store_id, dense=True, width=390
         )
         self.use_file_search_cb = ft.Checkbox(label="ファイル検索(RAG)を使用", value=self.state.config.use_file_search)
         self.rag_btn = ft.ElevatedButton("🛠️ ナレッジベース管理", on_click=self._on_open_rag_manager)
@@ -88,11 +86,11 @@ class SyukatsuSupportApp:
         
         self.mode_combo = ft.Dropdown(
             label="分析モード選択", options=prompt_options,
-            value=valid_val, dense=True, on_select=self._on_prompt_mode_select, width=330
+            value=valid_val, dense=True, on_select=self._on_prompt_mode_select, width=390
         )
         
         self.sys_prompt_field = ft.TextField(
-            label="システムプロンプト", multiline=True, width=330, min_lines=8, max_lines=10,
+            label="システムプロンプト", multiline=True, width=390, min_lines=4, max_lines=5,
             value=self.state.get_system_prompt(self.state.config.system_prompt_mode), text_size=12
         )
         self.clear_btn = ft.ElevatedButton("🧹 コンテキスト消去", on_click=self._on_clear_context)
@@ -112,7 +110,7 @@ class SyukatsuSupportApp:
             self.mode_combo,
             self.sys_prompt_field,
             self.clear_btn
-        ], width=350, scroll=ft.ScrollMode.ADAPTIVE)
+        ], width=410, spacing=6, scroll=ft.ScrollMode.ADAPTIVE)
 
         # --- Right Panel ---
         self.response_id_text = ft.Text(f"前回レスポンスID: {self.state.config.last_response_id or 'None'}", size=12, color=ft.Colors.GREY_600)
@@ -277,7 +275,7 @@ class SyukatsuSupportApp:
     # --- User Interactions ---
     async def _on_model_change(self, e):
         selected_model = self.model_combo.value
-        if selected_model in ["gpt-5.6-sol", "gpt-5.4-pro"]:
+        if selected_model == "gpt-5.6-sol":
             def confirm_change(_e):
                 dlg.open = False
                 self.page.update()
