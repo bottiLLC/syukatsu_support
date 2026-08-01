@@ -62,7 +62,13 @@ class SyukatsuSupportApp:
         )
         
         self.model_combo = ft.Dropdown(
-            label="モデル", options=[ft.dropdown.Option("gpt-5.4-pro"), ft.dropdown.Option("gpt-5.4")],
+            label="モデル", options=[
+                ft.dropdown.Option("gpt-5.6-terra"),
+                ft.dropdown.Option("gpt-5.6-sol"),
+                ft.dropdown.Option("gpt-5.6-luna"),
+                ft.dropdown.Option("gpt-5.4-pro"),
+                ft.dropdown.Option("gpt-5.4"),
+            ],
             value=self.state.config.model, expand=True, dense=True, on_select=self._on_model_change
         )
         self.reasoning_combo = ft.Dropdown(
@@ -270,19 +276,21 @@ class SyukatsuSupportApp:
 
     # --- User Interactions ---
     async def _on_model_change(self, e):
-        if self.model_combo.value == "gpt-5.4-pro":
+        selected_model = self.model_combo.value
+        if selected_model in ["gpt-5.6-sol", "gpt-5.4-pro"]:
             def confirm_change(_e):
                 dlg.open = False
                 self.page.update()
                 
             def cancel_change(_e):
-                self.model_combo.value = "gpt-5.4"
+                self.model_combo.value = "gpt-5.6-terra"
                 dlg.open = False
                 self.page.update()
 
+            msg = f"{selected_model} は高度な推論を行うモデルですが、gpt-5.6-terraと比較して高額なコストが発生する可能性があります。モデルを変更しますか？"
             dlg = ft.AlertDialog(
                 title=ft.Text("確認"),
-                content=ft.Text("gpt-5.4-proは最高度の推論を行うモデルですが、gpt-5.4と比較し、約15倍の費用が発生します。モデルを変更しますか？"),
+                content=ft.Text(msg),
                 actions=[
                     ft.TextButton("はい", on_click=confirm_change),
                     ft.TextButton("いいえ", on_click=cancel_change),
@@ -294,8 +302,8 @@ class SyukatsuSupportApp:
             self.page.update()
 
     async def _sync_to_state(self):
-        self.state.config.model = self.model_combo.value or "gpt-5.4"
-        self.state.config.reasoning_effort = self.reasoning_combo.value or "medium"
+        self.state.config.model = self.model_combo.value or "gpt-5.6-terra"
+        self.state.config.reasoning_effort = self.reasoning_combo.value or "high"
         self.state.config.system_prompt_mode = self.mode_combo.value or "standard"
         self.state.config.use_file_search = self.use_file_search_cb.value or False
         self.state.config.current_vector_store_id = self.vs_combo.value

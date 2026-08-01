@@ -19,10 +19,24 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
-    "pytest-asyncio"
+    "pytest-asyncio",
+    "hypothesis",
+    "pytest-mock",
+    "respx",
+    "ruff",
+    "mypy",
+    "pytest-cov",
 ]
 
 [dependency-groups]
 dev = [
+    "pytest",
+    "pytest-asyncio",
+    "hypothesis",
+    "pytest-mock",
+    "respx",
+    "ruff",
+    "mypy",
+    "pytest-cov",
     "pyinstaller>=6.19.0",
 ]

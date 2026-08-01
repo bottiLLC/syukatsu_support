@@ -24,7 +24,7 @@ from src.models import (
 
 def test_user_config_defaults():
     config = UserConfig()
-    assert config.model == "gpt-5.4"
+    assert config.model == "gpt-5.6-terra"
     assert config.reasoning_effort == "high"
     assert config.use_file_search is False
     assert config.api_key is None

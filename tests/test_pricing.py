@@ -56,6 +56,9 @@ class TestPricingTable:
             assert isinstance(pricing, ModelPricing)
 
     @pytest.mark.parametrize("model_key", [
+        "gpt-5.6-terra",
+        "gpt-5.6-sol",
+        "gpt-5.6-luna",
         "gpt-5.4",
         "gpt-5.4-pro",
     ])
@@ -64,11 +67,11 @@ class TestPricingTable:
         assert model_key in PRICING_TABLE
 
     @pytest.mark.parametrize("model, expected_input, expected_output, expected_cached", [
-        # Based on Pricing.txt (Source of Truth)
-        # gpt-5.4: In $2.50, Out $15.00, Cached $0.25
+        # Based on Pricing.md (Source of Truth)
+        ("gpt-5.6-sol", 5.00, 30.00, 0.50),
+        ("gpt-5.6-terra", 2.00, 12.00, 0.20),
+        ("gpt-5.6-luna", 0.20, 1.20, 0.02),
         ("gpt-5.4", 2.50, 15.00, 0.25),
-        
-        # gpt-5.4-pro: In $30.00, Out $180.00, Cached 0.0 (implied)
         ("gpt-5.4-pro", 30.00, 180.00, 0.0)
     ])
     def test_price_accuracy(self, model, expected_input, expected_output, expected_cached):
