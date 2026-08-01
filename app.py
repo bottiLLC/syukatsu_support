@@ -40,6 +40,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, ValidationEr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from tenacity import retry, wait_exponential, stop_after_attempt
 from cryptography.fernet import Fernet, InvalidToken
+import openai
 from openai import AsyncOpenAI, OpenAIError, NotFoundError, APIError
 
 # --- PyInstaller Resource Path Resolver ---
@@ -371,26 +372,135 @@ class CostCalculator:
 
 # --- Error Translation ---
 def translate_api_error(e: Exception) -> str:
-    match type(e):
-        case openai.AuthenticationError:
-            return "【API認証エラー】 APIキーが無効または未設定です。"
-        case openai.RateLimitError:
-            return "【利用制限エラー】 APIの利用上限に達したか、残高が不足しています。"
-        case openai.APITimeoutError:
-            return "【タイムアウト】 サーバーからの応答が制限時間を超えました。"
-        case openai.APIConnectionError:
-            return "【通信エラー】 サーバーに接続できません。ネットワークをご確認ください。"
-        case openai.NotFoundError:
-            return "【リソース未発見】 要求されたモデルやファイルが存在しません。"
-        case openai.BadRequestError:
-            err_str = str(e)
-            if "reasoning_effort" in err_str:
-                return "【リクエストエラー】 推論レベルが選択されたモデルでサポートされていません。"
-            return f"【リクエストエラー】 詳細: {err_str}"
-        case openai.OpenAIError:
-            return f"【OpenAI APIエラー】 詳細: {str(e)}"
-        case _:
-            return f"【システムエラー】 予期せぬエラー: {str(e)}"
+    """
+    OpenAI APIエラーおよびシステム例外を初心者に分かりやすい丁寧な日本語メッセージに変換します。
+    """
+    # Tenacity の RetryError の場合は内部で発生した元の例外を取り出す
+    if hasattr(e, "last_attempt") and getattr(e, "last_attempt", None):
+        try:
+            exc = e.last_attempt.exception()
+            if exc:
+                e = exc
+        except Exception:
+            pass
+
+    err_str = str(e)
+
+    # 1. アプリの多重起動によるロック / ファイル権限エラー
+    if isinstance(e, PermissionError) or "WinError 32" in err_str or "Permission denied" in err_str or "locked" in err_str.lower():
+        return (
+            "【アプリの多重起動エラー】 (App Lock Error)\n"
+            "SYUKATSU Supportがすでに別のウィンドウまたはバックグラウンドで起動しているため、設定ファイルやデータがロックされています。\n"
+            "他のSYUKATSU Supportの画面を閉じてから、再度起動・操作をお試しください。"
+        )
+
+    # 2. タイムアウト
+    if isinstance(e, (openai.APITimeoutError, TimeoutError)) or "APITimeoutError" in err_str or "timed out" in err_str.lower():
+        return (
+            "【通信タイムアウト】 (APITimeoutError)\n"
+            "OpenAIサーバーからの応答が制限時間を超えました。\n"
+            "サーバーが一時的に混雑している可能性があります。数十秒ほど待ってから再度お試しください。"
+        )
+
+    # 3. APIキー形式エラー (UnicodeEncodeError / 全角文字混入など)
+    if isinstance(e, (UnicodeEncodeError, UnicodeError)) or "ascii" in err_str.lower() or "ordinal not in range" in err_str.lower() or "codec" in err_str.lower():
+        return (
+            "【APIキー文字エラー】 (Invalid Key Format)\n"
+            "入力されたOpenAI APIキーに全角文字や全角スペースなど、使用できない文字が含まれています。\n"
+            "APIキーはすべて半角英数字・半角記号（sk-proj-...等）である必要があります。\n"
+            "入力欄に半角の正しいAPIキーを貼り付け直し、「登録」ボタンを押してください。"
+        )
+
+    # 4. APIキーが誤っている (AuthenticationError)
+    if isinstance(e, openai.AuthenticationError) or "AuthenticationError" in err_str or "invalid_api_key" in err_str.lower() or "401" in err_str:
+        return (
+            "【APIキーエラー】 (AuthenticationError)\n"
+            "入力されたOpenAI APIキーが正しくないか、無効化されています。\n"
+            "正しいAPIキー（sk-proj-...など）を入力欄に貼り付け直し、「登録」ボタンを押してください。"
+        )
+
+    # 4. API利用上限 / 残高不足 (RateLimitError)
+    if isinstance(e, openai.RateLimitError) or "RateLimitError" in err_str:
+        # クレジットの残高が不足している場合
+        if "insufficient_quota" in err_str or "quota" in err_str.lower() or "billing" in err_str.lower() or "credit" in err_str.lower():
+            return (
+                "【クレジット残高不足】 (Insufficient Quota)\n"
+                "OpenAIアカウントの無料利用分が終了したか、チャージ残高が不足しています。\n"
+                "OpenAIの管理画面（https://platform.openai.com/settings/organization/billing）でクレジット残高や支払い情報をご確認ください。"
+            )
+        # 短期的なAPI利用上限（レート制限）に達している場合
+        return (
+            "【一時的な利用制限】 (RateLimitError)\n"
+            "短時間での利用回数または利用量の上限（レートリミット）に達しました。\n"
+            "数十秒〜数分ほど時間を置いてから再度お試しください。"
+        )
+        # 短期的なAPI利用上限（レート制限）に達している場合
+        return (
+            "【一時的な利用制限】 (RateLimitError)\n"
+            "短時間での利用回数または利用量の上限（レートリミット）に達しました。\n"
+            "数十秒〜数分ほど時間を置いてから再度お試しください。"
+        )
+
+    # 5. リクエストエラー (BadRequestError) - 入力トークン上限オーバー / 推論レベルミスマッチ等
+    if isinstance(e, openai.BadRequestError) or "BadRequestError" in err_str:
+        # 入力トークン上限オーバー
+        if any(k in err_str.lower() for k in ["context_length_exceeded", "maximum context length", "exceeds the context window", "string_above_max_length", "too long", "token limit"]):
+            return (
+                "【入力文字数制限オーバー】 (Context Window Exceeded)\n"
+                "送信した文章または過去の会話履歴が、AIが一度に処理できる制限（トークン上限）を超えています。\n"
+                "「🧹 コンテキスト消去」ボタンを押して会話履歴をリセットするか、質問文を短くして再度お試しください。"
+            )
+        # 推論レベルミスマッチ
+        if "reasoning_effort" in err_str or "reasoning.effort" in err_str:
+            return (
+                "【モデル設定エラー】 (Reasoning Effort Error)\n"
+                "選択した推論強度が、現在のモデルでサポートされていません。\n"
+                "推論強度を変更するか、対応するモデル（gpt-5.6-terra等）を選択してください。"
+            )
+        return (
+            f"【リクエストエラー】 (BadRequestError)\n"
+            f"送信したデータ形式または設定内容に問題があります。\n"
+            f"詳細: {err_str}"
+        )
+
+    # 6. その他の標準的なOpenAI例外
+    if isinstance(e, openai.APIConnectionError) or "APIConnectionError" in err_str:
+        return (
+            "【ネットワーク接続エラー】 (APIConnectionError)\n"
+            "OpenAIのサーバーに接続できませんでした。\n"
+            "インターネットの接続状態を確認し、再度お試しください。"
+        )
+
+    if isinstance(e, openai.NotFoundError) or "NotFoundError" in err_str:
+        return (
+            "【リソースが見つかりません】 (NotFoundError)\n"
+            "指定されたモデルやVector Store（ナレッジベース）が存在しないか、アクセス権がありません。\n"
+            "設定画面でモデルやVector Storeが正しいか確認してください。"
+        )
+
+    if isinstance(e, openai.InternalServerError) or "InternalServerError" in err_str:
+        return (
+            "【OpenAIサーバーエラー】 (InternalServerError)\n"
+            "OpenAIのサーバー側で一時的な障害が発生しています。\n"
+            "しばらく待ってから再度お試しください。"
+        )
+
+    if isinstance(e, openai.ConflictError) or "ConflictError" in err_str:
+        return (
+            "【データ競合エラー】 (ConflictError)\n"
+            "リソースが別の処理で更新中であるため、競合が発生しました。\n"
+            "しばらく待ってから再度お試しください。"
+        )
+
+    if isinstance(e, openai.OpenAIError):
+        return (
+            f"【OpenAI APIエラー】 ({type(e).__name__})\n"
+            f"AI通信中にエラーが発生しました。\n"
+            f"詳細: {err_str}"
+        )
+
+    # 7. その他の予期せぬエラー
+    return f"【システムエラー】 予期せぬエラーが発生しました:\n{err_str}"
 
 
 # --- OpenAI Client Infrastructure ---
@@ -423,9 +533,9 @@ class OpenAIClient:
                     if result:
                         yield result
         except OpenAIError as e:
-            yield StreamError(message=f"\n[API Error] {translate_api_error(e)}")
+            yield StreamError(message=f"\n{translate_api_error(e)}")
         except Exception as e:
-            yield StreamError(message=f"\n[Stream Error] {e}")
+            yield StreamError(message=f"\n{translate_api_error(e)}")
 
     def _process_event(self, event: Any) -> Optional[StreamResult]:
         event_type = getattr(event, "type", None)
@@ -459,7 +569,8 @@ class OpenAIClient:
         elif event_type == "error":
             error_obj = getattr(event, "error", None)
             msg = getattr(error_obj, "message", str(error_obj)) if error_obj else "Unknown error"
-            return StreamError(message=f"\n[Stream Error] {msg}")
+            translated = translate_api_error(Exception(msg))
+            return StreamError(message=f"\n{translated}")
 
         return None
 
@@ -649,7 +760,17 @@ class AppState:
 
     async def update_api_key(self, api_key: str, silent: bool = False):
         if api_key:
-            self.config.api_key = api_key
+            cleaned_key = api_key.strip().replace("　", "")
+            try:
+                cleaned_key.encode("ascii")
+            except UnicodeEncodeError:
+                await self._notify_error(
+                    "APIキー入力エラー",
+                    "入力されたAPIキーに全角文字が含まれています。\nAPIキーはすべて半角英数字・記号で入力してください。"
+                )
+                return
+
+            self.config.api_key = cleaned_key
             self.save_config()
             self.init_client()
             if not silent:
@@ -695,7 +816,10 @@ class AppState:
         if self.is_processing or not user_input.strip():
             return
         if not self.config.api_key or not self.client:
-            await self._notify_error("APIキー未設定", "API Keyを入力してください。")
+            await self._notify_error(
+                "APIキーが未登録です",
+                "OpenAI APIキーが設定されていません。\n画面左側の「OpenAI APIキー」入力欄にAPIキーを入力し、「登録」ボタンを押してください。"
+            )
             return
 
         tools = None
@@ -758,7 +882,7 @@ class SyukatsuSupportApp:
     def __init__(self, page: ft.Page, state: AppState):
         self.page = page
         self.state = state
-        self.page.title = "SYUKATSU Support - 合同会社ぼっち (v2.2.0)"
+        self.page.title = "SYUKATSU Support - 合同会社ぼっち (v2.3.0)"
         self.page.padding = 20
         self.page.theme_mode = ft.ThemeMode.LIGHT
         self.page.window.width = 1350
@@ -785,8 +909,8 @@ class SyukatsuSupportApp:
         )
         self.api_key_btn = ft.ElevatedButton("登録", on_click=self._on_register_key)
         self.api_key_disclaimer = ft.Text(
-            "※入力されたAPIキーは本PC内にのみ暗号化保存され、アプリ削除時に完全に消去されます。",
-            color=ft.Colors.RED_700, size=10.5, weight="bold", no_wrap=True
+            "※入力されたAPIキーは本PC内（AppData）にのみ暗号化保存され、\n 外部へ送信・保持されることはありません。",
+            color=ft.Colors.RED_700, size=10.5, weight="bold", no_wrap=False
         )
 
         self.model_combo = ft.Dropdown(
@@ -816,7 +940,7 @@ class SyukatsuSupportApp:
             value=valid_val, dense=True, on_select=self._on_prompt_mode_select, width=390
         )
         self.sys_prompt_field = ft.TextField(
-            label="システムプロンプト", multiline=True, width=390, min_lines=4, max_lines=5,
+            label="システムプロンプト", multiline=True, width=390, min_lines=12, max_lines=16,
             value=self.state.get_system_prompt(self.state.config.system_prompt_mode), text_size=12
         )
         self.clear_btn = ft.ElevatedButton("🧹 コンテキスト消去", on_click=self._on_clear_context)
@@ -916,13 +1040,31 @@ class SyukatsuSupportApp:
         self.page.update()
 
     async def _show_error(self, title: str, msg: str):
-        dlg = ft.AlertDialog(title=ft.Text(title, color=ft.Colors.RED), content=ft.Text(msg))
+        def close_dlg(_e):
+            dlg.open = False
+            self.page.update()
+
+        dlg = ft.AlertDialog(
+            title=ft.Text(title, color=ft.Colors.RED),
+            content=ft.Text(msg),
+            actions=[ft.TextButton("OK", on_click=close_dlg)],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
         self.page.overlay.append(dlg)
         dlg.open = True
         self.page.update()
 
     async def _show_info(self, title: str, msg: str):
-        dlg = ft.AlertDialog(title=ft.Text(title), content=ft.Text(msg))
+        def close_dlg(_e):
+            dlg.open = False
+            self.page.update()
+
+        dlg = ft.AlertDialog(
+            title=ft.Text(title),
+            content=ft.Text(msg),
+            actions=[ft.TextButton("OK", on_click=close_dlg)],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
         self.page.overlay.append(dlg)
         dlg.open = True
         self.page.update()
@@ -1011,18 +1153,29 @@ class SyukatsuSupportApp:
     async def _on_save_log(self, e):
         full_text = ""
         for ctrl in self.chat_list.controls:
-            if hasattr(ctrl, "content"):
-                if hasattr(ctrl.content, "value"):
-                    full_text += ctrl.content.value + "\n"
-        if not full_text:
-            await self._show_info("通知", "保存するログがありません。")
+            if hasattr(ctrl, "content") and hasattr(ctrl.content, "value"):
+                full_text += ctrl.content.value + "\n\n"
+            elif hasattr(ctrl, "value"):
+                full_text += ctrl.value + "\n\n"
+
+        if not full_text.strip():
+            await self._show_info("通知", "保存するレポート内容がありません。")
             return
 
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"report_log_{timestamp}.txt"
-        save_path = Path(_app_data_dir) / filename
-        save_path.write_text(full_text, encoding="utf-8")
-        await self._show_info("保存完了", f"レポートを保存しました:\n{save_path}")
+        file_picker = ft.FilePicker()
+        path = await file_picker.save_file(
+            dialog_title="レポートの保存先を選択",
+            file_name=f"report_log_{timestamp}.txt",
+            allowed_extensions=["txt"]
+        )
+
+        if path:
+            try:
+                Path(path).write_text(full_text.strip(), encoding="utf-8")
+                await self._show_info("保存完了", f"レポートを保存しました:\n{path}")
+            except Exception as ex:
+                await self._show_error("保存エラー", f"ファイルの保存に失敗しました:\n{ex}")
 
     async def _on_open_rag_manager(self, e):
         if not self.state.rag_usecase:
@@ -1034,10 +1187,6 @@ class SyukatsuSupportApp:
         file_list = ft.ListView(expand=True, spacing=5)
         status_txt = ft.Text("", size=12, color=ft.Colors.GREY_700)
         selected_store_id = [None]
-
-        file_picker = ft.FilePicker()
-        self.page.overlay.append(file_picker)
-        self.page.update()
 
         async def refresh_stores():
             status_txt.value = "Vector Store一覧を取得中..."
@@ -1090,19 +1239,23 @@ class SyukatsuSupportApp:
             await self.state.rag_usecase.delete_file_from_store_and_storage(sid, fid)
             await select_store(sid)
 
-        async def on_file_picked(pe: ft.FilePickerResultEvent):
-            if pe.files and selected_store_id[0]:
-                for f in pe.files:
+        async def pick_and_upload(_e):
+            if not selected_store_id[0]:
+                status_txt.value = "Vector Storeが選択されていません。"
+                self.page.update()
+                return
+            file_picker = ft.FilePicker()
+            files = await file_picker.pick_files(allow_multiple=True)
+            if files:
+                for f in files:
                     status_txt.value = f"アップロード・インデックス中: {f.name}..."
                     self.page.update()
                     await self.state.rag_usecase.upload_and_index_file(f.path, selected_store_id[0])
                 await select_store(selected_store_id[0])
 
-        file_picker.on_result = lambda pe: self.page.run_task(on_file_picked, pe)
-
         upload_btn = ft.ElevatedButton(
             "ファイル追加 📄",
-            on_click=lambda _e: file_picker.pick_files(allow_multiple=True)
+            on_click=lambda e: self.page.run_task(pick_and_upload, e)
         )
 
         dlg = ft.AlertDialog(
@@ -1137,13 +1290,15 @@ def main(page: ft.Page) -> None:
     except Exception as e:
         log_crash_and_exit(e)
         log.critical(f"Application failed to start: {e}", exc_info=True)
-        page.add(
-            ft.AlertDialog(
-                title=ft.Text("重大なエラー", color=ft.Colors.RED),
-                content=ft.Text(f"起動中に予期せぬエラーが発生しました:\n{e}"),
-                open=True
-            )
+        err_msg = translate_api_error(e)
+        dlg = ft.AlertDialog(
+            title=ft.Text("起動エラー", color=ft.Colors.RED),
+            content=ft.Text(f"起動中にエラーが発生しました:\n\n{err_msg}"),
+            open=True,
+            actions=[ft.TextButton("OK", on_click=lambda _e: page.window.close())],
+            actions_alignment=ft.MainAxisAlignment.END,
         )
+        page.overlay.append(dlg)
         page.update()
 
 

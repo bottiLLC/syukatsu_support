@@ -114,7 +114,17 @@ class AppState:
 
     async def update_api_key(self, api_key: str, silent: bool = False):
         if api_key:
-            self.config.api_key = api_key
+            cleaned_key = api_key.strip().replace("　", "")
+            try:
+                cleaned_key.encode("ascii")
+            except UnicodeEncodeError:
+                await self._notify_error(
+                    "APIキー入力エラー",
+                    "入力されたAPIキーに全角文字が含まれています。\nAPIキーはすべて半角英数字・記号で入力してください。"
+                )
+                return
+
+            self.config.api_key = cleaned_key
             self.save_config()
             self.init_client()
             if not silent:
@@ -156,7 +166,10 @@ class AppState:
             return
 
         if not self.config.api_key or not self.client:
-            await self._notify_error("APIキー未設定", "API Keyを入力してください。")
+            await self._notify_error(
+                "APIキーが未登録です",
+                "OpenAI APIキーが設定されていません。\n画面左側の「OpenAI APIキー」入力欄にAPIキーを入力し、「登録」ボタンを押してください。"
+            )
             return
 
         tools = None

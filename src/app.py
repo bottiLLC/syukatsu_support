@@ -60,15 +60,17 @@ def main(page: ft.Page) -> None:
         SyukatsuSupportApp(page, state)
 
     except Exception as e:
+        from src.core.errors import translate_api_error
         log.critical(f"Application failed to start: {e}", exc_info=True)
-        # 起動エラー時のフォールバックUI
-        page.add(
-            ft.AlertDialog(
-                title=ft.Text("重大なエラー", color=ft.Colors.RED),
-                content=ft.Text(f"アプリケーションの起動中に予期せぬエラーが発生しました。\n\n{e}"),
-                open=True
-            )
+        err_msg = translate_api_error(e)
+        dlg = ft.AlertDialog(
+            title=ft.Text("起動エラー", color=ft.Colors.RED),
+            content=ft.Text(f"アプリケーションの起動中にエラーが発生しました:\n\n{err_msg}"),
+            open=True,
+            actions=[ft.TextButton("OK", on_click=lambda _e: page.window.close())],
+            actions_alignment=ft.MainAxisAlignment.END,
         )
+        page.overlay.append(dlg)
         page.update()
 
 if __name__ == "__main__":

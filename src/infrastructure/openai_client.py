@@ -83,11 +83,12 @@ class OpenAIClient:
 
         except OpenAIError as e:
             msg = translate_api_error(e)
-            yield StreamError(message=f"\n[API Error] {msg}")
+            yield StreamError(message=f"\n{msg}")
         except ValidationError as e:
-            yield StreamError(message=f"\n[Validation Error] リクエスト形式が不正です: {e}")
+            yield StreamError(message=f"\n【バリデーションエラー】 リクエスト形式が不正です: {e}")
         except Exception as e:
-            yield StreamError(message=f"\n[Stream Error] ストリーム処理エラー: {e}")
+            msg = translate_api_error(e)
+            yield StreamError(message=f"\n{msg}")
 
     def _process_event(self, event: Any) -> Optional[StreamResult]:
         event_type = getattr(event, "type", None)
@@ -137,7 +138,8 @@ class OpenAIClient:
             msg = "Unknown stream error"
             if error_obj:
                 msg = getattr(error_obj, "message", str(error_obj))
-            return StreamError(message=f"\n[Stream Error] {msg}")
+            translated = translate_api_error(Exception(msg))
+            return StreamError(message=f"\n{translated}")
 
         return None
 

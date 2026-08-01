@@ -24,7 +24,7 @@ class SyukatsuSupportApp:
     def __init__(self, page: ft.Page, state: AppState):
         self.page = page
         self.state = state
-        self.page.title = "SYUKATSU Support - 合同会社ぼっち (v2.2.0)"
+        self.page.title = "SYUKATSU Support - 合同会社ぼっち (v2.3.0)"
         self.page.padding = 20
         self.page.theme_mode = ft.ThemeMode.LIGHT
         
@@ -57,8 +57,8 @@ class SyukatsuSupportApp:
         self.api_key_btn = ft.ElevatedButton("登録", on_click=self._on_register_key)
         
         self.api_key_disclaimer = ft.Text(
-            "※入力されたAPIキーは本PC内にのみ暗号化保存され、アプリ削除時に完全に消去されます。",
-            color=ft.Colors.RED_700, size=10.5, weight="bold", no_wrap=True
+            "※入力されたAPIキーは本PC内（AppData）にのみ暗号化保存され、\n 外部へ送信・保持されることはありません。",
+            color=ft.Colors.RED_700, size=10.5, weight="bold", no_wrap=False
         )
         
         self.model_combo = ft.Dropdown(
@@ -90,7 +90,7 @@ class SyukatsuSupportApp:
         )
         
         self.sys_prompt_field = ft.TextField(
-            label="システムプロンプト", multiline=True, width=390, min_lines=4, max_lines=5,
+            label="システムプロンプト", multiline=True, width=390, min_lines=12, max_lines=16,
             value=self.state.get_system_prompt(self.state.config.system_prompt_mode), text_size=12
         )
         self.clear_btn = ft.ElevatedButton("🧹 コンテキスト消去", on_click=self._on_clear_context)
@@ -339,27 +339,32 @@ class SyukatsuSupportApp:
         self.page.update()
 
     async def _on_save_log(self, e):
-        """「保存 💾」ボタンが押されたときにダイアログを開く処理"""
-        # Instantiate FilePicker dynamically (do NOT append to overlay)
+        """「保存 💾」ボタンが押されたときにファイル保存先選択ダイアログを開く処理"""
+        text_content = ""
+        for control in self.chat_list.controls:
+            if hasattr(control, "content") and hasattr(control.content, "value"):
+                text_content += control.content.value + "\n\n"
+            elif hasattr(control, "value"):
+                text_content += control.value + "\n\n"
+
+        if not text_content.strip():
+            await self._show_info("通知", "保存するレポート内容がありません。")
+            return
+
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         file_picker = ft.FilePicker()
-        
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
         path = await file_picker.save_file(
-            file_name=f"{timestamp}_分析レポート.txt", 
+            dialog_title="レポートの保存先を選択",
+            file_name=f"report_log_{timestamp}.txt",
             allowed_extensions=["txt"]
         )
-        
+
         if path:
-            text_content = ""
-            for control in self.chat_list.controls:
-                if hasattr(control, "content") and hasattr(control.content, "value"):
-                    text_content += control.content.value + "\n\n"
-                elif hasattr(control, "value"):
-                    text_content += control.value + "\n\n"
-                    
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(text_content.strip())
-            self.page.run_task(self._show_info, "保存", f"保存しました: {path}")
+            try:
+                Path(path).write_text(text_content.strip(), encoding="utf-8")
+                await self._show_info("保存完了", f"レポートを保存しました:\n{path}")
+            except Exception as ex:
+                await self._show_error("保存エラー", f"ファイルの保存に失敗しました:\n{ex}")
 
     async def _start_generation(self):
         if self.state.is_processing:

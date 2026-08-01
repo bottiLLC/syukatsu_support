@@ -17,6 +17,9 @@
     - Vector Storeとそれに紐づくファイル群を専用の管理画面(GUI)から直接管理（作成、ファイルアップロード、削除）。
 3. **コスト計算と可視化**
     - APIリクエストの入力・出力・キャッシュ済みトークン使用量を元に、リアルタイムで概算コスト（USD）を計算してステータスバーに表示。
+4. **初心者向けエラーハンドリング & 直感的なダイアログ UX**
+    - **親切なエラーメッセージ**: APIキー未登録・誤り、クレジット残高不足、利用制限(Rate Limit)、タイムアウト、トークン数制限オーバー、アプリ多重起動ロック等が発生した際、初心者が即座に対処できるよう原因と解決策を分かりやすく日本語で表示。
+    - **「OK」ボタン付きダイアログ**: APIキー保存時（「設定完了 APIキーを保存しました。」）や通知・エラー発生時のすべてのダイアログに「OK」ボタンを配置し、ワンクリックで確実に閉じられる快適な操作性を実現。
 
 ---
 
@@ -58,7 +61,7 @@ src/
 ## 必要要件
 
 - **OS**: Windows / macOS / Linux (Windows推奨)
-- **Python**: 3.13 以上
+- **Python**: 3.14 以上
 - **Package Manager**: [uv](https://github.com/astral-sh/uv) (高速なPythonパッケージ/仮想環境管理ツール)
 - **API Key**: `OPENAI_API_KEY` (初回起動時にGUIから登録、暗号化されて安全にローカル保存されます)
 
@@ -86,13 +89,20 @@ uv run src/app.py
 uv run pytest tests/ -v
 ```
 
-### 3. アプリケーションのビルド (MSIX配信・VFS対応向け)
-PyInstaller を用いて、Python環境が不要な実行可能アプリ（フォルダ構成）を作成します。Windowsストア（MSIX形式）での配信要件と高速化を考慮し、展開遅延を防ぐため `--onedir` モードでビルドしてください。
+### 3. アプリケーションのビルド (単一ファイル .exe 化)
+PyInstaller を用いて、Python環境が不要な単一の実行可能ファイル（`dist/syukatsu-support.exe`）を作成します。
+Flet および Flet-Desktop の全バイナリリソースが1つの `.exe` 内に完全にバンドルされるため、配布や実行が容易です。
 
+**ビルド自動化スクリプトでの実行 (推奨)**:
 ```powershell
-uv run pyinstaller --noconsole --onedir --name syukatsu-support --collect-all src --add-data "system_prompts.json;." src/app.py -y
+uv run python build.py
 ```
-※ ビルド完了後、`dist/syukatsu-support/` フォルダ内に `syukatsu-support.exe` と関連リソース群が生成されます。MSIX化する際はこのフォルダ全体をパッケージします。
+
+**コマンドラインで直接実行する場合**:
+```powershell
+uv run pyinstaller --noconsole --onefile --name syukatsu-support --collect-all flet --collect-all flet_desktop --collect-all src --add-data "system_prompts.json;." src/app.py -y
+```
+※ ビルド完了後、`dist/` フォルダ内に単一の実行ファイル `syukatsu-support.exe` が生成されます。この `.exe` ファイル単体で他のPC環境でもダブルクリックで直接起動できます。
 
 ---
 
@@ -102,10 +112,10 @@ uv run pyinstaller --noconsole --onedir --name syukatsu-support --collect-all sr
     APIキーなどの機密設定は内蔵されたFernet方式で暗号化処理され、クラウドドキュメント等の同期エラーを防ぐため、OS標準の `%LOCALAPPDATA%\SYUKATSU_Support` 配下 (`config.json`, `.secret.key`) に安全に保持されます。
 - **レポートのエクスポート**:
     画面上の「保存 💾」ボタンから、AIの推論・回答履歴のすべてをタイムスタンプ付きのテキストファイルとして書き出すことができます。
-- **エラーハンドリングと開発者向けサポート**:
-    エラー発生時にはダイアログが起動し、ログを即座にローカルに保存したり、メーラー（mailto）を直接起動して開発者に報告するためのアクションボタンをご利用いただけます。
+- **初心者向けエラーガイドと開発者サポート**:
+    各種OpenAI APIエラーやアプリ多重起動ロックが発生した際、ダイアログ上に原因と具体的対処法を初心者向け日本語で表示します。また、ダイアログからエラーログをテキスト保存したり、メールで開発者へ報告するためのサポート機能も備えています。
 - **構造化ロギング (Structlog)**:
-    コンソールには、障害調査が容易なStructlogによるコンテキスト付きログ（変数状態・タイムスタンプ）が出力されます。
+    コンソールやバックグラウンド処理では、障害調査が容易なStructlogによるコンテキスト付きログ（変数状態・タイムスタンプ）が出力されます。
 
 ---
 
