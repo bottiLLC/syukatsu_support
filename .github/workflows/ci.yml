@@ -34,7 +34,7 @@ jobs:
 
       - name: Type check with Mypy
         run: |
-          mypy src app.py backup_manager.py
+          mypy src app.py
 
       - name: Run tests with Pytest and coverage
         run: |

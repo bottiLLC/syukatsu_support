@@ -28,7 +28,6 @@ from typing import cast
 
 import flet as ft
 
-from backup_manager import get_backup_dir, run_backup, set_backup_dir
 from src.core.utils import clean_citation_markers
 from src.models import AppConfigDefaults, ReasoningEffort
 from src.state import AppState
@@ -135,25 +134,6 @@ class SyukatsuSupportApp:
         self.use_file_search_cb = ft.Checkbox(label="ファイル検索(RAG)を使用", value=self.state.config.use_file_search)
         self.rag_btn = ft.ElevatedButton("🛠️ ナレッジベース管理", on_click=self._on_open_rag_manager)
 
-        # --- Backup & Data Protection (Python-backup-script compliant) ---
-        self.backup_dir_field = ft.TextField(
-            label="保存先フォルダ",
-            value=str(get_backup_dir()),
-            dense=True,
-            width=390,
-        )
-        self.update_backup_dir_btn = ft.ElevatedButton(
-            "保存先パスを更新",
-            on_click=self._on_update_backup_dir,
-            width=390,
-        )
-        self.run_backup_btn = ft.ElevatedButton(
-            "今すぐバックアップを実行",
-            on_click=self._on_run_backup,
-            width=390,
-        )
-        self.backup_status_caption = ft.Text("", size=11, color=ft.Colors.GREY_700)
-
         # --- Prompt Mode Selection (Dynamically loaded from JSON) ---
         prompt_options = [ft.dropdown.Option(m) for m in self.state.available_prompt_modes]
         valid_val = (
@@ -194,13 +174,6 @@ class SyukatsuSupportApp:
                 self.vs_combo,
                 self.rag_btn,
                 self.use_file_search_cb,
-                ft.Divider(),
-                ft.Text("データ保護・バックアップ", weight=ft.FontWeight.BOLD),
-                self.backup_dir_field,
-                self.update_backup_dir_btn,
-                self.run_backup_btn,
-                self.backup_status_caption,
-                ft.Divider(),
                 self.mode_combo,
                 self.sys_prompt_field,
                 self.clear_btn,
@@ -410,31 +383,6 @@ class SyukatsuSupportApp:
         if not found and values:
             self.vs_combo.value = None
 
-        self.page.update()
-
-    # --- Backup UI Event Handlers ---
-
-    async def _on_update_backup_dir(self, e: ft.ControlEvent) -> None:
-        """バックアップ保存先フォルダの更新イベントを処理します。"""
-        target = self.backup_dir_field.value or ""
-        res = set_backup_dir(target)
-        if res["success"]:
-            await self._show_info("バックアップ設定", str(res["message"]))
-        else:
-            await self._show_error("バックアップ設定エラー", str(res["message"]))
-
-    async def _on_run_backup(self, e: ft.ControlEvent) -> None:
-        """今すぐバックアップ実行イベントを処理します。"""
-        self.backup_status_caption.value = "圧縮・整合性検証中..."
-        self.page.update()
-
-        res = run_backup(app_name="syukatsu_support")
-        if res["success"]:
-            self.backup_status_caption.value = f"完了日時: {res['timestamp']}\n保存先: {res['destination']}"
-            await self._show_info("バックアップ完了", str(res["message"]))
-        else:
-            self.backup_status_caption.value = ""
-            await self._show_error("バックアップエラー", str(res["message"]))
         self.page.update()
 
     # --- User Interactions ---

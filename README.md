@@ -19,7 +19,6 @@ uv run python package_msix.py
 - **GPT-6 次世代推論モデル対応**: フラッグシップ推論モデル `gpt-6-astra`、高精度・低コストの `gpt-6.1-sol`、および超高速・大量処理の `gpt-6-luna` の3モデルに完全対応。
 - **推論強度（Reasoning Effort）の動的制御**: 課題の難易度に応じて `max`, `xhigh`, `high`, `medium`, `low` を指定可能。非推論モード `none` は `gpt-6-luna` のみ選択可能とするモデル整合性インターロックを内蔵。
 - **OpenAI Responses API & RAG 連携**: OpenAI `/responses` エンドポイントをネイティブ採用し、企業の有価証券報告書（PDF）を対象とする Vector Store ファイル検索（`file_search`）とストリーミング分析を実行。
-- **整合性検証付き自動バックアップ**: `./data` 配下の暗号化設定および永続データを `testzip()` による破損検知付きアトミックZIPとして保護（`backup_manager.py`）。
 - **Windows Store 申請準備完了**: UWP / Desktop Bridge 仕様の `AppxManifest.xml`、5種類のストアアイコンアセット、および自動 MSIX パッケージ生成スクリプト（`package_msix.py` / [WINDOWS_STORE_GUIDE.md](file:///e:/Python/syukatsu_Support/WINDOWS_STORE_GUIDE.md)）を完備。
 
 ## Environment Variables
