@@ -8,7 +8,8 @@ import sys
 from pathlib import Path
 
 
-def main():
+def main() -> None:
+    """PyInstaller を使用して単一実行可能ファイル (.exe) の自動ビルドと検証を実行します。"""
     project_dir = Path(__file__).resolve().parent
     spec_file = project_dir / "build_exe.spec"
     dist_dir = project_dir / "dist"

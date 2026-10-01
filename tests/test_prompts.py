@@ -19,10 +19,8 @@ from src.core.prompts import MODE_ENTRY_SHEET, MODE_FINANCIAL, MODE_HUMAN_CAPITA
 from src.models import UserConfig
 
 
-def test_prompts_structure():
-    """
-    [構造] 本番の system_prompts.json が生成する辞書は空ではない必要があります。
-    """
+def test_prompts_structure() -> None:
+    """[構造] 本番の system_prompts.json が生成する辞書が空ではないことを検証します。"""
     manager = PromptManager()
     prompts = manager.prompts
     assert isinstance(prompts, dict), "prompts must be a dict"
@@ -30,10 +28,8 @@ def test_prompts_structure():
 
 
 @pytest.mark.parametrize("required_key", [MODE_FINANCIAL, MODE_HUMAN_CAPITAL, MODE_ENTRY_SHEET])
-def test_prompts_keys_exist(required_key):
-    """
-    [整合性] 必須の分析モードがキーとして存在することを検証します。
-    """
+def test_prompts_keys_exist(required_key: str) -> None:
+    """[整合性] 必須の分析モードがキーとして存在することを検証します。"""
     manager = PromptManager()
     assert required_key in manager.prompts, f"Missing required key in JSON: {required_key}"
 
@@ -46,10 +42,8 @@ def test_prompts_keys_exist(required_key):
         (MODE_ENTRY_SHEET, ["志望動機", "泥臭い課題", "キラーワード"]),
     ],
 )
-def test_prompts_content_integrity(mode, expected_keywords):
-    """
-    [コンテンツ] プロンプトの内容が有効な文字列であり、重要なドメインタームが含まれているか検証します。
-    """
+def test_prompts_content_integrity(mode: str, expected_keywords: list[str]) -> None:
+    """[コンテンツ] プロンプトの内容が有効な文字列であり重要なドメインタームが含まれていることを検証します。"""
     manager = PromptManager()
     prompt_text = manager.get_prompt(mode)
 
@@ -67,10 +61,8 @@ def test_prompts_content_integrity(mode, expected_keywords):
         assert keyword in prompt_text, f"Prompt for {mode} is missing expected keyword: '{keyword}'"
 
 
-def test_prompts_contain_required_sections():
-    """
-    [構造] プロンプトにはAIのための重要な構造的ヘッダーが含まれている必要があります。
-    """
+def test_prompts_contain_required_sections() -> None:
+    """[構造] プロンプトにAIのための構造的ヘッダーが含まれていることを検証します。"""
     manager = PromptManager()
     for mode, prompt_text in manager.prompts.items():
         if not prompt_text:
@@ -81,11 +73,8 @@ def test_prompts_contain_required_sections():
         assert has_english_headers or has_japanese_headers, f"{mode} missing required section headers"
 
 
-def test_default_config_key_exists_in_prompts():
-    """
-    [統合] UserConfig のデフォルトプロンプトモードが
-    実際に定義内に存在することを検証します。
-    """
+def test_default_config_key_exists_in_prompts() -> None:
+    """[統合] UserConfig のデフォルトプロンプトモードが定義内に存在することを検証します。"""
     # Instantiate default config
     config = UserConfig()
     default_mode = config.system_prompt_mode

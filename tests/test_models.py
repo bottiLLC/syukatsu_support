@@ -24,7 +24,8 @@ from src.models import (
 )
 
 
-def test_user_config_defaults():
+def test_user_config_defaults() -> None:
+    """UserConfig の初期化時デフォルト値が仕様通りであることを検証します。"""
     config = UserConfig()
     assert config.model == "gpt-5.6-terra"
     assert config.reasoning_effort == "high"
@@ -32,7 +33,8 @@ def test_user_config_defaults():
     assert config.api_key is None
 
 
-def test_response_request_payload_normalization():
+def test_response_request_payload_normalization() -> None:
+    """文字列入力が自動的に InputMessage 構造へ正規化されることを検証します。"""
     # String input should be normalized to InputMessage
     payload = ResponseRequestPayload(
         model="gpt-5.4",
@@ -44,7 +46,8 @@ def test_response_request_payload_normalization():
     assert payload.input[0].content[0].text == "Hello World"
 
 
-def test_forbid_extra_fields():
+def test_forbid_extra_fields() -> None:
+    """ResponseRequestPayload に未定義フィールドを渡した際にバリデーションエラーとなることを検証します。"""
     # extra fields should be forbidden in request payload
     with pytest.raises(ValidationError):
         ResponseRequestPayload(
@@ -54,12 +57,14 @@ def test_forbid_extra_fields():
         )
 
 
-def test_stream_text_delta_forbid_extra():
+def test_stream_text_delta_forbid_extra() -> None:
+    """StreamTextDelta に余分なフィールドが指定された場合にバリデーションエラーとなることを検証します。"""
     with pytest.raises(ValidationError):
         StreamTextDelta(delta="test", extra_field="fail")  # type: ignore
 
 
-def test_tools_serialization():
+def test_tools_serialization() -> None:
+    """FileSearchTool を含むリクエストペイロードが正しくシリアライズされることを検証します。"""
     tool = FileSearchTool(vector_store_ids=["vs_123"])
     payload = ResponseRequestPayload(
         model="gpt-4o",

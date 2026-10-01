@@ -64,6 +64,7 @@ class SecurityManager:
 
     @staticmethod
     def _get_or_create_key() -> bytes:
+        """暗号化キーを取得または新規生成して返します。"""
         if KEY_FILE.exists():
             try:
                 return KEY_FILE.read_bytes()
@@ -84,6 +85,7 @@ class SecurityManager:
 
     @classmethod
     def encrypt(cls, plain_text: str) -> str:
+        """平文文字列を暗号化して返します。"""
         if not plain_text:
             return ""
         try:
@@ -151,6 +153,7 @@ class ConfigManager:
 
     @staticmethod
     def save(config: UserConfig) -> None:
+        """ユーザー設定を設定ファイル (config.json) に永続化します。"""
         try:
             data = config.model_dump(exclude={"api_key"})
             if config.api_key:

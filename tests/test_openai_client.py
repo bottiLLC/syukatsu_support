@@ -23,7 +23,8 @@ from src.models import ResponseRequestPayload, StreamResponseCreated
 
 
 @pytest.mark.asyncio
-async def test_openai_client_resilience():
+async def test_openai_client_resilience() -> None:
+    """一時的な RateLimitError 発生時にリトライが正常に実行されることを検証します。"""
     client = OpenAIClient("test-key")
 
     mock_client = MagicMock()
@@ -48,7 +49,8 @@ async def test_openai_client_resilience():
 
 
 @pytest.mark.asyncio
-async def test_stream_analysis_validation_error():
+async def test_stream_analysis_validation_error() -> None:
+    """不正なリクエストペイロードに対して ValidationError が発生することを検証します。"""
     # Send a formally invalid payload model that causes ValidationError in pydantic
     # Wait, pydantic checks at instantiation.
     from pydantic import ValidationError
@@ -62,7 +64,8 @@ async def test_stream_analysis_validation_error():
 
 
 @pytest.mark.asyncio
-async def test_process_text_delta():
+async def test_process_text_delta() -> None:
+    """テキスト出力差分イベントが正しくパースされることを検証します。"""
     client = OpenAIClient("test-key")
 
     event_delta = MagicMock()
@@ -74,7 +77,8 @@ async def test_process_text_delta():
 
 
 @pytest.mark.asyncio
-async def test_process_reasoning_text_delta():
+async def test_process_reasoning_text_delta() -> None:
+    """推論テキスト差分イベントが正しくパースされることを検証します。"""
     client = OpenAIClient("test-key")
 
     event_delta = MagicMock()
