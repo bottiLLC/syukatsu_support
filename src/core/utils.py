@@ -8,6 +8,17 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+from typing import Final
+
+# OpenAI Vector Store (file_search) および Web検索の内部引用マーカー正規表現
+# 例: turn1file2, fileciteturn2file0, 【turn1file2】, [turn1file2], 【4:0†source】
+# 通常の有報引用形式（[P.45 【連結損益計算書】] 等）は安全に保持
+_CITATION_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"(?:【[^】]*?(?:turn\d+|source|filecite)[^】]*?】"
+    r"|\[(?:turn\d+file\d+|turn\d+search\d+|filecite[a-zA-Z0-9]*)\]"
+    r"|filecite[a-zA-Z0-9]*"
+    r"|turn\d+(?:file|search)\d+)"
+)
 
 
 def get_resource_path(relative_path: str | Path) -> Path:
@@ -25,16 +36,16 @@ def get_resource_path(relative_path: str | Path) -> Path:
 
 
 def clean_citation_markers(text: str | None) -> str | None:
-    """LLMが内部的に出力した filecite タグを正規表現で削除します。
+    """LLMが内部的に出力した引用タグ（turn1file2, filecite 等）を正規表現で削除します。
 
     Args:
         text: 削除対象のテキスト (None許容)
 
     Returns:
-        str | None: 内部タグが削除されたテキスト
+        str | None: 内部引用タグが除去されたテキスト
     """
     if text is None:
         return None
     if not text:
         return ""
-    return re.sub(r"filecite[a-zA-Z0-9]*", "", text)
+    return _CITATION_PATTERN.sub("", text)
