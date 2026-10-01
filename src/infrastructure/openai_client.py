@@ -73,7 +73,7 @@ class OpenAIClient:
             StreamResult: テキスト差分、トークン使用量、またはエラーイベント
         """
         try:
-            request_params = payload.model_dump(exclude_none=True)
+            request_params = payload.model_dump(exclude_none=True, by_alias=True)
             log.info("Starting async stream analysis", model=payload.model)
 
             async for result in self._execute_stream(request_params):

@@ -5,6 +5,7 @@ PyInstaller実行時と通常開発時のパス解決、およびテキスト正
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -49,3 +50,50 @@ def clean_citation_markers(text: str | None) -> str | None:
     if not text:
         return ""
     return _CITATION_PATTERN.sub("", text)
+
+
+def extract_markdown_content(raw_text: str | None) -> str:
+    """JSON形式の構造化出力から markdown_content を抽出し、未完了のストリーミング断片も適切に復元します。
+
+    Args:
+        raw_text: モデルからの出力文字列 (JSONまたはプレーンテキスト)
+
+    Returns:
+        str: 抽出・復元されたMarkdownテキスト
+    """
+    if not raw_text:
+        return ""
+
+    trimmed = raw_text.strip()
+
+    # 1. 完全なJSONのパース
+    try:
+        data = json.loads(trimmed)
+        if isinstance(data, dict) and "markdown_content" in data:
+            return str(data["markdown_content"])
+    except Exception:
+        pass
+
+    # 2. ストリーミング中の部分文字列抽出
+    match = re.search(r'"markdown_content"\s*:\s*"', raw_text)
+    if match:
+        content_part = raw_text[match.end() :]
+        # 閉じ引用符（エスケープされていない二重引用符）を探索
+        end_match = re.search(r'(?<!\\)(?:\\\\)*"', content_part)
+        if end_match:
+            # 閉じ引用符の手前までがコンテンツ
+            content_part = content_part[: end_match.end() - 1]
+        elif content_part.endswith("\\"):
+            # ストリーミング途中でエスケープ途中の \ を一時除去
+            content_part = content_part[:-1]
+
+        # JSON文字列エスケープシーケンスのアンエスケープ
+        return (
+            content_part.replace(r"\"", '"')
+            .replace(r"\n", "\n")
+            .replace(r"\r", "\r")
+            .replace(r"\t", "\t")
+            .replace(r"\\", "\\")
+        )
+
+    return raw_text

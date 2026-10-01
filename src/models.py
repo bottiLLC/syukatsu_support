@@ -21,7 +21,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, Self
+from typing import Any, Final, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -109,10 +109,42 @@ class ReasoningOptions(BaseModel):
     effort: ReasoningEffort = "medium"
 
 
+# --- Structured Outputs Schema ---
+
+MARKDOWN_OUTPUT_SCHEMA: Final[dict[str, Any]] = {
+    "type": "object",
+    "properties": {
+        "markdown_content": {
+            "type": "string",
+            "description": "マークダウン形式で記述された本文",
+        }
+    },
+    "required": ["markdown_content"],
+    "additionalProperties": False,
+}
+
+
+class ResponseFormatJsonSchema(BaseModel):
+    """Responses API の JSON Schema 設定。"""
+
+    model_config = ConfigDict(extra="forbid")
+    type: Literal["json_schema"] = "json_schema"
+    name: str = "markdown_response"
+    strict: bool = True
+    schema_: dict[str, Any] = Field(default_factory=lambda: dict(MARKDOWN_OUTPUT_SCHEMA), alias="schema")
+
+
+class ResponseTextConfig(BaseModel):
+    """Responses API の text 設定。"""
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+    format: ResponseFormatJsonSchema = Field(default_factory=ResponseFormatJsonSchema)
+
+
 class ResponseRequestPayload(BaseModel):
     """client.responses.create 用メインリクエストペイロード。"""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     model: str
     input: list[InputMessage] | str
@@ -121,6 +153,7 @@ class ResponseRequestPayload(BaseModel):
     tools: list[FileSearchTool | WebSearchTool] | None = None
     previous_response_id: str | None = None
     stream: bool = True
+    text: ResponseTextConfig | None = Field(default_factory=ResponseTextConfig)
 
     @field_validator("input", mode="before")
     @classmethod

@@ -29,7 +29,7 @@ from typing import cast
 import flet as ft
 
 from src.core.docx_exporter import export_markdown_to_docx
-from src.core.utils import clean_citation_markers
+from src.core.utils import clean_citation_markers, extract_markdown_content
 from src.models import AppConfigDefaults, ReasoningEffort
 from src.state import AppState
 from src.styles import UI_COLORS
@@ -325,12 +325,14 @@ class SyukatsuSupportApp:
             else:
                 self.current_ai_text += text
 
+            # 構造化出力 (JSON) から markdown_content を抽出
+            raw_content = extract_markdown_content(self.current_ai_text)
             # LLMの出力結果(response_text)から <thought>～</thought> ブロックを削除
-            final_report = re.sub(r"<thought>.*?</thought>", "", self.current_ai_text, flags=re.DOTALL)
+            final_report = re.sub(r"<thought>.*?</thought>", "", raw_content, flags=re.DOTALL)
             # ストリーミング中でまだ閉じていない <thought> ブロックも非表示化
             final_report = re.sub(r"<thought>.*", "", final_report, flags=re.DOTALL).strip()
             # 内部引用タグ (fileciteturn...) をクリーンアップ
-            final_report = clean_citation_markers(final_report)
+            final_report = clean_citation_markers(final_report) or ""
             self.current_ai_message.value = final_report
 
         elif tag == "error":

@@ -120,3 +120,26 @@ def test_tools_serialization() -> None:
     assert "tools" in dumped
     assert dumped["tools"][0]["type"] == "file_search"
     assert dumped["tools"][0]["vector_store_ids"] == ["vs_123"]
+
+
+def test_structured_output_schema_serialization() -> None:
+    """Responses API 用の text 設定および JSON Schema が正しくシリアライズされることを検証します。"""
+    payload = ResponseRequestPayload(
+        model="gpt-6.1-sol",
+        input="分析依頼",
+    )
+    dumped = payload.model_dump(exclude_none=True, by_alias=True)
+    assert "text" in dumped
+    assert "format" in dumped["text"]
+    text_format = dumped["text"]["format"]
+    assert text_format["type"] == "json_schema"
+    assert text_format["name"] == "markdown_response"
+    assert text_format["strict"] is True
+    assert "schema" in text_format
+
+    schema = text_format["schema"]
+    assert schema["type"] == "object"
+    assert "markdown_content" in schema["properties"]
+    assert schema["properties"]["markdown_content"]["type"] == "string"
+    assert schema["required"] == ["markdown_content"]
+    assert schema["additionalProperties"] is False

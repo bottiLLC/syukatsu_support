@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from src.core.utils import clean_citation_markers, get_resource_path
+from src.core.utils import clean_citation_markers, extract_markdown_content, get_resource_path
 
 
 def test_clean_citation_markers() -> None:
@@ -47,3 +47,35 @@ def test_get_resource_path() -> None:
     """リソースファイル名から正しい絶対パスが解決されることを検証します。"""
     path = get_resource_path("system_prompts.json")
     assert path.name == "system_prompts.json"
+
+
+def test_extract_markdown_content() -> None:
+    """JSON形式の構造化出力から markdown_content が正しく抽出・復元されることを検証します。"""
+    import json
+
+    # 1. 完全なJSONオブジェクト
+    full_json = json.dumps({"markdown_content": "# 財務分析\n\n- 売上高: 100億円\n**総評**"})
+    assert extract_markdown_content(full_json) == "# 財務分析\n\n- 売上高: 100億円\n**総評**"
+
+    # 2. ストリーミング中の不完全なJSONプレフィックス
+    stream_chunk1 = '{"markdown_content": "# 財務分析\\n\\n- 売上'
+    assert extract_markdown_content(stream_chunk1) == "# 財務分析\n\n- 売上"
+
+    # 3. 閉じ中括弧付きのJSON文字列
+    stream_chunk2 = '{"markdown_content": "本文テスト"}'
+    assert extract_markdown_content(stream_chunk2) == "本文テスト"
+
+    # 4. エスケープされた引用符およびストリーミング途中エスケープの処理
+    stream_chunk3 = '{"markdown_content": "テキスト\\"と引用"}'
+    assert extract_markdown_content(stream_chunk3) == 'テキスト"と引用'
+
+    stream_chunk4 = '{"markdown_content": "テキスト\\'
+    assert extract_markdown_content(stream_chunk4) == "テキスト"
+
+    # 5. 通常のプレーンテキスト（非JSON）はそのまま返却
+    plain_text = "通常のプレーンテキスト返答です。"
+    assert extract_markdown_content(plain_text) == plain_text
+
+    # 6. 空文字・Noneの安全処理
+    assert extract_markdown_content("") == ""
+    assert extract_markdown_content(None) == ""
