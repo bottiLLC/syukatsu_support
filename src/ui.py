@@ -28,6 +28,7 @@ from typing import cast
 
 import flet as ft
 
+from src.core.docx_exporter import export_markdown_to_docx
 from src.core.utils import clean_citation_markers
 from src.models import AppConfigDefaults, ReasoningEffort
 from src.state import AppState
@@ -522,7 +523,7 @@ class SyukatsuSupportApp:
         self.page.update()
 
     async def _on_save_log(self, e: ft.ControlEvent) -> None:
-        """レポートログ保存ダイアログを開き、テキストファイルとして出力します。"""
+        """レポートログ保存ダイアログを開き、Word (.docx) またはテキスト (.txt) として出力します。"""
         text_content = ""
         for control in self.chat_list.controls:
             if hasattr(control, "content") and hasattr(control.content, "value"):
@@ -534,21 +535,58 @@ class SyukatsuSupportApp:
             await self._show_info("通知", "保存するレポート内容がありません。")
             return
 
-        timestamp = datetime.now(UTC).astimezone().strftime("%Y%m%d_%H%M%S")
-        file_picker = ft.FilePicker()
-        path = await file_picker.save_file(
-            dialog_title="レポートの保存先を選択",
-            file_name=f"report_log_{timestamp}.txt",
-            allowed_extensions=["txt"],
-        )
+        def close_format_dlg(ev: ft.ControlEvent) -> None:
+            format_dlg.open = False
+            self.page.update()
 
-        if path:
+        async def save_as_format(file_type: str) -> None:
+            format_dlg.open = False
+            self.page.update()
+
+            timestamp = datetime.now(UTC).astimezone().strftime("%Y%m%d_%H%M%S")
+            file_picker = ft.FilePicker()
+            ext = "docx" if file_type == "docx" else "txt"
+            path = await file_picker.save_file(
+                dialog_title=f"レポートの保存先を選択 ({ext.upper()})",
+                file_name=f"report_log_{timestamp}.{ext}",
+                allowed_extensions=[ext],
+            )
+            if not path:
+                return
+
             try:
-                cleaned_export = clean_citation_markers(text_content.strip())
-                Path(path).write_text(cleaned_export, encoding="utf-8")
-                await self._show_info("保存完了", f"レポートを保存しました:\n{path}")
-            except OSError as ex:
+                cleaned_export = clean_citation_markers(text_content.strip()) or ""
+                if file_type == "docx":
+                    export_markdown_to_docx(cleaned_export, path)
+                    await self._show_info("保存完了", f"Wordレポートを保存しました:\n{path}")
+                else:
+                    Path(path).write_text(cleaned_export, encoding="utf-8")
+                    await self._show_info("保存完了", f"テキストレポートを保存しました:\n{path}")
+            except Exception as ex:
                 await self._show_error("保存エラー", f"ファイルの保存に失敗しました:\n{ex}")
+
+        format_dlg = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("保存形式の選択", weight=ft.FontWeight.BOLD),
+            content=ft.Text(
+                "レポートの出力形式を選択してください。\nWord形式（.docx）またはテキスト形式（.txt）で保存できます。"
+            ),
+            actions=[
+                ft.ElevatedButton(
+                    "📄 Word (.docx)",
+                    on_click=lambda _: self.page.run_task(save_as_format, "docx"),
+                ),
+                ft.ElevatedButton(
+                    "📝 テキスト (.txt)",
+                    on_click=lambda _: self.page.run_task(save_as_format, "txt"),
+                ),
+                ft.TextButton("キャンセル", on_click=close_format_dlg),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        self.page.overlay.append(format_dlg)
+        format_dlg.open = True
+        self.page.update()
 
     async def _start_generation(self) -> None:
         """分析リクエストを開始し、非同期タスクとして実行します。"""
