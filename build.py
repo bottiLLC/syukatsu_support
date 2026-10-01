@@ -1,11 +1,12 @@
 # Copyright (C) 2026 合同会社ぼっち (bottiLLC)
-# 
+#
 # PyInstaller 自動ビルド & 検証スクリプト (build.py)
 
 import os
-import sys
 import subprocess
+import sys
 from pathlib import Path
+
 
 def main():
     project_dir = Path(__file__).resolve().parent
@@ -55,6 +56,7 @@ def main():
     print("\n" + "=" * 60)
     print("  Build completed successfully! Product ready in dist/syukatsu-support.exe")
     print("=" * 60)
+
 
 if __name__ == "__main__":
     main()

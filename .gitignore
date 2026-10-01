@@ -149,3 +149,8 @@ test_results/
 # Old/Backup folders
 old/
 .web/
+
+# Data persistence
+data/
+!data/.gitkeep
+

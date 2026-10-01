@@ -1,5 +1,9 @@
 # 就職活動サポートアプリ (SYUKATSU Support)
 
+[![CI](https://github.com/bottiLLC/syukatsu_support/actions/workflows/ci.yml/badge.svg)](https://github.com/bottiLLC/syukatsu_support/actions/workflows/ci.yml)
+[![Python 3.14 | 3.13](https://img.shields.io/badge/python-3.14%20%7C%203.13-blue.svg)](https://www.python.org/)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![Type Checker: mypy strict](https://img.shields.io/badge/mypy-strict-blue.svg)](https://mypy-lang.org/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 合同会社ぼっちが開発した、就職活動・企業分析用のデスクトップアプリケーションです。
@@ -9,17 +13,21 @@
 
 1. **企業分析アシスタント (GPT-5.6 シリーズ完全対応)**
     - `gpt-5.6-terra` (標準・推論バランスモデル), `gpt-5.6-sol` (高度推論モデル), `gpt-5.6-luna` (高速・低コストモデル) および `gpt-5.4-pro`, `gpt-5.4` に完全対応。
-    - **Reasoning Effort (推論強度: `high`, `medium`, `low`, `xhigh`)** の選択により、難解な業界・企業分析に対しても高度な推論を実行可能。
+    - **Reasoning Effort (推論強度: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`)** の選択により、難解な業界・企業分析に対しても高度な推論を実行可能。
     - 履歴書作成支援、面接対策、有報比較など、用途に応じた複数の専用メタプロンプトをプルダウンからワンタッチで切り替え。
 2. **ナレッジベース管理 (RAG)**
     - 企業のAnnual Reportsや有価証券報告書（PDF/TXT等）をローカルから直接 OpenAI の Vector Store へアップロード。
     - `file_search` ツールを通じたセキュアかつ精度の高いドキュメント参照による回答生成。
     - Vector Storeとそれに紐づくファイル群を専用の管理画面(GUI)から直接管理（作成、ファイルアップロード、削除）。
-3. **コスト計算と可視化**
+3. **データ保護・整合性検証付き自動バックアップ**
+    - ユーザー設定、暗号化キー、システムプロンプト等の永続データを `./data/` 配下に完全隔離。
+    - `testzip()` による整合性検証付きアトミックZIPアーカイブ生成機能 (`backup_manager.py`) を標準搭載。
+    - GUI設定サイドバーから保存先ディレクトリの確認・更新および即時バックアップ実行が可能。
+4. **コスト計算と可視化**
     - APIリクエストの入力・出力・キャッシュ済みトークン使用量を元に、リアルタイムで概算コスト（USD）を計算してステータスバーに表示。
-4. **初心者向けエラーハンドリング & 直感的なダイアログ UX**
+5. **初心者向けエラーハンドリング & 直感的なダイアログ UX**
     - **親切なエラーメッセージ**: APIキー未登録・誤り、クレジット残高不足、利用制限(Rate Limit)、タイムアウト、トークン数制限オーバー、アプリ多重起動ロック等が発生した際、初心者が即座に対処できるよう原因と解決策を分かりやすく日本語で表示。
-    - **「OK」ボタン付きダイアログ**: APIキー保存時（「設定完了 APIキーを保存しました。」）や通知・エラー発生時のすべてのダイアログに「OK」ボタンを配置し、ワンクリックで確実に閉じられる快適な操作性を実現。
+    - **「OK」ボタン付きダイアログ**: APIキー保存時や通知・エラー発生時のすべてのダイアログに「OK」ボタンを配置し、ワンクリックで確実に閉じられる快適な操作性を実現。
 
 ---
 
@@ -28,40 +36,45 @@
 本アプリケーションは、モダンなGUIフレームワークである **Flet** を採用し、**State-Driven Architecture (状態駆動型アーキテクチャ)** と **Clean Architecture** の設計思想に基づいて構築されています。UI層とビジネスロジックは完全に切り離されています。
 
 ```text
-src/
-├── app.py              # アプリケーションのエントリーポイント (Flet初期化処理)
-├── state.py            # (AppState) ViewModel: 状態管理、UseCaseレイヤーへの処理移譲
-├── ui.py               # (View) メインウィンドウの純粋なUIレイアウト宣言
-├── rag_ui.py           # (View) RAG管理画面のUIコンポーネント
-├── models.py           # Pydantic V2 スキーマ (ユーザー設定、API入出力の厳密な型定義)
-├── styles.py           # UIフォントやカラーの一元管理
-├── application/        # アプリケーション層 (Use Cases)
-│   └── usecases/       # UIやインフラに依存しないビジネスロジック群
-│       ├── llm_usecase.py # LLM分析の独立実行とストリーミングの一元管理
-│       └── rag_usecase.py # ナレッジベース(Vector Store/File)の操作カプセル化
-├── infrastructure/     # インフラ層 (外部依存関係)
-│   ├── openai_client.py # AsyncOpenAI を用いたAPI通信実装 (v2.3 Responses対応)
-│   └── security.py      # Fernet を用いた API Key の暗号化・復号、設定の永続化
-├── core/               # コアロジック・ドメイン層 (UI/インフラに依存しない)
-│   ├── errors.py       # APIエラーハンドリング・ユーザー向けメッセージ変換
-│   ├── pricing.py      # トークン単価算定のロジック
-│   ├── prompts.py      # システムプロンプト定義
-│   ├── resilience.py   # Tenacityを用いた非同期リトライデコレータ
-│   └── logger.py       # Structlogを用いたログ可視化・構造化設定
-└── tests/              # pytest / pytest-asyncio による各コンポーネントの非同期テスト
+syukatsu_Support/
+├── app.py                  # ルート起動エントリーポイント (sys.path確定的解決)
+├── backup_manager.py       # データ保護・整合性検証バックアップマネージャー
+├── run.bat                 # Windows用ワンクリック自動セットアップ起動スクリプト
+├── run.command             # macOS/Linux用ワンクリック自動起動スクリプト
+├── data/                   # 永続データ隔離ディレクトリ (Git管理外)
+│   ├── config.json         # ユーザー設定
+│   ├── .secret.key         # APIキー暗号化用鍵
+│   └── system_prompts.json # システムプロンプト定義
+├── src/
+│   ├── app.py              # アプリケーション初期化・メインループ
+│   ├── state.py            # (AppState) ViewModel: 状態管理・リアクティブ通知
+│   ├── ui.py               # (View) メインウィンドウUIレイアウト・バックアップ操作
+│   ├── rag_ui.py           # (View) RAG管理画面UIコンポーネント
+│   ├── models.py           # Pydantic V2 スキーマ (厳密な型定義・シリアライゼーション)
+│   ├── styles.py           # UIカラー・スタイリング定数
+│   ├── application/        # アプリケーション層 (Use Cases)
+│   │   └── usecases/
+│   │       ├── llm_usecase.py # LLM分析実行とストリーミング管理
+│   │       └── rag_usecase.py # ナレッジベース(Vector Store/File)操作
+│   ├── infrastructure/     # インフラ層 (外部依存関係)
+│   │   ├── openai_client.py   # AsyncOpenAI を用いたAPI通信実装
+│   │   └── security.py        # Fernet暗号化・./data への設定永続化管理
+│   └── core/               # コアロジック・ドメイン層
+│       ├── errors.py       # APIエラーメッセージ変換
+│       ├── pricing.py      # トークン単価算定ロジック
+│       ├── prompts.py      # プロンプトローダー
+│       ├── resilience.py   # Tenacity指数バックオフリトライ
+│       ├── logger.py       # Structlog構造化ロギング
+│       └── utils.py        # パス解決・引用マーカー除去
+└── tests/                  # pytest / pytest-asyncio による包括的単体テスト群
 ```
-
-### 【設計のポイント】
-- **Fletによる非同期UI描画**: PythonネイティブなUI構築とモダンなフラットデザイン。非同期タスク (`page.run_task`) による完全なノンブロッキングUIを実現。
-- **Trinitarian Integrity**: データベース定義、Pydantic V2スキーマ、ビジネスロジックが強固に統合されたシリアライズ検証（Schema-Logic Alignment）。
-- **Resilient API Calls**: Structlog を用いた構造化ロギングと Tenacity の指数バックオフリトライにより、一過性のネットワーク障害を自動リカバリー。
 
 ---
 
 ## 必要要件
 
 - **OS**: Windows / macOS / Linux (Windows推奨)
-- **Python**: 3.14 以上
+- **Python**: 3.13 または 3.14 以上
 - **Package Manager**: [uv](https://github.com/astral-sh/uv) (高速なPythonパッケージ/仮想環境管理ツール)
 - **API Key**: `OPENAI_API_KEY` (初回起動時にGUIから登録、暗号化されて安全にローカル保存されます)
 
@@ -75,45 +88,49 @@ src/
 
 **ワンクリック起動 (推奨)**:
 - **Windows**: `run.bat` をダブルクリックします。
-- **Mac/Linux**: ターミナルで `chmod +x run.command` を実行した後、`run.command` をダブルクリック（またはスクリプト実行）します。
+- **Mac/Linux**: ターミナルで `chmod +x run.command` を実行した後、`run.command` をダブルクリックします。
 
 **コマンドラインでの起動**:
 ```powershell
-uv run src/app.py
+uv run app.py
 ```
 
-### 2. 単体テストの実行 (Pytest)
-非同期処理およびモデルのシリアライゼーションに対する自動テストを実行します（常にPass率100%を維持）。
+### 2. 品質検証・静的解析・テストの実行
+
+本プロジェクトは CI/CD パイプラインと完全に同期したローカル検証環境を提供します。
 
 ```powershell
-uv run pytest tests/ -v
+# 1. Ruff による静的解析と自動修正
+uv run ruff check .
+
+# 2. Ruff によるコードフォーマット検証
+uv run ruff format --check .
+
+# 3. Mypy による厳格な静的型検査 (Strict Type Checking)
+uv run mypy src app.py backup_manager.py
+
+# 4. Pytest による単体テストおよびブランチカバレッジ計測
+uv run pytest
 ```
 
 ### 3. アプリケーションのビルド (単一ファイル .exe 化)
-PyInstaller を用いて、Python環境が不要な単一の実行可能ファイル（`dist/syukatsu-support.exe`）を作成します。
-Flet および Flet-Desktop の全バイナリリソースが1つの `.exe` 内に完全にバンドルされるため、配布や実行が容易です。
 
-**ビルド自動化スクリプトでの実行 (推奨)**:
+PyInstaller を用いて、Python環境が不要な単一の実行可能ファイル（`dist/syukatsu-support.exe`）を作成します。
+
 ```powershell
 uv run python build.py
 ```
 
-**コマンドラインで直接実行する場合**:
-```powershell
-uv run pyinstaller --noconsole --onefile --name syukatsu-support --collect-all flet --collect-all flet_desktop --collect-all src --add-data "system_prompts.json;." src/app.py -y
-```
-※ ビルド完了後、`dist/` フォルダ内に単一の実行ファイル `syukatsu-support.exe` が生成されます。この `.exe` ファイル単体で他のPC環境でもダブルクリックで直接起動できます。
+※ ビルド完了後、`dist/` フォルダ内に単一の実行ファイル `syukatsu-support.exe` が生成されます。
 
 ---
 
-## ロギング・データ保存・サポート
+## ロギング・データ保存・バックアップ
 
-- **セキュアな設定管理 (LocalAppdata連携)**:
-    APIキーなどの機密設定は内蔵されたFernet方式で暗号化処理され、クラウドドキュメント等の同期エラーを防ぐため、OS標準の `%LOCALAPPDATA%\SYUKATSU_Support` 配下 (`config.json`, `.secret.key`) に安全に保持されます。
-- **レポートのエクスポート**:
-    画面上の「保存 💾」ボタンから、AIの推論・回答履歴のすべてをタイムスタンプ付きのテキストファイルとして書き出すことができます。
-- **初心者向けエラーガイドと開発者サポート**:
-    各種OpenAI APIエラーやアプリ多重起動ロックが発生した際、ダイアログ上に原因と具体的対処法を初心者向け日本語で表示します。また、ダイアログからエラーログをテキスト保存したり、メールで開発者へ報告するためのサポート機能も備えています。
+- **セキュアなデータ隔離 (`./data`)**:
+    APIキーなどの機密設定は内蔵されたFernet方式で暗号化処理され、プロジェクト内の `./data/` 配下 (`config.json`, `.secret.key`, `system_prompts.json`) に厳格に隔離保持されます。
+- **整合性検証付き自動バックアップ (`backup_manager.py`)**:
+    バックアップ実行時は一時ファイル経由のアトミックなZIP生成を行い、ZIP内のCRC32を検証する `testzip()` を通過したアーカイブのみを確定保存します。
 - **構造化ロギング (Structlog)**:
     コンソールやバックグラウンド処理では、障害調査が容易なStructlogによるコンテキスト付きログ（変数状態・タイムスタンプ）が出力されます。
 

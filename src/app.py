@@ -1,15 +1,15 @@
 # Copyright (C) 2026 合同会社ぼっち (bottiLLC)
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
@@ -28,15 +28,16 @@ project_root = str(Path(__file__).resolve().parent.parent)
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
+import contextlib
+
 import flet as ft
 import structlog
 
 # Initialize logger
 from src.core.logger import setup_logging
-try:
+
+with contextlib.suppress(Exception):
     setup_logging()
-except Exception:
-    pass
 
 log = structlog.get_logger()
 
@@ -55,23 +56,25 @@ def main(page: ft.Page) -> None:
 
         log.info("Initializing AppState...")
         state = AppState()
-        
+
         log.info("Initializing Flet UI...")
         SyukatsuSupportApp(page, state)
 
     except Exception as e:
         from src.core.errors import translate_api_error
+
         log.critical(f"Application failed to start: {e}", exc_info=True)
         err_msg = translate_api_error(e)
         dlg = ft.AlertDialog(
             title=ft.Text("起動エラー", color=ft.Colors.RED),
             content=ft.Text(f"アプリケーションの起動中にエラーが発生しました:\n\n{err_msg}"),
             open=True,
-            actions=[ft.TextButton("OK", on_click=lambda _e: page.window.close())],
+            actions=[ft.TextButton("OK", on_click=lambda _e: page.window.close())],  # type: ignore[no-untyped-call]
             actions_alignment=ft.MainAxisAlignment.END,
         )
         page.overlay.append(dlg)
         page.update()
+
 
 if __name__ == "__main__":
     log.info("Starting Flet app...")

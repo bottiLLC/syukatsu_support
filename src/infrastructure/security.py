@@ -1,15 +1,15 @@
 # Copyright (C) 2026 合同会社ぼっち (bottiLLC)
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
@@ -20,32 +20,54 @@ APIキーの安全な暗号化/復号化（Fernet）および
 設定ファイル（config.json）の読み書きを処理します。
 """
 
+from __future__ import annotations
+
 import json
 import os
-import structlog
+import shutil
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Final
+
+import structlog
 from cryptography.fernet import Fernet, InvalidToken
 from pydantic import ValidationError
 
-from src.models import UserConfig, AppConfigDefaults
+from src.models import AppConfigDefaults, UserConfig
 
 log = structlog.get_logger()
 
-# パス設定（LOCALAPPDATA基準に変更）
-_app_data_dir = os.path.expandvars(r'%LOCALAPPDATA%\SYUKATSU_Support')
-os.makedirs(_app_data_dir, exist_ok=True)
-CONFIG_FILE = Path(_app_data_dir) / "config.json"
-KEY_FILE = Path(_app_data_dir) / ".secret.key"
+# 永続データディレクトリ（./data）の厳格隔離
+PROJECT_ROOT: Final[Path] = Path(__file__).resolve().parent.parent.parent
+DATA_DIR: Final[Path] = PROJECT_ROOT / "data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+CONFIG_FILE: Final[Path] = DATA_DIR / "config.json"
+KEY_FILE: Final[Path] = DATA_DIR / ".secret.key"
+
+# 旧保存先（%LOCALAPPDATA% またはルート）からの自動マイグレーション
+_legacy_app_dir = Path(os.path.expandvars(r"%LOCALAPPDATA%\SYUKATSU_Support"))
+if not CONFIG_FILE.exists():
+    if (_legacy_app_dir / "config.json").exists():
+        shutil.copy2(_legacy_app_dir / "config.json", CONFIG_FILE)
+    elif (PROJECT_ROOT / "config.json").exists():
+        shutil.copy2(PROJECT_ROOT / "config.json", CONFIG_FILE)
+
+if not KEY_FILE.exists():
+    if (_legacy_app_dir / ".secret.key").exists():
+        shutil.copy2(_legacy_app_dir / ".secret.key", KEY_FILE)
+    elif (PROJECT_ROOT / ".secret.key").exists():
+        shutil.copy2(PROJECT_ROOT / ".secret.key", KEY_FILE)
 
 
 class SecurityManager:
+    """APIキーの暗号化および復号化をFernetアルゴリズムで提供するクラス。"""
+
     @staticmethod
     def _get_or_create_key() -> bytes:
         if KEY_FILE.exists():
             try:
                 return KEY_FILE.read_bytes()
-            except IOError as e:
+            except OSError as e:
                 log.error("キーファイルの読み込みに失敗しました", error=str(e), path=str(KEY_FILE))
                 raise
 
@@ -55,7 +77,7 @@ class SecurityManager:
             KEY_FILE.write_bytes(key)
             if os.name == "posix":
                 KEY_FILE.chmod(0o600)
-        except IOError as e:
+        except OSError as e:
             log.critical("暗号化キーの保存に失敗しました", error=str(e), path=str(KEY_FILE))
             raise
         return key
@@ -72,7 +94,8 @@ class SecurityManager:
             return ""
 
     @classmethod
-    def decrypt(cls, cipher_text: str) -> Optional[str]:
+    def decrypt(cls, cipher_text: str) -> str | None:
+        """暗号化された文字列を復号化します。失敗時は None を返します。"""
         if not cipher_text:
             return None
         try:
@@ -84,9 +107,12 @@ class SecurityManager:
 
 
 class ConfigManager:
+    """ユーザー設定の永続化およびロードを管理するクラス。"""
+
     @staticmethod
     def load() -> UserConfig:
-        config_data: Dict[str, Any] = {}
+        """設定ファイル (config.json) からユーザー設定を読み込みます。"""
+        config_data: dict[str, Any] = {}
 
         if CONFIG_FILE.exists():
             try:
@@ -136,5 +162,5 @@ class ConfigManager:
                 json.dump(data, f, indent=4)
 
             log.info("設定が正常に保存されました。", path=str(CONFIG_FILE))
-        except IOError as e:
+        except OSError as e:
             log.error("設定の保存に失敗しました", error=str(e), path=str(CONFIG_FILE))

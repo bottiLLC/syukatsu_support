@@ -1,30 +1,32 @@
 # Copyright (C) 2026 合同会社ぼっち (bottiLLC)
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import pytest
 from dataclasses import FrozenInstanceError
-from src.core.pricing import ModelPricing, PRICING_TABLE
+
+import pytest
+
+from src.core.pricing import PRICING_TABLE, ModelPricing
 
 # --- Test Cases: ModelPricing Dataclass ---
 
-class TestModelPricing:
 
+class TestModelPricing:
     def test_model_pricing_structure(self):
         """[構造] ModelPricing の属性を検証します。"""
         pricing = ModelPricing(input_price=1.0, output_price=2.0, cached_input_price=0.5)
-        
+
         assert pricing.input_price == 1.0
         assert pricing.output_price == 2.0
         assert pricing.cached_input_price == 0.5
@@ -32,55 +34,64 @@ class TestModelPricing:
     def test_model_pricing_immutability(self):
         """[構造] ModelPricing がイミュータブル（凍結状態）であることを検証します。"""
         pricing = ModelPricing(input_price=1.0, output_price=2.0)
-        
+
         # Should raise FrozenInstanceError when trying to modify
         with pytest.raises(FrozenInstanceError):
-            pricing.input_price = 5.0 # type: ignore
+            pricing.input_price = 5.0  # type: ignore
 
     def test_default_cached_price(self):
         """[デフォルト値] 指定がない場合、cached_input_price がデフォルトで 0.0 になることを検証します。"""
         pricing = ModelPricing(input_price=10.0, output_price=20.0)
         assert pricing.cached_input_price == 0.0
 
+
 # --- Test Cases: PRICING_TABLE ---
 
-class TestPricingTable:
 
+class TestPricingTable:
     def test_table_integrity(self):
-        """[構造] PRICING_TABLE が文字列から ModelPricing への辞書であることを検証します。"""
-        assert isinstance(PRICING_TABLE, dict)
+        """[構造] PRICING_TABLE が文字列から ModelPricing への不変マッピングであることを検証します。"""
+        from types import MappingProxyType
+
+        assert isinstance(PRICING_TABLE, (dict, MappingProxyType))
         assert len(PRICING_TABLE) > 0
-        
+
         for model_name, pricing in PRICING_TABLE.items():
             assert isinstance(model_name, str)
             assert isinstance(pricing, ModelPricing)
 
-    @pytest.mark.parametrize("model_key", [
-        "gpt-5.6-terra",
-        "gpt-5.6-sol",
-        "gpt-5.6-luna",
-        "gpt-5.4",
-        "gpt-5.4-pro",
-    ])
+    @pytest.mark.parametrize(
+        "model_key",
+        [
+            "gpt-5.6-terra",
+            "gpt-5.6-sol",
+            "gpt-5.6-luna",
+            "gpt-5.4",
+            "gpt-5.4-pro",
+        ],
+    )
     def test_essential_models_exist(self, model_key):
         """[コンテンツ] 仕様で定義された主要なモデルがテーブルに存在することを検証します。"""
         assert model_key in PRICING_TABLE
 
-    @pytest.mark.parametrize("model, expected_input, expected_output, expected_cached", [
-        # Based on Pricing.md (Source of Truth)
-        ("gpt-5.6-sol", 5.00, 30.00, 0.50),
-        ("gpt-5.6-terra", 2.00, 12.00, 0.20),
-        ("gpt-5.6-luna", 0.20, 1.20, 0.02),
-        ("gpt-5.4", 2.50, 15.00, 0.25),
-        ("gpt-5.4-pro", 30.00, 180.00, 0.0)
-    ])
+    @pytest.mark.parametrize(
+        "model, expected_input, expected_output, expected_cached",
+        [
+            # Based on Pricing.md (Source of Truth)
+            ("gpt-5.6-sol", 5.00, 30.00, 0.50),
+            ("gpt-5.6-terra", 2.00, 12.00, 0.20),
+            ("gpt-5.6-luna", 0.20, 1.20, 0.02),
+            ("gpt-5.4", 2.50, 15.00, 0.25),
+            ("gpt-5.4-pro", 30.00, 180.00, 0.0),
+        ],
+    )
     def test_price_accuracy(self, model, expected_input, expected_output, expected_cached):
         """
         [正確性] 価格設定が Pricing.txt と完全に一致していることを検証します。
         これは正確なコスト見積もりに不可欠です。
         """
         pricing = PRICING_TABLE[model]
-        
+
         assert pricing.input_price == expected_input, f"{model} input price mismatch"
         assert pricing.output_price == expected_output, f"{model} output price mismatch"
         assert pricing.cached_input_price == expected_cached, f"{model} cached price mismatch"
@@ -91,8 +102,8 @@ class TestPricingTable:
             assert p.input_price >= 0, f"{name}: Negative input price"
             assert p.output_price >= 0, f"{name}: Negative output price"
             assert p.cached_input_price >= 0, f"{name}: Negative cached price"
-            
+
             # General rule: Output is usually more expensive than Input
             # (Not strict for all future models, but true for current ones)
-            if "pro" not in name: 
-                 assert p.output_price >= p.input_price
+            if "pro" not in name:
+                assert p.output_price >= p.input_price

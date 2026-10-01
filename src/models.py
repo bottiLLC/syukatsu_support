@@ -1,50 +1,53 @@
 # Copyright (C) 2026 合同会社ぼっち (bottiLLC)
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""
-データモデルとスキーマの定義。
+"""データモデルおよびPydanticスキーマ定義モジュール。
 
-このモジュールはアプリケーション全体で使用されるPydantic V2モデルを集約します。
-設定（UserConfig）、OpenAI APIリクエスト（ResponseRequestPayload）、
-およびストリームイベント（StreamResult等）を含みます。
+アプリケーション全体で使用される設定 (UserConfig)、OpenAI Responses API リクエストモデル、
+およびストリーミングイベントの型定義を集約します。
 """
 
-from typing import List, Literal, Optional, Union, Any
+from __future__ import annotations
+
+from typing import Any, Literal
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+ReasoningEffort = Literal["none", "minimal", "low", "medium", "high", "xhigh"]
 
 
 # --- Constants / App Config Defaults ---
+
+
 class AppConfigDefaults:
+    """アプリケーション設定のデフォルト値を定義する定数クラス。"""
+
     DEFAULT_MODEL: str = "gpt-5.6-terra"
-    DEFAULT_REASONING: Literal["none", "minimal", "low", "medium", "high", "xhigh"] = "high"
+    DEFAULT_REASONING: ReasoningEffort = "high"
 
 
 # --- Application Configuration Models ---
 
+
 class UserConfig(BaseModel):
-    """
-    実行時のユーザー設定を表すPydanticモデル。
-    """
+    """実行時のユーザー設定を表すPydanticモデル。"""
+
     model_config = ConfigDict(populate_by_name=True, extra="ignore")
 
-    api_key: Optional[str] = Field(
-        default=None, description="復号化されたOpenAI APIキー。"
-    )
-    model: str = Field(
-        default=AppConfigDefaults.DEFAULT_MODEL, description="選択されたOpenAIモデルのID。"
-    )
+    api_key: str | None = Field(default=None, description="復号化されたOpenAI APIキー。")
+    model: str = Field(default=AppConfigDefaults.DEFAULT_MODEL, description="選択されたOpenAIモデルのID。")
     reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"] = Field(
         default=AppConfigDefaults.DEFAULT_REASONING,
         description="モデルの推論強度（reasoning effort）。",
@@ -53,68 +56,75 @@ class UserConfig(BaseModel):
         default="有価証券報告書 -財務分析-",
         description="現在選択されている分析戦略モード。",
     )
-    last_response_id: Optional[str] = Field(
+    last_response_id: str | None = Field(
         default=None,
         description="コンテキストの継続性を保つための最後のレスポンスID。",
     )
 
     # RAG Configuration
-    current_vector_store_id: Optional[str] = Field(
-        default=None, description="現在選択されているVector StoreのID。"
-    )
-    use_file_search: bool = Field(
-        default=False, description="File Search (RAG) ツールを有効にするかどうか。"
-    )
+    current_vector_store_id: str | None = Field(default=None, description="現在選択されているVector StoreのID。")
+    use_file_search: bool = Field(default=False, description="File Search (RAG) ツールを有効にするかどうか。")
 
 
 # --- OpenAI API Request Models (Responses API) ---
 
+
 class InputTextContent(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    """テキスト入力コンテンツを表すスキーマ。"""
+
+    model_config = ConfigDict(extra="forbid")
     type: Literal["input_text"] = "input_text"
     text: str
 
 
 class InputMessage(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    """会話メッセージ入力（ロールとコンテンツ）を表すスキーマ。"""
+
+    model_config = ConfigDict(extra="forbid")
     role: Literal["user", "assistant"]
-    content: List[InputTextContent]
+    content: list[InputTextContent]
 
 
 class FileSearchTool(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    """OpenAI File Search ツール設定スキーマ。"""
+
+    model_config = ConfigDict(extra="forbid")
     type: Literal["file_search"] = "file_search"
-    vector_store_ids: List[str] = Field(default_factory=list)
+    vector_store_ids: list[str] = Field(default_factory=list)
 
 
 class WebSearchTool(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    """Web Search プレビューツール設定スキーマ。"""
+
+    model_config = ConfigDict(extra="forbid")
     type: Literal["web_search_preview"] = "web_search_preview"
-    search_context_size: Optional[Literal["low", "medium", "high"]] = "medium"
+    search_context_size: Literal["low", "medium", "high"] | None = "medium"
 
 
 class ReasoningOptions(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    """推論強度オプションスキーマ。"""
+
+    model_config = ConfigDict(extra="forbid")
     effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"] = "medium"
 
 
 class ResponseRequestPayload(BaseModel):
-    """
-    client.responses.create 用メインリクエストペイロード。
-    """
-    model_config = ConfigDict(extra='forbid')
+    """client.responses.create 用メインリクエストペイロード。"""
+
+    model_config = ConfigDict(extra="forbid")
 
     model: str
-    input: List[InputMessage]
-    instructions: Optional[str] = None
-    reasoning: Optional[ReasoningOptions] = None
-    tools: Optional[List[Union[FileSearchTool, WebSearchTool]]] = None
-    previous_response_id: Optional[str] = None
+    input: list[InputMessage] | str
+    instructions: str | None = None
+    reasoning: ReasoningOptions | None = None
+    tools: list[FileSearchTool | WebSearchTool] | None = None
+    previous_response_id: str | None = None
     stream: bool = True
 
     @field_validator("input", mode="before")
     @classmethod
-    def normalize_input(cls, v: Any) -> List[Any]:
+    def normalize_input(cls, v: Any) -> list[dict[str, Any]] | Any:
+        """文字列入力を正規化されたメッセージ構造に変換します。"""
         if isinstance(v, str):
             return [
                 {
@@ -127,18 +137,25 @@ class ResponseRequestPayload(BaseModel):
 
 # --- Stream Response Event Models ---
 
+
 class StreamTextDelta(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    """テキスト差分ストリーミングイベントスキーマ。"""
+
+    model_config = ConfigDict(extra="forbid")
     delta: str
 
 
 class StreamResponseCreated(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    """レスポンス生成開始イベントスキーマ。"""
+
+    model_config = ConfigDict(extra="forbid")
     response_id: str
 
 
 class StreamUsage(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    """トークン使用量イベントスキーマ。"""
+
+    model_config = ConfigDict(extra="forbid")
     input_tokens: int = 0
     output_tokens: int = 0
     total_tokens: int = 0
@@ -146,9 +163,10 @@ class StreamUsage(BaseModel):
 
 
 class StreamError(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    """エラーイベントスキーマ。"""
+
+    model_config = ConfigDict(extra="forbid")
     message: str
 
 
-StreamResult = Union[StreamTextDelta, StreamResponseCreated, StreamUsage, StreamError]
-
+StreamResult = StreamTextDelta | StreamResponseCreated | StreamUsage | StreamError

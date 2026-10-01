@@ -3,7 +3,7 @@ name = "syukatsu-support"
 version = "2.3.0"
 description = "Syukatsu Support Application"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 dependencies = [
     "openai==2.15.0",
     "pydantic>=2.0.0",
@@ -41,3 +41,54 @@ dev = [
     "pytest-cov",
     "pyinstaller>=6.19.0",
 ]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "W",
+    "UP",
+    "B",
+    "C4",
+    "SIM",
+    "RUF",
+]
+ignore = [
+    "E501",
+    "RUF001",
+    "RUF002",
+    "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"app.py" = ["E402"]
+"src/app.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "flet.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "src.ui",
+    "src.rag_ui",
+]
+disable_error_code = ["arg-type", "assignment"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+testpaths = ["tests"]
+addopts = "-v --cov=src --cov=backup_manager --cov-branch --cov-report=term-missing"

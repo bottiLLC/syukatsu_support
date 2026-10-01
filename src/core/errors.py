@@ -1,24 +1,30 @@
 # Copyright (C) 2026 合同会社ぼっち (bottiLLC)
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""OpenAI API エラー翻訳モジュール。
+
+OpenAI API例外およびシステムエラーを検知し、初心者に分かりやすい丁寧な日本語メッセージに変換します。
+"""
+
+from __future__ import annotations
+
 import openai
 
+
 def translate_api_error(e: Exception) -> str:
-    """
-    OpenAI APIエラーおよびシステム例外を初心者に分かりやすい丁寧な日本語メッセージに変換します。
-    """
+    """OpenAI APIエラーおよびシステム例外を初心者に分かりやすい丁寧な日本語メッセージに変換します。"""
     # Tenacity の RetryError の場合は内部で発生した元の例外を取り出す
     if hasattr(e, "last_attempt") and getattr(e, "last_attempt", None):
         try:
@@ -31,7 +37,12 @@ def translate_api_error(e: Exception) -> str:
     err_str = str(e)
 
     # 1. アプリの多重起動によるロック / ファイル権限エラー
-    if isinstance(e, PermissionError) or "WinError 32" in err_str or "Permission denied" in err_str or "locked" in err_str.lower():
+    if (
+        isinstance(e, PermissionError)
+        or "WinError 32" in err_str
+        or "Permission denied" in err_str
+        or "locked" in err_str.lower()
+    ):
         return (
             "【アプリの多重起動エラー】 (App Lock Error)\n"
             "SYUKATSU Supportがすでに別のウィンドウまたはバックグラウンドで起動しているため、設定ファイルやデータがロックされています。\n"
@@ -39,7 +50,11 @@ def translate_api_error(e: Exception) -> str:
         )
 
     # 2. タイムアウト
-    if isinstance(e, (openai.APITimeoutError, TimeoutError)) or "APITimeoutError" in err_str or "timed out" in err_str.lower():
+    if (
+        isinstance(e, (openai.APITimeoutError, TimeoutError))
+        or "APITimeoutError" in err_str
+        or "timed out" in err_str.lower()
+    ):
         return (
             "【通信タイムアウト】 (APITimeoutError)\n"
             "OpenAIサーバーからの応答が制限時間を超えました。\n"
@@ -47,7 +62,12 @@ def translate_api_error(e: Exception) -> str:
         )
 
     # 3. APIキー形式エラー (UnicodeEncodeError / 全角文字混入など)
-    if isinstance(e, (UnicodeEncodeError, UnicodeError)) or "ascii" in err_str.lower() or "ordinal not in range" in err_str.lower() or "codec" in err_str.lower():
+    if (
+        isinstance(e, (UnicodeEncodeError, UnicodeError))
+        or "ascii" in err_str.lower()
+        or "ordinal not in range" in err_str.lower()
+        or "codec" in err_str.lower()
+    ):
         return (
             "【APIキー文字エラー】 (Invalid Key Format)\n"
             "入力されたOpenAI APIキーに全角文字や全角スペースなど、使用できない文字が含まれています。\n"
@@ -56,7 +76,12 @@ def translate_api_error(e: Exception) -> str:
         )
 
     # 4. APIキーが誤っている (AuthenticationError)
-    if isinstance(e, openai.AuthenticationError) or "AuthenticationError" in err_str or "invalid_api_key" in err_str.lower() or "401" in err_str:
+    if (
+        isinstance(e, openai.AuthenticationError)
+        or "AuthenticationError" in err_str
+        or "invalid_api_key" in err_str.lower()
+        or "401" in err_str
+    ):
         return (
             "【APIキーエラー】 (AuthenticationError)\n"
             "入力されたOpenAI APIキーが正しくないか、無効化されています。\n"
@@ -66,7 +91,12 @@ def translate_api_error(e: Exception) -> str:
     # 4. API利用上限 / 残高不足 (RateLimitError)
     if isinstance(e, openai.RateLimitError) or "RateLimitError" in err_str:
         # クレジットの残高が不足している場合
-        if "insufficient_quota" in err_str or "quota" in err_str.lower() or "billing" in err_str.lower() or "credit" in err_str.lower():
+        if (
+            "insufficient_quota" in err_str
+            or "quota" in err_str.lower()
+            or "billing" in err_str.lower()
+            or "credit" in err_str.lower()
+        ):
             return (
                 "【クレジット残高不足】 (Insufficient Quota)\n"
                 "OpenAIアカウントの無料利用分が終了したか、チャージ残高が不足しています。\n"
@@ -82,7 +112,17 @@ def translate_api_error(e: Exception) -> str:
     # 5. リクエストエラー (BadRequestError) - 入力トークン上限オーバー / 推論レベルミスマッチ等
     if isinstance(e, openai.BadRequestError) or "BadRequestError" in err_str:
         # 入力トークン上限オーバー
-        if any(k in err_str.lower() for k in ["context_length_exceeded", "maximum context length", "exceeds the context window", "string_above_max_length", "too long", "token limit"]):
+        if any(
+            k in err_str.lower()
+            for k in [
+                "context_length_exceeded",
+                "maximum context length",
+                "exceeds the context window",
+                "string_above_max_length",
+                "too long",
+                "token limit",
+            ]
+        ):
             return (
                 "【入力文字数制限オーバー】 (Context Window Exceeded)\n"
                 "送信した文章または過去の会話履歴が、AIが一度に処理できる制限（トークン上限）を超えています。\n"
@@ -131,12 +171,7 @@ def translate_api_error(e: Exception) -> str:
         )
 
     if isinstance(e, openai.OpenAIError):
-        return (
-            f"【OpenAI APIエラー】 ({type(e).__name__})\n"
-            f"AI通信中にエラーが発生しました。\n"
-            f"詳細: {err_str}"
-        )
+        return f"【OpenAI APIエラー】 ({type(e).__name__})\nAI通信中にエラーが発生しました。\n詳細: {err_str}"
 
     # 7. その他の予期せぬエラー
     return f"【システムエラー】 予期せぬエラーが発生しました:\n{err_str}"
-

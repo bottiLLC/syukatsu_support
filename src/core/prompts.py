@@ -1,29 +1,17 @@
-# Copyright (C) 2026 合同会社ぼっち (bottiLLC)
-# 
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# 
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-# 
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""システムプロンプト定義および管理モジュール。
 
+外部JSONファイル (./data/system_prompts.json) と同期し、分析モード別のシステムプロンプトを管理します。
 """
-システムプロンプト定義モジュール。
 
-このモジュールには、AIモデルが各種分析モードで使用する想定のシステム指示文と、
-外部ファイル(system_prompts.json)から動的に読み込むための管理クラスが含まれています。
-"""
+from __future__ import annotations
 
 import json
-import structlog
 from pathlib import Path
-from typing import Dict, Final
+from typing import Final
+
+import structlog
+
+from src.core.utils import get_resource_path
 
 log = structlog.get_logger()
 
@@ -34,45 +22,76 @@ MODE_ENTRY_SHEET: Final[str] = "志望動機検討"
 MODE_COMPETITOR_ANALYSIS: Final[str] = "有価証券報告書 -企業・経年比較分析-"
 MODE_NO_PROMPT: Final[str] = "システムプロンプトなし"
 
+
 class PromptManager:
-    """
-    外部の JSON ファイル (system_prompts.json) とプロンプトを同期・管理するクラス。
-    """
-    def __init__(self, filepath: str = "system_prompts.json"):
-        from src.core.utils import get_resource_path
-        self.filepath = get_resource_path(filepath)
-        self._prompts: Dict[str, str] = {}
+    """外部 JSON ファイルとプロンプトを同期・管理するクラス。"""
+
+    def __init__(self, filepath: str = "data/system_prompts.json") -> None:
+        """PromptManager を初期化し、プロンプトデータをロードします。
+
+        Args:
+            filepath: システムプロンプト定義ファイルの相対パス
+        """
+        primary_path = get_resource_path(filepath)
+        fallback_path = get_resource_path("system_prompts.json")
+
+        if primary_path.exists():
+            self.filepath: Path = primary_path
+        elif fallback_path.exists():
+            self.filepath = fallback_path
+        else:
+            self.filepath = primary_path
+
+        self._prompts: dict[str, str] = {}
         self._load()
 
-    def _load(self):
+    def _load(self) -> None:
+        """設定ファイルからプロンプトを読み込みます。"""
         if self.filepath.exists():
             try:
                 with self.filepath.open("r", encoding="utf-8") as f:
                     self._prompts = json.load(f)
                 return
-            except Exception as e:
-                log.error("Failed to read prompt JSON", error=str(e))
+            except (OSError, json.JSONDecodeError) as e:
+                log.error("Failed to read prompt JSON", error=str(e), path=str(self.filepath))
         else:
-            log.warning(f"Prompt JSON file not found: {self.filepath}")
-            # 本番ファイルが存在しない場合の最小限のフェイルセーフ
-            self._prompts = {
-                MODE_FINANCIAL: "設定ファイルが見つかりません。",
-                MODE_NO_PROMPT: ""
-            }
+            log.warning("Prompt JSON file not found", path=str(self.filepath))
 
-    def save(self):
+        # 本番ファイルが存在しない場合の最小限のフェイルセーフ
+        self._prompts = {
+            MODE_FINANCIAL: "設定ファイルが見つかりません。",
+            MODE_NO_PROMPT: "",
+        }
+
+    def save(self) -> None:
+        """現在のプロンプトを設定ファイルに永続化します。"""
         try:
+            self.filepath.parent.mkdir(parents=True, exist_ok=True)
             with self.filepath.open("w", encoding="utf-8") as f:
                 json.dump(self._prompts, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            log.error("Failed to save prompt JSON", error=str(e))
+        except OSError as e:
+            log.error("Failed to save prompt JSON", error=str(e), path=str(self.filepath))
 
     def get_prompt(self, mode_name: str) -> str:
+        """指定された分析モードのプロンプト文字列を返します。
+
+        Args:
+            mode_name: 分析モードの名称
+
+        Returns:
+            str: 該当するシステムプロンプト文字列
+        """
         return self._prompts.get(mode_name, "")
 
     def get_all_modes(self) -> list[str]:
+        """利用可能な全分析モードのリストを返します。
+
+        Returns:
+            list[str]: 分析モード名のリスト
+        """
         return list(self._prompts.keys())
 
     @property
-    def prompts(self) -> dict:
-            return self._prompts
+    def prompts(self) -> dict[str, str]:
+        """保持している全プロンプトの辞書を返します。"""
+        return self._prompts

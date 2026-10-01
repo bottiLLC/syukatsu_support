@@ -1,15 +1,15 @@
 # Copyright (C) 2026 合同会社ぼっち (bottiLLC)
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
@@ -20,8 +20,11 @@
 トークン使用量に基づくコスト見積もりに使用されます。
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Dict, Any
+from types import MappingProxyType
+from typing import Any, Final
 
 
 @dataclass(frozen=True)
@@ -43,53 +46,30 @@ class ModelPricing:
     cached_input_price: float = 0.0
 
 
-# 'Standard' ティアに基づく料金テーブル
-# 価格は100万トークンあたりのUSDです。
-# Note: これらの値は、最新のOpenAIの料金ページに合わせて更新する必要があります。
-PRICING_TABLE: Dict[str, ModelPricing] = {
-    # GPT-5.6 Series
-    "gpt-5.6-sol": ModelPricing(
-        input_price=5.00,
-        output_price=30.00,
-        cached_input_price=0.50
-    ),
-    "gpt-5.6-terra": ModelPricing(
-        input_price=2.00,
-        output_price=12.00,
-        cached_input_price=0.20
-    ),
-    "gpt-5.6-luna": ModelPricing(
-        input_price=0.20,
-        output_price=1.20,
-        cached_input_price=0.02
-    ),
-    # GPT-5.4 Series
-    "gpt-5.4-pro": ModelPricing(
-        input_price=30.00,
-        output_price=180.00,
-        cached_input_price=0.0
-    ),
-    "gpt-5.4": ModelPricing(
-        input_price=2.50,
-        output_price=15.00,
-        cached_input_price=0.25
-    ),
-    # Legacy Fallbacks
-    "gpt-4o": ModelPricing(
-        input_price=2.50,
-        output_price=10.00,
-        cached_input_price=1.25
-    ),
-    "gpt-4o-mini": ModelPricing(
-        input_price=0.150,
-        output_price=0.600,
-        cached_input_price=0.075
-    )
-}
+# 'Standard' ティアに基づく料金テーブル（不変マッピング）
+PRICING_TABLE: Final[MappingProxyType[str, ModelPricing]] = MappingProxyType(
+    {
+        # GPT-5.6 Series
+        "gpt-5.6-sol": ModelPricing(input_price=5.00, output_price=30.00, cached_input_price=0.50),
+        "gpt-5.6-terra": ModelPricing(input_price=2.00, output_price=12.00, cached_input_price=0.20),
+        "gpt-5.6-luna": ModelPricing(input_price=0.20, output_price=1.20, cached_input_price=0.02),
+        # GPT-5.4 Series
+        "gpt-5.4-pro": ModelPricing(input_price=30.00, output_price=180.00, cached_input_price=0.0),
+        "gpt-5.4": ModelPricing(input_price=2.50, output_price=15.00, cached_input_price=0.25),
+        # Legacy Fallbacks
+        "gpt-4o": ModelPricing(input_price=2.50, output_price=10.00, cached_input_price=1.25),
+        "gpt-4o-mini": ModelPricing(
+            input_price=0.150,
+            output_price=0.600,
+            cached_input_price=0.075,
+        ),
+    }
+)
+
 
 class CostCalculator:
     """Provides methods for calculating API usage costs."""
-    
+
     @staticmethod
     def calculate(model_name: str, usage_event: Any) -> str:
         """
@@ -114,14 +94,14 @@ class CostCalculator:
             uncached_prompt_tokens = max(0, prompt_tokens - cached_tokens)
 
             cost = (
-                (uncached_prompt_tokens / 1_000_000) * pricing.input_price +
-                (cached_tokens / 1_000_000) * pricing.cached_input_price +
-                (completion_tokens / 1_000_000) * pricing.output_price
+                (uncached_prompt_tokens / 1_000_000) * pricing.input_price
+                + (cached_tokens / 1_000_000) * pricing.cached_input_price
+                + (completion_tokens / 1_000_000) * pricing.output_price
             )
 
             return f"Cost: ${cost:.5f} | In: {prompt_tokens} (Cache: {cached_tokens}) | Out: {completion_tokens}"
-            
+
         except AttributeError:
-             return "Cost: Data Unreadable"
+            return "Cost: Data Unreadable"
         except Exception as e:
-            return f"Cost Error: {str(e)}"
+            return f"Cost Error: {e!s}"
