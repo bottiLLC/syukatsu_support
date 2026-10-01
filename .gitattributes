@@ -1,0 +1,7 @@
+# Force Windows batch files to always use CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Force POSIX shell scripts to always use LF
+*.sh text eol=lf
+*.command text eol=lf

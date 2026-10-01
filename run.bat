@@ -47,64 +47,51 @@ if %errorlevel% neq 0 (
 set "ENTRY_POINT="
 
 :: Check 1: In batch directory (%PROJ_ROOT%)
-if exist "%PROJ_ROOT%app.py" (
-    set "ENTRY_POINT=app.py"
-    goto ENTRY_POINT_FOUND
-)
-if exist "%PROJ_ROOT%main.py" (
-    set "ENTRY_POINT=main.py"
-    goto ENTRY_POINT_FOUND
-)
-if exist "%PROJ_ROOT%src\app.py" (
-    set "ENTRY_POINT=src\app.py"
-    goto ENTRY_POINT_FOUND
-)
+if exist "%PROJ_ROOT%app.py" set "ENTRY_POINT=app.py"
+if not defined ENTRY_POINT if exist "%PROJ_ROOT%main.py" set "ENTRY_POINT=main.py"
+if not defined ENTRY_POINT if exist "%PROJ_ROOT%src\app.py" set "ENTRY_POINT=src\app.py"
 
 :: Check 2: In current working directory (%CD%)
-if exist "%CD%\app.py" (
+if not defined ENTRY_POINT if exist "%CD%\app.py" (
     set "PROJ_ROOT=%CD%\"
     set "ENTRY_POINT=app.py"
-    goto ENTRY_POINT_FOUND
 )
-if exist "%CD%\main.py" (
+if not defined ENTRY_POINT if exist "%CD%\main.py" (
     set "PROJ_ROOT=%CD%\"
     set "ENTRY_POINT=main.py"
-    goto ENTRY_POINT_FOUND
 )
-if exist "%CD%\src\app.py" (
+if not defined ENTRY_POINT if exist "%CD%\src\app.py" (
     set "PROJ_ROOT=%CD%\"
     set "ENTRY_POINT=src\app.py"
-    goto ENTRY_POINT_FOUND
 )
 
 :: Check 3: In parent directory (if run.bat was moved into a subfolder)
-if exist "%PROJ_ROOT%..\app.py" (
+if not defined ENTRY_POINT if exist "%PROJ_ROOT%..\app.py" (
     cd /d "%PROJ_ROOT%.."
     set "PROJ_ROOT=%CD%\"
     set "ENTRY_POINT=app.py"
-    goto ENTRY_POINT_FOUND
 )
 
-:ENTRY_POINT_NOT_FOUND
-echo [ERROR] Python entry point (app.py / main.py / src\app.py) not found.
-echo.
-echo -------------------------------------------------------------
-echo Diagnostic Information:
-echo   Script Directory : %~dp0
-echo   Current Directory: %CD%
-echo -------------------------------------------------------------
-echo.
-echo Possible causes and solutions:
-echo 1. You may have copied or moved 'run.bat' out of the project folder.
-echo    - Do NOT copy 'run.bat' directly to your Desktop.
-echo    - Instead, right-click 'run.bat' in the project folder and choose:
-echo      'Show more options' -^> 'Send to' -^> 'Desktop (create shortcut)'.
-echo 2. The project directory was moved or renamed.
-echo.
-pause
-exit /b 1
+if not defined ENTRY_POINT (
+    echo [ERROR] Python entry point [app.py / main.py / src\app.py] not found.
+    echo.
+    echo -------------------------------------------------------------
+    echo Diagnostic Information:
+    echo   Script Directory : %~dp0
+    echo   Current Directory: %CD%
+    echo -------------------------------------------------------------
+    echo.
+    echo Possible causes and solutions:
+    echo 1. You may have copied or moved 'run.bat' out of the project folder.
+    echo    - Do NOT copy 'run.bat' directly to your Desktop.
+    echo    - Instead, right-click 'run.bat' in the project folder and choose:
+    echo      'Show more options' -^> 'Send to' -^> 'Desktop ^(create shortcut^)'.
+    echo 2. The project directory was moved or renamed.
+    echo.
+    pause
+    exit /b 1
+)
 
-:ENTRY_POINT_FOUND
 cd /d "%PROJ_ROOT%"
 
 echo [INFO] Entry point found: %ENTRY_POINT%
