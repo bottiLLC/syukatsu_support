@@ -18,6 +18,7 @@ from pydantic import ValidationError
 
 from src.models import (
     FileSearchTool,
+    InputMessage,
     ResponseRequestPayload,
     StreamTextDelta,
     UserConfig,
@@ -38,12 +39,15 @@ def test_response_request_payload_normalization() -> None:
     # String input should be normalized to InputMessage
     payload = ResponseRequestPayload(
         model="gpt-6.1-sol",
-        input="Hello World",  # type: ignore
+        input="Hello World",
     )
+    assert isinstance(payload.input, list)
     assert len(payload.input) == 1
-    assert payload.input[0].role == "user"
-    assert payload.input[0].content[0].type == "input_text"
-    assert payload.input[0].content[0].text == "Hello World"
+    msg = payload.input[0]
+    assert isinstance(msg, InputMessage)
+    assert msg.role == "user"
+    assert msg.content[0].type == "input_text"
+    assert msg.content[0].text == "Hello World"
 
 
 def test_reasoning_effort_luna_none_allowed() -> None:
@@ -52,7 +56,7 @@ def test_reasoning_effort_luna_none_allowed() -> None:
 
     payload = ResponseRequestPayload(
         model="gpt-6-luna",
-        input="Test Luna",  # type: ignore
+        input="Test Luna",
         reasoning=ReasoningOptions(effort="none"),
     )
     assert payload.reasoning is not None
@@ -67,7 +71,7 @@ def test_reasoning_effort_none_disallowed_for_astra_and_sol(disallowed_model: st
     with pytest.raises(ValidationError, match="gpt-6-luna のみ対応しています"):
         ResponseRequestPayload(
             model=disallowed_model,
-            input="Test Disallowed",  # type: ignore
+            input="Test Disallowed",
             reasoning=ReasoningOptions(effort="none"),
         )
 
@@ -80,7 +84,7 @@ def test_reasoning_effort_standard_levels_allowed(effort: str) -> None:
     for model in ["gpt-6-astra", "gpt-6.1-sol", "gpt-6-luna"]:
         payload = ResponseRequestPayload(
             model=model,
-            input="Test Standard",  # type: ignore
+            input="Test Standard",
             reasoning=ReasoningOptions(effort=effort),  # type: ignore[arg-type]
         )
         assert payload.reasoning is not None
@@ -93,15 +97,15 @@ def test_forbid_extra_fields() -> None:
     with pytest.raises(ValidationError):
         ResponseRequestPayload(
             model="gpt-5.4",
-            input="Test",  # type: ignore
-            invalid_field="should fail",  # type: ignore
+            input="Test",
+            invalid_field="should fail",  # type: ignore[call-arg]
         )
 
 
 def test_stream_text_delta_forbid_extra() -> None:
     """StreamTextDelta に余分なフィールドが指定された場合にバリデーションエラーとなることを検証します。"""
     with pytest.raises(ValidationError):
-        StreamTextDelta(delta="test", extra_field="fail")  # type: ignore
+        StreamTextDelta(delta="test", extra_field="fail")  # type: ignore[call-arg]
 
 
 def test_tools_serialization() -> None:
@@ -109,7 +113,7 @@ def test_tools_serialization() -> None:
     tool = FileSearchTool(vector_store_ids=["vs_123"])
     payload = ResponseRequestPayload(
         model="gpt-4o",
-        input="Query",  # type: ignore
+        input="Query",
         tools=[tool],
     )
     dumped = payload.model_dump(exclude_none=True)

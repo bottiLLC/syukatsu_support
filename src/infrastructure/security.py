@@ -39,24 +39,25 @@ log = structlog.get_logger()
 # 永続データディレクトリ（./data）の厳格隔離
 PROJECT_ROOT: Final[Path] = Path(__file__).resolve().parent.parent.parent
 DATA_DIR: Final[Path] = PROJECT_ROOT / "data"
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-
 CONFIG_FILE: Final[Path] = DATA_DIR / "config.json"
 KEY_FILE: Final[Path] = DATA_DIR / ".secret.key"
 
-# 旧保存先（%LOCALAPPDATA% またはルート）からの自動マイグレーション
-_legacy_app_dir = Path(os.path.expandvars(r"%LOCALAPPDATA%\SYUKATSU_Support"))
-if not CONFIG_FILE.exists():
-    if (_legacy_app_dir / "config.json").exists():
-        shutil.copy2(_legacy_app_dir / "config.json", CONFIG_FILE)
-    elif (PROJECT_ROOT / "config.json").exists():
-        shutil.copy2(PROJECT_ROOT / "config.json", CONFIG_FILE)
 
-if not KEY_FILE.exists():
-    if (_legacy_app_dir / ".secret.key").exists():
-        shutil.copy2(_legacy_app_dir / ".secret.key", KEY_FILE)
-    elif (PROJECT_ROOT / ".secret.key").exists():
-        shutil.copy2(PROJECT_ROOT / ".secret.key", KEY_FILE)
+def ensure_storage_initialized() -> None:
+    """永続化ストレージディレクトリを検証し、旧配置からのマイグレーションを透過的に実施します。"""
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    legacy_app_dir = Path(os.path.expandvars(r"%LOCALAPPDATA%\SYUKATSU_Support"))
+    if not CONFIG_FILE.exists():
+        if (legacy_app_dir / "config.json").exists():
+            shutil.copy2(legacy_app_dir / "config.json", CONFIG_FILE)
+        elif (PROJECT_ROOT / "config.json").exists():
+            shutil.copy2(PROJECT_ROOT / "config.json", CONFIG_FILE)
+
+    if not KEY_FILE.exists():
+        if (legacy_app_dir / ".secret.key").exists():
+            shutil.copy2(legacy_app_dir / ".secret.key", KEY_FILE)
+        elif (PROJECT_ROOT / ".secret.key").exists():
+            shutil.copy2(PROJECT_ROOT / ".secret.key", KEY_FILE)
 
 
 class SecurityManager:
@@ -65,6 +66,7 @@ class SecurityManager:
     @staticmethod
     def _get_or_create_key() -> bytes:
         """暗号化キーを取得または新規生成して返します。"""
+        ensure_storage_initialized()
         if KEY_FILE.exists():
             try:
                 return KEY_FILE.read_bytes()
@@ -114,6 +116,7 @@ class ConfigManager:
     @staticmethod
     def load() -> UserConfig:
         """設定ファイル (config.json) からユーザー設定を読み込みます。"""
+        ensure_storage_initialized()
         config_data: dict[str, Any] = {}
 
         if CONFIG_FILE.exists():
@@ -154,6 +157,7 @@ class ConfigManager:
     @staticmethod
     def save(config: UserConfig) -> None:
         """ユーザー設定を設定ファイル (config.json) に永続化します。"""
+        ensure_storage_initialized()
         try:
             data = config.model_dump(exclude={"api_key"})
             if config.api_key:

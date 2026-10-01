@@ -24,15 +24,17 @@ def get_resource_path(relative_path: str | Path) -> Path:
     return (base_path / relative_path).resolve()
 
 
-def clean_citation_markers(text: str) -> str:
+def clean_citation_markers(text: str | None) -> str | None:
     """LLMが内部的に出力した filecite タグを正規表現で削除します。
 
     Args:
-        text: 削除対象のテキスト
+        text: 削除対象のテキスト (None許容)
 
     Returns:
-        str: 内部タグが削除されたテキスト
+        str | None: 内部タグが削除されたテキスト
     """
+    if text is None:
+        return None
     if not text:
-        return text
+        return ""
     return re.sub(r"filecite[a-zA-Z0-9]*", "", text)

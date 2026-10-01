@@ -19,7 +19,7 @@ import pytest
 from openai import RateLimitError
 
 from src.infrastructure.openai_client import OpenAIClient
-from src.models import ResponseRequestPayload, StreamResponseCreated
+from src.models import ResponseRequestPayload, StreamResponseCreated, StreamTextDelta
 
 
 @pytest.mark.asyncio
@@ -73,6 +73,7 @@ async def test_process_text_delta() -> None:
     event_delta.delta = "Hello"
 
     result = client._process_event(event_delta)
+    assert isinstance(result, StreamTextDelta)
     assert result.delta == "Hello"
 
 
@@ -86,4 +87,5 @@ async def test_process_reasoning_text_delta() -> None:
     event_delta.delta = " Thinking..."
 
     result = client._process_event(event_delta)
+    assert isinstance(result, StreamTextDelta)
     assert result.delta == " Thinking..."

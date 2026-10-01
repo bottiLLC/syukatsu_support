@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import httpx
 import openai
 
 from src.core.errors import translate_api_error as src_translate
@@ -19,7 +20,8 @@ def test_permission_error_translation() -> None:
 
 def test_timeout_error_translation() -> None:
     """API タイムアウトエラーの翻訳を検証します。"""
-    err = openai.APITimeoutError(request=None)
+    req = httpx.Request("GET", "https://api.openai.com/v1")
+    err = openai.APITimeoutError(request=req)
     msg = src_translate(err)
     assert "タイムアウト" in msg
 
