@@ -30,7 +30,7 @@ import flet as ft
 
 from backup_manager import get_backup_dir, run_backup, set_backup_dir
 from src.core.utils import clean_citation_markers
-from src.models import ReasoningEffort
+from src.models import AppConfigDefaults, ReasoningEffort
 from src.state import AppState
 from src.styles import UI_COLORS
 
@@ -92,12 +92,25 @@ class SyukatsuSupportApp:
             no_wrap=False,
         )
 
+        current_model = self.state.config.model
+        if current_model not in ["gpt-6-astra", "gpt-6.1-sol", "gpt-6-luna"]:
+            current_model = AppConfigDefaults.DEFAULT_MODEL
+            self.state.config.model = current_model
+
+        reasoning_opts = (
+            ["max", "xhigh", "high", "medium", "low", "none"]
+            if current_model == "gpt-6-luna"
+            else ["max", "xhigh", "high", "medium", "low"]
+        )
+        if self.state.config.reasoning_effort not in reasoning_opts:
+            self.state.config.reasoning_effort = AppConfigDefaults.DEFAULT_REASONING
+
         self.model_combo = ft.Dropdown(
             label="モデル",
             options=[
-                ft.dropdown.Option("gpt-5.6-terra"),
-                ft.dropdown.Option("gpt-5.6-sol"),
-                ft.dropdown.Option("gpt-5.6-luna"),
+                ft.dropdown.Option("gpt-6-astra"),
+                ft.dropdown.Option("gpt-6.1-sol"),
+                ft.dropdown.Option("gpt-6-luna"),
             ],
             value=self.state.config.model,
             expand=True,
@@ -106,7 +119,7 @@ class SyukatsuSupportApp:
         )
         self.reasoning_combo = ft.Dropdown(
             label="推論強度",
-            options=[ft.dropdown.Option(o) for o in ["none", "minimal", "low", "medium", "high", "xhigh"]],
+            options=[ft.dropdown.Option(o) for o in reasoning_opts],
             value=self.state.config.reasoning_effort,
             expand=True,
             dense=True,
@@ -427,20 +440,42 @@ class SyukatsuSupportApp:
     # --- User Interactions ---
 
     async def _on_model_change(self, e: ft.ControlEvent) -> None:
-        """モデル変更イベントを処理し、高推論モデル選択時は警告モーダルを表示します。"""
-        selected_model = self.model_combo.value
-        if selected_model == "gpt-5.6-sol":
+        """モデル変更イベントを処理し、推論強度選択肢の動的切替および高額モデル選択時の警告を行います。"""
+        selected_model = self.model_combo.value or AppConfigDefaults.DEFAULT_MODEL
+
+        # 推論強度オプションの動的更新（none は luna のみ許可）
+        if selected_model == "gpt-6-luna":
+            opts = ["max", "xhigh", "high", "medium", "low", "none"]
+        else:
+            opts = ["max", "xhigh", "high", "medium", "low"]
+            if self.reasoning_combo.value == "none":
+                self.reasoning_combo.value = "medium"
+                self.state.config.reasoning_effort = "medium"
+
+        self.reasoning_combo.options = [ft.dropdown.Option(o) for o in opts]
+        if self.reasoning_combo.value not in opts:
+            self.reasoning_combo.value = opts[0]
+            self.state.config.reasoning_effort = cast(ReasoningEffort, opts[0])
+
+        if selected_model == "gpt-6-astra":
 
             def confirm_change(_e: ft.ControlEvent) -> None:
                 dlg.open = False
                 self.page.update()
 
             def cancel_change(_e: ft.ControlEvent) -> None:
-                self.model_combo.value = "gpt-5.6-terra"
+                self.model_combo.value = "gpt-6.1-sol"
+                self.reasoning_combo.options = [
+                    ft.dropdown.Option(o) for o in ["max", "xhigh", "high", "medium", "low"]
+                ]
+                if self.reasoning_combo.value == "none":
+                    self.reasoning_combo.value = "medium"
+                    self.state.config.reasoning_effort = "medium"
+                self.state.config.model = "gpt-6.1-sol"
                 dlg.open = False
                 self.page.update()
 
-            msg = f"{selected_model} は高度な推論を行うモデルですが、gpt-5.6-terraと比較して高額なコストが発生する可能性があります。モデルを変更しますか？"
+            msg = f"{selected_model} は最上位の高度推論モデルであり、gpt-6.1-sol や gpt-6-luna と比較して高額なコストが発生する可能性があります。モデルを変更しますか？"
             actions_list: list[ft.Control] = [
                 ft.TextButton("はい", on_click=confirm_change),
                 ft.TextButton("いいえ", on_click=cancel_change),
@@ -453,16 +488,25 @@ class SyukatsuSupportApp:
             )
             self.page.overlay.append(dlg)
             dlg.open = True
-            self.page.update()
+
+        await self._sync_to_state()
+        self.page.update()
 
     async def _sync_to_state(self) -> None:
         """UIコンポーネントの入力値を State へ同期します。"""
-        self.state.config.model = self.model_combo.value or "gpt-5.6-terra"
-        raw_effort = self.reasoning_combo.value or "high"
-        if raw_effort in ["none", "minimal", "low", "medium", "high", "xhigh"]:
+        self.state.config.model = self.model_combo.value or AppConfigDefaults.DEFAULT_MODEL
+        raw_effort = self.reasoning_combo.value or AppConfigDefaults.DEFAULT_REASONING
+        valid_efforts = (
+            ["max", "xhigh", "high", "medium", "low", "none"]
+            if self.state.config.model == "gpt-6-luna"
+            else ["max", "xhigh", "high", "medium", "low"]
+        )
+        if raw_effort in valid_efforts:
             self.state.config.reasoning_effort = cast(ReasoningEffort, raw_effort)
         else:
-            self.state.config.reasoning_effort = "high"
+            self.state.config.reasoning_effort = (
+                "medium" if raw_effort == "none" else AppConfigDefaults.DEFAULT_REASONING
+            )
         self.state.config.system_prompt_mode = self.mode_combo.value or "有価証券報告書 -財務分析-"
         self.state.config.use_file_search = self.use_file_search_cb.value or False
         self.state.config.current_vector_store_id = self.vs_combo.value

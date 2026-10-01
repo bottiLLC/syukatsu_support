@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap rescap">
+
+  <Identity
+    Name="BottiLLC.SyukatsuSupport"
+    Publisher="CN=BottiLLC"
+    Version="1.0.0.0"
+    ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>就職活動サポート AI</DisplayName>
+    <PublisherDisplayName>合同会社ぼっち</PublisherDisplayName>
+    <Logo>assets\StoreLogo.png</Logo>
+    <Description>有価証券報告書等の分析・志望動機作成を支援するAI就活アシスタントデスクトップアプリ</Description>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="ja-JP" />
+    <Resource Language="en-US" />
+  </Resources>
+
+  <Applications>
+    <Application Id="SyukatsuSupport"
+      Executable="syukatsu-support.exe"
+      EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="就職活動サポート AI"
+        Description="有価証券報告書等の分析・志望動機作成を支援するAI就活アシスタントデスクトップアプリ"
+        BackgroundColor="#2C3E50"
+        Square150x150Logo="assets\Square150x150Logo.png"
+        Square44x44Logo="assets\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="assets\Wide310x150Logo.png" ShortName="就活サポート" />
+        <uap:SplashScreen Image="assets\SplashScreen.png" BackgroundColor="#2C3E50" />
+      </uap:VisualElements>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>

@@ -133,7 +133,7 @@ def translate_api_error(e: Exception) -> str:
             return (
                 "【モデル設定エラー】 (Reasoning Effort Error)\n"
                 "選択した推論強度が、現在のモデルでサポートされていません。\n"
-                "推論強度を変更するか、対応するモデル（gpt-5.6-terra等）を選択してください。"
+                "推論強度を変更するか、対応するモデル（gpt-6-luna等）を選択してください。"
             )
         return (
             f"【リクエストエラー】 (BadRequestError)\n"

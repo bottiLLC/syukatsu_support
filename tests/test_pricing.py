@@ -63,6 +63,9 @@ class TestPricingTable:
     @pytest.mark.parametrize(
         "model_key",
         [
+            "gpt-6-astra",
+            "gpt-6.1-sol",
+            "gpt-6-luna",
             "gpt-5.6-terra",
             "gpt-5.6-sol",
             "gpt-5.6-luna",
@@ -77,7 +80,11 @@ class TestPricingTable:
     @pytest.mark.parametrize(
         "model, expected_input, expected_output, expected_cached",
         [
-            # Based on Pricing.md (Source of Truth)
+            # GPT-6 Series (Official)
+            ("gpt-6-astra", 10.00, 50.00, 1.00),
+            ("gpt-6.1-sol", 2.00, 10.00, 0.10),
+            ("gpt-6-luna", 0.10, 0.50, 0.01),
+            # Legacy / Compatibility Series
             ("gpt-5.6-sol", 5.00, 30.00, 0.50),
             ("gpt-5.6-terra", 2.00, 12.00, 0.20),
             ("gpt-5.6-luna", 0.20, 1.20, 0.02),

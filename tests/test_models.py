@@ -27,7 +27,7 @@ from src.models import (
 def test_user_config_defaults() -> None:
     """UserConfig の初期化時デフォルト値が仕様通りであることを検証します。"""
     config = UserConfig()
-    assert config.model == "gpt-5.6-terra"
+    assert config.model == "gpt-6.1-sol"
     assert config.reasoning_effort == "high"
     assert config.use_file_search is False
     assert config.api_key is None
@@ -37,13 +37,54 @@ def test_response_request_payload_normalization() -> None:
     """文字列入力が自動的に InputMessage 構造へ正規化されることを検証します。"""
     # String input should be normalized to InputMessage
     payload = ResponseRequestPayload(
-        model="gpt-5.4",
+        model="gpt-6.1-sol",
         input="Hello World",  # type: ignore
     )
     assert len(payload.input) == 1
     assert payload.input[0].role == "user"
     assert payload.input[0].content[0].type == "input_text"
     assert payload.input[0].content[0].text == "Hello World"
+
+
+def test_reasoning_effort_luna_none_allowed() -> None:
+    """gpt-6-luna では推論強度 none が許可されることを検証します。"""
+    from src.models import ReasoningOptions
+
+    payload = ResponseRequestPayload(
+        model="gpt-6-luna",
+        input="Test Luna",  # type: ignore
+        reasoning=ReasoningOptions(effort="none"),
+    )
+    assert payload.reasoning is not None
+    assert payload.reasoning.effort == "none"
+
+
+@pytest.mark.parametrize("disallowed_model", ["gpt-6-astra", "gpt-6.1-sol"])
+def test_reasoning_effort_none_disallowed_for_astra_and_sol(disallowed_model: str) -> None:
+    """gpt-6-astra および gpt-6.1-sol では推論強度 none が禁止されることを検証します。"""
+    from src.models import ReasoningOptions
+
+    with pytest.raises(ValidationError, match="gpt-6-luna のみ対応しています"):
+        ResponseRequestPayload(
+            model=disallowed_model,
+            input="Test Disallowed",  # type: ignore
+            reasoning=ReasoningOptions(effort="none"),
+        )
+
+
+@pytest.mark.parametrize("effort", ["max", "xhigh", "high", "medium", "low"])
+def test_reasoning_effort_standard_levels_allowed(effort: str) -> None:
+    """max, xhigh, high, medium, low は全モデルで許可されることを検証します。"""
+    from src.models import ReasoningOptions
+
+    for model in ["gpt-6-astra", "gpt-6.1-sol", "gpt-6-luna"]:
+        payload = ResponseRequestPayload(
+            model=model,
+            input="Test Standard",  # type: ignore
+            reasoning=ReasoningOptions(effort=effort),  # type: ignore[arg-type]
+        )
+        assert payload.reasoning is not None
+        assert payload.reasoning.effort == effort
 
 
 def test_forbid_extra_fields() -> None:

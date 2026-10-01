@@ -49,14 +49,16 @@ class ModelPricing:
 # 'Standard' ティアに基づく料金テーブル（不変マッピング）
 PRICING_TABLE: Final[MappingProxyType[str, ModelPricing]] = MappingProxyType(
     {
-        # GPT-5.6 Series
+        # GPT-6 Series (Official)
+        "gpt-6-astra": ModelPricing(input_price=10.00, output_price=50.00, cached_input_price=1.00),
+        "gpt-6.1-sol": ModelPricing(input_price=2.00, output_price=10.00, cached_input_price=0.10),
+        "gpt-6-luna": ModelPricing(input_price=0.10, output_price=0.50, cached_input_price=0.01),
+        # Legacy / Compatibility Series
         "gpt-5.6-sol": ModelPricing(input_price=5.00, output_price=30.00, cached_input_price=0.50),
         "gpt-5.6-terra": ModelPricing(input_price=2.00, output_price=12.00, cached_input_price=0.20),
         "gpt-5.6-luna": ModelPricing(input_price=0.20, output_price=1.20, cached_input_price=0.02),
-        # GPT-5.4 Series
         "gpt-5.4-pro": ModelPricing(input_price=30.00, output_price=180.00, cached_input_price=0.0),
         "gpt-5.4": ModelPricing(input_price=2.50, output_price=15.00, cached_input_price=0.25),
-        # Legacy Fallbacks
         "gpt-4o": ModelPricing(input_price=2.50, output_price=10.00, cached_input_price=1.25),
         "gpt-4o-mini": ModelPricing(
             input_price=0.150,

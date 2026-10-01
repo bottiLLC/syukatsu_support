@@ -21,11 +21,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-ReasoningEffort = Literal["none", "minimal", "low", "medium", "high", "xhigh"]
+ReasoningEffort = Literal["none", "low", "medium", "high", "xhigh", "max"]
+AvailableModel = Literal["gpt-6-astra", "gpt-6.1-sol", "gpt-6-luna"]
 
 
 # --- Constants / App Config Defaults ---
@@ -34,7 +35,7 @@ ReasoningEffort = Literal["none", "minimal", "low", "medium", "high", "xhigh"]
 class AppConfigDefaults:
     """アプリケーション設定のデフォルト値を定義する定数クラス。"""
 
-    DEFAULT_MODEL: str = "gpt-5.6-terra"
+    DEFAULT_MODEL: str = "gpt-6.1-sol"
     DEFAULT_REASONING: ReasoningEffort = "high"
 
 
@@ -48,7 +49,7 @@ class UserConfig(BaseModel):
 
     api_key: str | None = Field(default=None, description="復号化されたOpenAI APIキー。")
     model: str = Field(default=AppConfigDefaults.DEFAULT_MODEL, description="選択されたOpenAIモデルのID。")
-    reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"] = Field(
+    reasoning_effort: ReasoningEffort = Field(
         default=AppConfigDefaults.DEFAULT_REASONING,
         description="モデルの推論強度（reasoning effort）。",
     )
@@ -105,7 +106,7 @@ class ReasoningOptions(BaseModel):
     """推論強度オプションスキーマ。"""
 
     model_config = ConfigDict(extra="forbid")
-    effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"] = "medium"
+    effort: ReasoningEffort = "medium"
 
 
 class ResponseRequestPayload(BaseModel):
@@ -133,6 +134,15 @@ class ResponseRequestPayload(BaseModel):
                 }
             ]
         return v
+
+    @model_validator(mode="after")
+    def validate_model_and_reasoning(self) -> Self:
+        """モデルと推論強度の整合性を検証します。'none' は gpt-6-luna のみ利用可能です。"""
+        if self.reasoning and self.reasoning.effort == "none" and self.model != "gpt-6-luna":
+            raise ValueError(
+                f"モデル '{self.model}' では推論強度 'none' は利用できません。'none' は gpt-6-luna のみ対応しています。"
+            )
+        return self
 
 
 # --- Stream Response Event Models ---
