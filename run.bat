@@ -1,49 +1,121 @@
 @echo off
-cd /d "%~dp0"
+setlocal
+set "PROJ_ROOT=%~dp0"
+cd /d "%PROJ_ROOT%"
 
 echo ===================================================
-echo   App Launcher (Windows)
+echo   App Launcher (Windows / Python-only Environment)
 echo ===================================================
 echo.
 
-:: 1. Auto-detect and fix 'uv' command path
+:: 0. Force uv to use local system Python (disable downloading Python binaries)
+set "UV_PYTHON_PREFERENCE=only-system"
+
+:: 1. Auto-detect existing uv in standard locations
 where uv >nul 2>&1
 if %errorlevel% neq 0 (
     if exist "%USERPROFILE%\.cargo\bin\uv.exe" set "PATH=%USERPROFILE%\.cargo\bin;%PATH%"
     if exist "%LOCALAPPDATA%\bin\uv.exe" set "PATH=%LOCALAPPDATA%\bin;%PATH%"
+    if exist "%USERPROFILE%\.local\bin\uv.exe" set "PATH=%USERPROFILE%\.local\bin;%PATH%"
+    if exist "%APPDATA%\Python\Scripts\uv.exe" set "PATH=%APPDATA%\Python\Scripts;%PATH%"
 )
 
+:: 2. Bootstrap 'uv' via Python pip if missing
 where uv >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [ERROR] Package manager 'uv' not found.
-    echo Please install uv by running the following command in PowerShell:
-    echo powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-    echo.
-    pause
-    exit /b 1
+    where python >nul 2>&1
+    if %errorlevel% neq 0 (
+        echo [ERROR] Python is not installed or not in PATH.
+        echo Please install Python and ensure it is added to your environment variables.
+        echo.
+        pause
+        exit /b 1
+    )
+    echo [INFO] 'uv' package manager not found. Bootstrapping via pip...
+    python -m pip install --upgrade pip >nul 2>&1
+    python -m pip install uv
+    if %errorlevel% neq 0 (
+        echo [ERROR] Failed to install 'uv'.
+        echo.
+        pause
+        exit /b 1
+    )
+    echo [INFO] 'uv' installed successfully.
 )
 
-:: 2. Auto-detect Python entry point
+:: 3. Auto-detect Python entry point with multi-tier path resolution
 set "ENTRY_POINT="
-if exist "app.py" set "ENTRY_POINT=app.py"
-if not defined ENTRY_POINT (if exist "main.py" set "ENTRY_POINT=main.py")
-if not defined ENTRY_POINT (if exist "src\app.py" set "ENTRY_POINT=src\app.py")
 
-if not defined ENTRY_POINT (
-    echo [ERROR] Python entry point (app.py / main.py / src\app.py) not found.
-    echo.
-    pause
-    exit /b 1
+:: Check 1: In batch directory (%PROJ_ROOT%)
+if exist "%PROJ_ROOT%app.py" (
+    set "ENTRY_POINT=app.py"
+    goto ENTRY_POINT_FOUND
 )
+if exist "%PROJ_ROOT%main.py" (
+    set "ENTRY_POINT=main.py"
+    goto ENTRY_POINT_FOUND
+)
+if exist "%PROJ_ROOT%src\app.py" (
+    set "ENTRY_POINT=src\app.py"
+    goto ENTRY_POINT_FOUND
+)
+
+:: Check 2: In current working directory (%CD%)
+if exist "%CD%\app.py" (
+    set "PROJ_ROOT=%CD%\"
+    set "ENTRY_POINT=app.py"
+    goto ENTRY_POINT_FOUND
+)
+if exist "%CD%\main.py" (
+    set "PROJ_ROOT=%CD%\"
+    set "ENTRY_POINT=main.py"
+    goto ENTRY_POINT_FOUND
+)
+if exist "%CD%\src\app.py" (
+    set "PROJ_ROOT=%CD%\"
+    set "ENTRY_POINT=src\app.py"
+    goto ENTRY_POINT_FOUND
+)
+
+:: Check 3: In parent directory (if run.bat was moved into a subfolder)
+if exist "%PROJ_ROOT%..\app.py" (
+    cd /d "%PROJ_ROOT%.."
+    set "PROJ_ROOT=%CD%\"
+    set "ENTRY_POINT=app.py"
+    goto ENTRY_POINT_FOUND
+)
+
+:ENTRY_POINT_NOT_FOUND
+echo [ERROR] Python entry point (app.py / main.py / src\app.py) not found.
+echo.
+echo -------------------------------------------------------------
+echo Diagnostic Information:
+echo   Script Directory : %~dp0
+echo   Current Directory: %CD%
+echo -------------------------------------------------------------
+echo.
+echo Possible causes and solutions:
+echo 1. You may have copied or moved 'run.bat' out of the project folder.
+echo    - Do NOT copy 'run.bat' directly to your Desktop.
+echo    - Instead, right-click 'run.bat' in the project folder and choose:
+echo      'Show more options' -^> 'Send to' -^> 'Desktop (create shortcut)'.
+echo 2. The project directory was moved or renamed.
+echo.
+pause
+exit /b 1
+
+:ENTRY_POINT_FOUND
+cd /d "%PROJ_ROOT%"
 
 echo [INFO] Entry point found: %ENTRY_POINT%
+echo [INFO] Working directory: %PROJ_ROOT%
 
-:: 3. Auto-create .venv and sync package dependencies
+:: 4. Auto-create .venv and sync package dependencies
 if not exist ".venv" (
-    echo [INFO] Virtual environment (.venv) not found. Creating virtual environment...
-    uv venv
+    echo [INFO] Creating virtual environment...
+    uv venv --python python
     if %errorlevel% neq 0 (
-        echo [ERROR] Failed to create virtual environment (.venv).
+        echo [ERROR] Failed to create virtual environment .venv.
         echo.
         pause
         exit /b %errorlevel%
@@ -52,10 +124,10 @@ if not exist ".venv" (
 )
 
 if exist "pyproject.toml" (
-    echo [INFO] Verifying and syncing package dependencies (uv sync)...
+    echo [INFO] Syncing dependencies...
     uv sync
     if %errorlevel% neq 0 (
-        echo [ERROR] Dependency sync (uv sync) failed.
+        echo [ERROR] Dependency sync [uv sync] failed.
         echo Please check your pyproject.toml configuration.
         echo.
         pause
@@ -63,12 +135,17 @@ if exist "pyproject.toml" (
     )
 )
 
-:: 4. Launch App
+:: 5. Launch Application
 echo.
-echo [INFO] Launching App...
+echo [INFO] Launching %ENTRY_POINT% ...
 echo.
 
-uv run python "%ENTRY_POINT%"
+findstr /i "streamlit" pyproject.toml >nul 2>&1
+if %errorlevel% equ 0 (
+    uv run streamlit run "%ENTRY_POINT%" --server.headless false
+) else (
+    uv run python "%ENTRY_POINT%"
+)
 
 if %errorlevel% neq 0 (
     echo.
