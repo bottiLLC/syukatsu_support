@@ -29,9 +29,9 @@ from typing import Final
 UI_COLORS: Final[MappingProxyType[str, str]] = MappingProxyType(
     {
         "TITLE": "#2c3e50",
-        "USER_BG": "#ecf0f1",
-        "USER_FG": "#2c3e50",
-        "AI_FG": "#16a085",
+        "USER_BG": "#e8eaf6",
+        "USER_FG": "#0d47a1",
+        "AI_FG": "#000000",
         "ERROR_FG": "red",
         "ID_FG": "blue",
         "LABEL_FG": "gray",

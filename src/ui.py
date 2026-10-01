@@ -63,7 +63,7 @@ class SyukatsuSupportApp:
         self.state.on_vs_updated = self._update_vs_combo
 
         self.chat_list = ft.ListView(expand=True, spacing=10, auto_scroll=True)
-        self.current_ai_message: ft.Text | None = None
+        self.current_ai_message: ft.Markdown | None = None
         self.current_ai_text: str = ""
 
         self._build_ui()
@@ -277,12 +277,32 @@ class SyukatsuSupportApp:
 
         self.page.update()
 
+    @staticmethod
+    def _create_ai_markdown_style() -> ft.MarkdownStyleSheet:
+        """AI返答用のマークダウン文字色・書式スタイルシートを生成します。"""
+        fg_color = UI_COLORS["AI_FG"]
+        return ft.MarkdownStyleSheet(
+            p_text_style=ft.TextStyle(color=fg_color),
+            h1_text_style=ft.TextStyle(color=fg_color, weight=ft.FontWeight.BOLD),
+            h2_text_style=ft.TextStyle(color=fg_color, weight=ft.FontWeight.BOLD),
+            h3_text_style=ft.TextStyle(color=fg_color, weight=ft.FontWeight.BOLD),
+            h4_text_style=ft.TextStyle(color=fg_color, weight=ft.FontWeight.BOLD),
+            h5_text_style=ft.TextStyle(color=fg_color, weight=ft.FontWeight.BOLD),
+            h6_text_style=ft.TextStyle(color=fg_color, weight=ft.FontWeight.BOLD),
+            strong_text_style=ft.TextStyle(color=fg_color, weight=ft.FontWeight.BOLD),
+            em_text_style=ft.TextStyle(color=fg_color, italic=True),
+            list_bullet_text_style=ft.TextStyle(color=fg_color),
+            table_body_text_style=ft.TextStyle(color=fg_color),
+            table_head_text_style=ft.TextStyle(color=fg_color, weight=ft.FontWeight.BOLD),
+            blockquote_text_style=ft.TextStyle(color=fg_color),
+        )
+
     async def _append_log(self, text: str, tag: str) -> None:
         """ログビューにメッセージまたはストリーミングテキストを追加します。"""
         if tag == "user":
             self.chat_list.controls.append(
                 ft.Container(
-                    content=ft.Text(text, color=ft.Colors.WHITE, selectable=True),
+                    content=ft.Text(text, color=UI_COLORS["USER_FG"], selectable=True),
                     bgcolor=UI_COLORS["USER_BG"],
                     border_radius=5,
                     padding=10,
@@ -293,7 +313,12 @@ class SyukatsuSupportApp:
         elif tag == "ai":
             if not self.current_ai_message:
                 self.current_ai_text = text
-                ai_msg = ft.Text("", color=UI_COLORS["AI_FG"], selectable=True)
+                ai_msg = ft.Markdown(
+                    value="",
+                    selectable=True,
+                    extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+                    md_style_sheet=self._create_ai_markdown_style(),
+                )
                 self.current_ai_message = ai_msg
                 self.chat_list.controls.append(ai_msg)
             else:
