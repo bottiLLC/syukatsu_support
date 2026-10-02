@@ -16,11 +16,18 @@ from src.core.utils import get_resource_path
 log = structlog.get_logger()
 
 # --- Analysis Mode Constants ---
-MODE_FINANCIAL: Final[str] = "有価証券報告書 -財務分析-"
-MODE_HUMAN_CAPITAL: Final[str] = "有価証券報告書 -人的資本分析-"
+MODE_FINANCIAL: Final[str] = "財務分析"
+MODE_HUMAN_CAPITAL: Final[str] = "人的資本分析"
 MODE_ENTRY_SHEET: Final[str] = "志望動機検討"
-MODE_COMPETITOR_ANALYSIS: Final[str] = "有価証券報告書 -企業・経年比較分析-"
+MODE_COMPETITOR_ANALYSIS: Final[str] = "企業・経年比較分析"
 MODE_NO_PROMPT: Final[str] = "システムプロンプトなし"
+
+# 旧分析モード名との後方互換マッピング
+LEGACY_MODE_MAPPING: Final[dict[str, str]] = {
+    "有価証券報告書 -財務分析-": MODE_FINANCIAL,
+    "有価証券報告書 -人的資本分析-": MODE_HUMAN_CAPITAL,
+    "有価証券報告書 -企業・経年比較分析-": MODE_COMPETITOR_ANALYSIS,
+}
 
 
 class PromptManager:
@@ -46,11 +53,16 @@ class PromptManager:
         self._load()
 
     def _load(self) -> None:
-        """設定ファイルからプロンプトを読み込みます。"""
+        """設定ファイルからプロンプトを読み込み、旧キーがあれば透過的に正規化します。"""
         if self.filepath.exists():
             try:
                 with self.filepath.open("r", encoding="utf-8") as f:
-                    self._prompts = json.load(f)
+                    raw_prompts: dict[str, str] = json.load(f)
+                migrated: dict[str, str] = {}
+                for k, v in raw_prompts.items():
+                    norm_k = LEGACY_MODE_MAPPING.get(k, k)
+                    migrated[norm_k] = v
+                self._prompts = migrated
                 return
             except (OSError, json.JSONDecodeError) as e:
                 log.error("Failed to read prompt JSON", error=str(e), path=str(self.filepath))
@@ -73,7 +85,7 @@ class PromptManager:
             log.error("Failed to save prompt JSON", error=str(e), path=str(self.filepath))
 
     def get_prompt(self, mode_name: str) -> str:
-        """指定された分析モードのプロンプト文字列を返します。
+        """指定された分析モードのプロンプト文字列を返します。旧名称キーにも自動対応します。
 
         Args:
             mode_name: 分析モードの名称
@@ -81,7 +93,8 @@ class PromptManager:
         Returns:
             str: 該当するシステムプロンプト文字列
         """
-        return self._prompts.get(mode_name, "")
+        norm_name = LEGACY_MODE_MAPPING.get(mode_name, mode_name)
+        return self._prompts.get(norm_name, "")
 
     def get_all_modes(self) -> list[str]:
         """利用可能な全分析モードのリストを返します。

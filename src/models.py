@@ -21,12 +21,27 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
 from typing import Any, Final, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 ReasoningEffort = Literal["none", "low", "medium", "high", "xhigh", "max"]
 AvailableModel = Literal["gpt-6-astra", "gpt-6.1-sol", "gpt-6-luna"]
+
+
+class ViewMode(StrEnum):
+    """UI表示モード定義。"""
+
+    SIMPLE = "simple"
+    ADVANCED = "advanced"
+
+
+class AnalysisMethod(StrEnum):
+    """分析実行方式の定義。"""
+
+    DIRECT = "direct"  # 単一有報PDFの直接全文分析（No-RAG）
+    RAG = "rag"  # Vector Storeを用いた横断検索分析
 
 
 # --- Constants / App Config Defaults ---
@@ -48,18 +63,29 @@ class UserConfig(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="ignore")
 
     api_key: str | None = Field(default=None, description="復号化されたOpenAI APIキー。")
+    view_mode: ViewMode = Field(default=ViewMode.SIMPLE, description="UI表示モード（シンプル/詳細）。")
     model: str = Field(default=AppConfigDefaults.DEFAULT_MODEL, description="選択されたOpenAIモデルのID。")
     reasoning_effort: ReasoningEffort = Field(
         default=AppConfigDefaults.DEFAULT_REASONING,
         description="モデルの推論強度（reasoning effort）。",
     )
     system_prompt_mode: str = Field(
-        default="有価証券報告書 -財務分析-",
+        default="財務分析",
         description="現在選択されている分析戦略モード。",
     )
     last_response_id: str | None = Field(
         default=None,
         description="コンテキストの継続性を保つための最後のレスポンスID。",
+    )
+
+    # Input File & Analysis Method Configuration
+    active_pdf_path: str | None = Field(
+        default=None,
+        description="選択中の有価証券報告書 (PDF) のローカル絶対パス。",
+    )
+    analysis_method: AnalysisMethod = Field(
+        default=AnalysisMethod.DIRECT,
+        description="分析実行方式（直接分析またはRAG）。",
     )
 
     # RAG Configuration
@@ -78,12 +104,20 @@ class InputTextContent(BaseModel):
     text: str
 
 
+class InputFileContent(BaseModel):
+    """ファイル入力コンテンツを表すスキーマ（Responses API）。"""
+
+    model_config = ConfigDict(extra="forbid")
+    type: Literal["input_file"] = "input_file"
+    file_id: str
+
+
 class InputMessage(BaseModel):
     """会話メッセージ入力（ロールとコンテンツ）を表すスキーマ。"""
 
     model_config = ConfigDict(extra="forbid")
     role: Literal["user", "assistant"]
-    content: list[InputTextContent]
+    content: list[InputTextContent | InputFileContent]
 
 
 class FileSearchTool(BaseModel):

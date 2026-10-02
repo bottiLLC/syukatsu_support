@@ -16,6 +16,7 @@
 """就職活動サポートアプリ メイン UI モジュール。
 
 Flet を使用したデスクトップ GUI の構築、リアクティブなステート連携、
+シンプルモード・詳細モードの切り替え、PDF直接投入・RAG分析、
 および各種分析・ナレッジベース操作のユーザーイベントハンドラを提供します。
 """
 
@@ -29,8 +30,13 @@ from typing import cast
 import flet as ft
 
 from src.core.docx_exporter import export_markdown_to_docx
+from src.core.prompts import (
+    MODE_ENTRY_SHEET,
+    MODE_FINANCIAL,
+    MODE_HUMAN_CAPITAL,
+)
 from src.core.utils import clean_citation_markers, extract_markdown_content
-from src.models import AppConfigDefaults, ReasoningEffort
+from src.models import AnalysisMethod, AppConfigDefaults, ReasoningEffort, ViewMode
 from src.state import AppState
 from src.styles import UI_COLORS
 
@@ -48,11 +54,11 @@ class SyukatsuSupportApp:
         self.page = page
         self.state = state
         self.page.title = "SYUKATSU Support - 合同会社ぼっち (v2.3.0)"
-        self.page.padding = 20
+        self.page.padding = 15
         self.page.theme_mode = ft.ThemeMode.LIGHT
 
         # Set default window size to fit layout without scrolling
-        self.page.window.width = 1350
+        self.page.window.width = 1380
         self.page.window.height = 980
 
         # State Binding Setup
@@ -73,7 +79,251 @@ class SyukatsuSupportApp:
 
     def _build_ui(self) -> None:
         """メイン画面の各コンポーネントをレイアウトに配置します。"""
-        # --- Left Panel ---
+        # --- Top AppBar: 常駐型モード切り替えヘッダー ---
+        self._build_appbar()
+
+        # --- Left Panels: シンプルモード & 詳細モード ---
+        self._build_simple_panel()
+        self._build_advanced_panel()
+
+        # 左パネルの動的コンテナ（現在選択されているモードのパネルを格納）
+        self.left_panel_container = ft.Container(
+            content=self.simple_panel if self.state.config.view_mode == ViewMode.SIMPLE else self.advanced_panel,
+            width=430,
+        )
+
+        # --- Right Panel: レポート出力・ストリーミング・操作エリア ---
+        self._build_right_panel()
+
+        # Main Layout (左右分割)
+        main_row = ft.Row(
+            [self.left_panel_container, ft.VerticalDivider(width=1), self.right_column],
+            expand=True,
+            vertical_alignment=ft.CrossAxisAlignment.START,
+        )
+
+        # Status Bar
+        self.status_text = ft.Text(self.state.status_message, size=12)
+        self.cost_text = ft.Text(self.state.cost_info, size=12)
+        bottom_bar = ft.Container(
+            content=ft.Row([self.status_text, self.cost_text], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            padding=ft.Padding(10, 5, 10, 5),
+            bgcolor=ft.Colors.GREY_200,
+            border_radius=5,
+        )
+
+        self.page.add(
+            ft.Column(
+                [
+                    main_row,
+                    bottom_bar,
+                ],
+                expand=True,
+            )
+        )
+
+    def _build_appbar(self) -> None:
+        """AppBar 常駐型セグメントボタンによるモード切替ヘッダーを構築します。"""
+        self.mode_segment = ft.SegmentedButton(
+            segments=[
+                ft.Segment(
+                    value=ViewMode.SIMPLE,
+                    label=ft.Text("🔰 かんたん (シンプル)"),
+                    icon=ft.Icon(ft.Icons.LIGHTBULB_OUTLINE),
+                ),
+                ft.Segment(
+                    value=ViewMode.ADVANCED,
+                    label=ft.Text("⚙️ 詳細 (カスタム)"),
+                    icon=ft.Icon(ft.Icons.TUNE),
+                ),
+            ],
+            selected={self.state.config.view_mode},
+            allow_multiple_selection=False,
+            on_change=self._on_mode_change,
+        )
+
+        self.page.appbar = ft.AppBar(
+            leading=ft.Icon(ft.Icons.AUTO_AWESOME, color=ft.Colors.BLUE_600, size=26),
+            title=ft.Text("就職活動サポート AI (SYUKATSU Support)", weight=ft.FontWeight.BOLD, size=18),
+            center_title=False,
+            bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
+            actions=[
+                ft.Container(
+                    content=self.mode_segment,
+                    margin=ft.margin.only(right=16),
+                )
+            ],
+        )
+
+    def _build_simple_panel(self) -> None:
+        """シンプルモード: 直感的な3ステップ動線パネルを構築します。"""
+        # [STEP 1] APIキー状態コンポーネント
+        self.simple_api_icon = ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.GREEN_600, size=20)
+        self.simple_api_label = ft.Text("APIキー設定", size=13, weight=ft.FontWeight.W_500)
+        self.simple_api_btn = ft.OutlinedButton(
+            "設定 / 変更",
+            icon=ft.Icons.KEY,
+            on_click=self._on_open_api_key_dialog,
+        )
+
+        step1_card = ft.Card(
+            content=ft.Container(
+                content=ft.Row(
+                    [
+                        ft.Text("STEP 1", weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
+                        self.simple_api_icon,
+                        self.simple_api_label,
+                        ft.Container(expand=True),
+                        self.simple_api_btn,
+                    ],
+                    alignment=ft.MainAxisAlignment.START,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                padding=12,
+            ),
+            elevation=1,
+        )
+
+        # [STEP 2] 有価証券報告書 (PDF) ドロップ＆選択コンポーネント
+        self.simple_file_name = ft.Text(
+            "有価証券報告書 (PDF) が未選択です",
+            size=13,
+            weight=ft.FontWeight.BOLD,
+            color=ft.Colors.GREY_800,
+            text_align=ft.TextAlign.CENTER,
+        )
+        self.simple_file_meta = ft.Text("", size=11, color=ft.Colors.GREY_600)
+        self.simple_clear_pdf_btn = ft.TextButton(
+            "✕ 解除",
+            icon=ft.Icons.CLOSE,
+            visible=False,
+            on_click=self._on_clear_pdf,
+        )
+
+        self.simple_pick_pdf_btn = ft.ElevatedButton(
+            "有報PDFを選択する",
+            icon=ft.Icons.UPLOAD_FILE,
+            on_click=self._on_pick_pdf,
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=8),
+                padding=ft.Padding(16, 12, 16, 12),
+            ),
+        )
+
+        step2_drop_zone = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Icon(ft.Icons.PICTURE_AS_PDF, size=42, color=ft.Colors.BLUE_600),
+                    ft.Text(
+                        "EDINETからダウンロードした\n有価証券報告書 (PDF) を指定",
+                        size=14,
+                        weight=ft.FontWeight.BOLD,
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                    self.simple_pick_pdf_btn,
+                    self.simple_file_name,
+                    self.simple_file_meta,
+                    self.simple_clear_pdf_btn,
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                alignment=ft.MainAxisAlignment.CENTER,
+                spacing=6,
+            ),
+            border=ft.border.all(1.5, ft.Colors.BLUE_300),
+            border_radius=10,
+            padding=16,
+            bgcolor=ft.Colors.BLUE_50,
+        )
+
+        step2_card = ft.Card(
+            content=ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Text(
+                            "STEP 2: 有価証券報告書 (PDF) を指定", weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900
+                        ),
+                        step2_drop_zone,
+                    ],
+                    spacing=8,
+                ),
+                padding=12,
+            ),
+            elevation=1,
+        )
+
+        # [STEP 3] 3大プリセット分析ボタン群
+        self.btn_preset_finance = ft.FilledButton(
+            "１．財務分析",
+            icon=ft.Icons.ANALYTICS,
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=8),
+                padding=ft.Padding(16, 14, 16, 14),
+            ),
+            on_click=lambda _: self.page.run_task(self._on_preset_click, MODE_FINANCIAL),
+            expand=True,
+        )
+        self.btn_preset_human_capital = ft.FilledButton(
+            "２．人的資本分析",
+            icon=ft.Icons.PEOPLE_ALT,
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=8),
+                padding=ft.Padding(16, 14, 16, 14),
+                bgcolor=ft.Colors.TEAL_700,
+            ),
+            on_click=lambda _: self.page.run_task(self._on_preset_click, MODE_HUMAN_CAPITAL),
+            expand=True,
+        )
+        self.btn_preset_entry_sheet = ft.FilledButton(
+            "３．志望動機検討",
+            icon=ft.Icons.LIGHTBULB,
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=8),
+                padding=ft.Padding(16, 14, 16, 14),
+                bgcolor=ft.Colors.AMBER_800,
+            ),
+            on_click=lambda _: self.page.run_task(self._on_preset_click, MODE_ENTRY_SHEET),
+            expand=True,
+        )
+
+        step3_card = ft.Card(
+            content=ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Text(
+                            "STEP 3: 分析する観点を選択（ワンクリックで実行）",
+                            weight=ft.FontWeight.BOLD,
+                            color=ft.Colors.BLUE_900,
+                        ),
+                        ft.Text(
+                            "ボタンを押すと、AIが有報を精読し自動でレポートを生成します。",
+                            size=11,
+                            color=ft.Colors.GREY_600,
+                        ),
+                        self.btn_preset_finance,
+                        self.btn_preset_human_capital,
+                        self.btn_preset_entry_sheet,
+                    ],
+                    spacing=10,
+                ),
+                padding=14,
+            ),
+            elevation=1,
+        )
+
+        self.simple_panel = ft.Column(
+            [
+                step1_card,
+                step2_card,
+                step3_card,
+            ],
+            spacing=10,
+            scroll=ft.ScrollMode.ADAPTIVE,
+            expand=True,
+        )
+
+    def _build_advanced_panel(self) -> None:
+        """詳細モード: 自由プロンプト入力、モデル・推論強度・RAG/直接分析を包含したパネルを構築します。"""
+        # APIキー
         self.api_key_field = ft.TextField(
             label="OpenAI APIキー",
             password=True,
@@ -83,15 +333,41 @@ class SyukatsuSupportApp:
             dense=True,
         )
         self.api_key_btn = ft.ElevatedButton("登録", on_click=self._on_register_key)
-
         self.api_key_disclaimer = ft.Text(
-            "※入力されたAPIキーは本PC内（./data）にのみ暗号化保存され、\n 外部へ送信・保持されることはありません。",
-            color=ft.Colors.RED_700,
+            "※APIキーは本PC内（./data）に暗号化保存され、外部送信されません。",
+            color=ft.Colors.GREY_600,
             size=10.5,
-            weight=ft.FontWeight.BOLD,
-            no_wrap=False,
         )
 
+        # PDF直接指定
+        self.adv_file_name = ft.Text("有報PDF: 未選択", size=12, color=ft.Colors.GREY_700, weight=ft.FontWeight.BOLD)
+        self.adv_pick_pdf_btn = ft.OutlinedButton("PDF選択", icon=ft.Icons.UPLOAD_FILE, on_click=self._on_pick_pdf)
+        self.adv_clear_pdf_btn = ft.TextButton("解除", icon=ft.Icons.CLOSE, visible=False, on_click=self._on_clear_pdf)
+
+        pdf_select_row = ft.Row(
+            [
+                self.adv_pick_pdf_btn,
+                ft.Container(content=self.adv_file_name, expand=True),
+                self.adv_clear_pdf_btn,
+            ],
+            alignment=ft.MainAxisAlignment.START,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+
+        # 分析方式の切り替え
+        self.method_radio = ft.RadioGroup(
+            content=ft.Row(
+                [
+                    ft.Radio(value=AnalysisMethod.DIRECT, label="⚡ 直接分析 (PDF全文・高速)"),
+                    ft.Radio(value=AnalysisMethod.RAG, label="📚 RAG分析 (Vector Store)"),
+                ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            ),
+            value=self.state.config.analysis_method,
+            on_change=self._on_analysis_method_change,
+        )
+
+        # モデル & 推論強度
         current_model = self.state.config.model
         if current_model not in ["gpt-6-astra", "gpt-6.1-sol", "gpt-6-luna"]:
             current_model = AppConfigDefaults.DEFAULT_MODEL
@@ -125,6 +401,7 @@ class SyukatsuSupportApp:
             dense=True,
         )
 
+        # RAGナレッジベース設定
         self.vs_combo = ft.Dropdown(
             label="Vector Store",
             options=[],
@@ -132,15 +409,19 @@ class SyukatsuSupportApp:
             dense=True,
             width=390,
         )
-        self.use_file_search_cb = ft.Checkbox(label="ファイル検索(RAG)を使用", value=self.state.config.use_file_search)
+        self.use_file_search_cb = ft.Checkbox(
+            label="File Search (RAG) ツールを使用",
+            value=self.state.config.use_file_search,
+            on_change=self._on_toggle_file_search,
+        )
         self.rag_btn = ft.ElevatedButton("🛠️ ナレッジベース管理", on_click=self._on_open_rag_manager)
 
-        # --- Prompt Mode Selection (Dynamically loaded from JSON) ---
+        # プロンプト設定
         prompt_options = [ft.dropdown.Option(m) for m in self.state.available_prompt_modes]
         valid_val = (
             self.state.config.system_prompt_mode
             if self.state.config.system_prompt_mode in self.state.available_prompt_modes
-            else None
+            else (self.state.available_prompt_modes[0] if self.state.available_prompt_modes else None)
         )
 
         self.mode_combo = ft.Dropdown(
@@ -156,25 +437,30 @@ class SyukatsuSupportApp:
             label="システムプロンプト",
             multiline=True,
             width=390,
-            min_lines=10,
-            max_lines=14,
+            min_lines=8,
+            max_lines=12,
             value=self.state.get_system_prompt(self.state.config.system_prompt_mode),
             text_size=12,
         )
         self.clear_btn = ft.ElevatedButton("🧹 コンテキスト消去", on_click=self._on_clear_context)
 
-        left_column = ft.Column(
+        self.advanced_panel = ft.Column(
             [
-                ft.Text("企業分析設定", size=18, weight=ft.FontWeight.BOLD),
-                ft.Divider(),
+                ft.Text("カスタム分析設定", size=16, weight=ft.FontWeight.BOLD),
+                ft.Divider(height=1),
                 ft.Row([self.api_key_field, self.api_key_btn]),
                 self.api_key_disclaimer,
+                ft.Divider(height=1),
+                ft.Text("有価証券報告書 (PDF)", weight=ft.FontWeight.BOLD, size=13),
+                pdf_select_row,
+                ft.Text("分析方式", weight=ft.FontWeight.BOLD, size=13),
+                self.method_radio,
                 ft.Row([self.model_combo, self.reasoning_combo]),
-                ft.Divider(),
-                ft.Text("ナレッジベース (RAG)", weight=ft.FontWeight.BOLD),
+                ft.Divider(height=1),
+                ft.Text("ナレッジベース (RAG)", weight=ft.FontWeight.BOLD, size=13),
                 self.vs_combo,
-                self.rag_btn,
-                self.use_file_search_cb,
+                ft.Row([self.rag_btn, self.use_file_search_cb], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                ft.Divider(height=1),
                 self.mode_combo,
                 self.sys_prompt_field,
                 self.clear_btn,
@@ -182,21 +468,24 @@ class SyukatsuSupportApp:
             width=410,
             spacing=6,
             scroll=ft.ScrollMode.ADAPTIVE,
+            expand=True,
         )
 
-        # --- Right Panel ---
+    def _build_right_panel(self) -> None:
+        """右パネル: レポート出力、ストリーミング、自由入力（詳細時）および保存・停止ボタン群を構築します。"""
         self.response_id_text = ft.Text(
             f"前回レスポンスID: {self.state.config.last_response_id or 'None'}",
             size=12,
             color=ft.Colors.GREY_600,
         )
+        self.pdf_badge_text = ft.Text("", size=12, color=ft.Colors.BLUE_800, weight=ft.FontWeight.BOLD)
 
         # Log view container
         log_container = ft.Container(
             content=self.chat_list,
             border=ft.border.all(1, ft.Colors.GREY_400),
-            border_radius=5,
-            padding=10,
+            border_radius=6,
+            padding=12,
             expand=True,
             bgcolor=ft.Colors.WHITE,
         )
@@ -212,69 +501,214 @@ class SyukatsuSupportApp:
         )
         self.send_btn = ft.ElevatedButton("送信 🚀", on_click=self._on_submit_button)
         self.stop_btn = ft.ElevatedButton("停止 ⏹️", on_click=self._on_stop_generation, disabled=True)
-        self.save_btn = ft.ElevatedButton("保存 💾", on_click=self._on_save_log)
+        self.save_btn = ft.ElevatedButton("レポート保存 💾", on_click=self._on_save_log)
 
-        input_row = ft.Row(
+        # 詳細モード用リクエスト行
+        self.advanced_input_row = ft.Row(
             [
                 self.input_field,
                 ft.Column([self.send_btn, self.stop_btn, self.save_btn], alignment=ft.MainAxisAlignment.START),
-            ]
+            ],
+            visible=self.state.config.view_mode == ViewMode.ADVANCED,
         )
 
-        right_column = ft.Column(
+        # シンプルモード用アクション行（入力不要、停止と保存のみ）
+        self.simple_actions_row = ft.Row(
+            [
+                ft.Text(
+                    "※分析結果は下記ボタンから Word / テキストとして保存できます。", size=12, color=ft.Colors.GREY_700
+                ),
+                ft.Container(expand=True),
+                self.stop_btn,
+                self.save_btn,
+            ],
+            visible=self.state.config.view_mode == ViewMode.SIMPLE,
+            alignment=ft.MainAxisAlignment.END,
+        )
+
+        self.right_column = ft.Column(
             [
                 ft.Row(
                     [
-                        ft.Text("レポート (応答履歴)", size=18, weight=ft.FontWeight.BOLD),
+                        ft.Row(
+                            [
+                                ft.Text("レポート (応答履歴)", size=18, weight=ft.FontWeight.BOLD),
+                                self.pdf_badge_text,
+                            ],
+                            spacing=10,
+                        ),
                         self.response_id_text,
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 ),
                 log_container,
-                input_row,
+                self.simple_actions_row,
+                self.advanced_input_row,
             ],
             expand=True,
         )
 
-        # Main Layout
-        main_row = ft.Row(
-            [left_column, ft.VerticalDivider(), right_column],
+    # --- Mode & PDF Switching Handlers ---
+
+    async def _on_mode_change(self, e: ft.ControlEvent) -> None:
+        """AppBarのセグメントボタンによるモード切り替えを処理します。"""
+        new_mode = next(iter(self.mode_segment.selected))
+        await self.state.set_view_mode(new_mode)
+
+    async def _on_pick_pdf(self, e: ft.ControlEvent) -> None:
+        """ファイルピッカーを起動し、有価証券報告書 (PDF) を指定します。"""
+        file_picker = ft.FilePicker()
+        files = await file_picker.pick_files(
+            dialog_title="有価証券報告書 (PDF) を選択",
+            allowed_extensions=["pdf"],
+            allow_multiple=False,
+        )
+        if files and files[0].path:
+            await self.state.set_active_pdf(files[0].path)
+
+    async def _on_clear_pdf(self, e: ft.ControlEvent) -> None:
+        """選択中の有価証券報告書 (PDF) を解除します。"""
+        await self.state.set_active_pdf(None)
+
+    async def _on_open_api_key_dialog(self, e: ft.ControlEvent) -> None:
+        """シンプルモード向けのAPIキー入力・設定ダイアログを表示します。"""
+        key_input = ft.TextField(
+            label="OpenAI APIキー",
+            password=True,
+            can_reveal_password=True,
+            value=self.state.config.api_key or "",
             expand=True,
-            vertical_alignment=ft.CrossAxisAlignment.START,
         )
 
-        # Status Bar
-        self.status_text = ft.Text(self.state.status_message, size=12)
-        self.cost_text = ft.Text(self.state.cost_info, size=12)
-        bottom_bar = ft.Container(
-            content=ft.Row([self.status_text, self.cost_text], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-            padding=5,
-            bgcolor=ft.Colors.GREY_200,
-            border_radius=5,
-        )
+        def close_dialog(ev: ft.ControlEvent) -> None:
+            dlg.open = False
+            self.page.update()
 
-        self.page.add(
-            ft.Column(
+        async def save_key() -> None:
+            dlg.open = False
+            self.page.update()
+            await self.state.update_api_key(key_input.value.strip())
+
+        dlg = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("OpenAI APIキーの設定", weight=ft.FontWeight.BOLD),
+            content=ft.Column(
                 [
-                    main_row,
-                    bottom_bar,
+                    ft.Text("お持ちの OpenAI APIキー (sk-...) を入力してください。"),
+                    key_input,
+                    ft.Text(
+                        "※APIキーは本PC内（./data）に暗号化保存され、外部送信されません。",
+                        size=11,
+                        color=ft.Colors.GREY_600,
+                    ),
                 ],
-                expand=True,
-            )
+                tight=True,
+                spacing=10,
+            ),
+            actions=[
+                ft.ElevatedButton("保存", on_click=lambda _: self.page.run_task(save_key)),
+                ft.TextButton("キャンセル", on_click=close_dialog),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
         )
+        self.page.overlay.append(dlg)
+        dlg.open = True
+        self.page.update()
+
+    async def _on_preset_click(self, mode_name: str) -> None:
+        """シンプルモードのプリセットボタン押下イベントを処理します。"""
+        if self.state.is_processing:
+            return
+        await self.state.handle_preset_submit(mode_name)
+
+    async def _on_analysis_method_change(self, e: ft.ControlEvent) -> None:
+        """詳細モードにおける分析方式（直接分析 / RAG）の切り替えを処理します。"""
+        selected_method = cast(AnalysisMethod, self.method_radio.value)
+        await self.state.set_analysis_method(selected_method)
+
+    async def _on_toggle_file_search(self, e: ft.ControlEvent) -> None:
+        """詳細モードにおけるRAGチェックボックス変更を処理します。"""
+        is_rag = bool(self.use_file_search_cb.value)
+        method = AnalysisMethod.RAG if is_rag else AnalysisMethod.DIRECT
+        self.method_radio.value = method
+        await self.state.set_analysis_method(method)
 
     # --- Callbacks from State ---
 
     async def _sync_from_state(self) -> None:
         """State の最新値を UI ウィジェットに反映します。"""
-        self.status_text.value = self.state.status_message
-        self.cost_text.value = self.state.cost_info
-        self.response_id_text.value = f"前回レスポンスID: {self.state.config.last_response_id or 'None'}"
-
         is_proc = self.state.is_processing
+        current_mode = self.state.config.view_mode
+
+        # 1. AppBar & パネル表示の同期
+        self.mode_segment.selected = {current_mode}
+        if current_mode == ViewMode.SIMPLE:
+            self.left_panel_container.content = self.simple_panel
+            self.simple_actions_row.visible = True
+            self.advanced_input_row.visible = False
+        else:
+            self.left_panel_container.content = self.advanced_panel
+            self.simple_actions_row.visible = False
+            self.advanced_input_row.visible = True
+
+        # 2. APIキー状態の同期
+        key_val = self.state.config.api_key
+        if key_val:
+            masked_key = f"{key_val[:7]}...{key_val[-4:]}" if len(key_val) > 15 else "設定済み"
+            self.simple_api_icon.icon = ft.Icons.CHECK_CIRCLE
+            self.simple_api_icon.color = ft.Colors.GREEN_600
+            self.simple_api_label.value = f"APIキー: 設定完了 ({masked_key})"
+            self.simple_api_label.color = ft.Colors.GREEN_900
+        else:
+            self.simple_api_icon.icon = ft.Icons.WARNING
+            self.simple_api_icon.color = ft.Colors.ORANGE_800
+            self.simple_api_label.value = "APIキー: 未設定 (要登録)"
+            self.simple_api_label.color = ft.Colors.RED_800
+
+        self.api_key_field.value = self.state.config.api_key or ""
+
+        # 3. 有価証券報告書 (PDF) 状態の同期
+        pdf_path = self.state.config.active_pdf_path
+        if pdf_path and Path(pdf_path).exists():
+            p = Path(pdf_path)
+            size_mb = p.stat().st_size / (1024 * 1024)
+            size_str = f"{size_mb:.2f} MB" if size_mb >= 1.0 else f"{p.stat().st_size / 1024:.1f} KB"
+            self.simple_file_name.value = f"📄 {p.name}"
+            self.simple_file_name.color = ft.Colors.BLUE_900
+            self.simple_file_meta.value = f"サイズ: {size_str} | パス: {p.parent.name}/{p.name}"
+            self.simple_clear_pdf_btn.visible = True
+
+            self.adv_file_name.value = f"📄 {p.name} ({size_str})"
+            self.adv_file_name.color = ft.Colors.BLUE_900
+            self.adv_clear_pdf_btn.visible = True
+
+            self.pdf_badge_text.value = f"[対象PDF: {p.name}]"
+        else:
+            self.simple_file_name.value = "有価証券報告書 (PDF) が未選択です"
+            self.simple_file_name.color = ft.Colors.GREY_800
+            self.simple_file_meta.value = "※下のボタンを押してPDFファイルを選択してください"
+            self.simple_clear_pdf_btn.visible = False
+
+            self.adv_file_name.value = "有報PDF: 未選択"
+            self.adv_file_name.color = ft.Colors.GREY_700
+            self.adv_clear_pdf_btn.visible = False
+            self.pdf_badge_text.value = ""
+
+        # 4. ボタン状態と進行状況
+        self.btn_preset_finance.disabled = is_proc
+        self.btn_preset_human_capital.disabled = is_proc
+        self.btn_preset_entry_sheet.disabled = is_proc
+
         self.send_btn.disabled = is_proc
         self.stop_btn.disabled = not is_proc
         self.input_field.disabled = is_proc
+
+        self.method_radio.value = self.state.config.analysis_method
+        self.use_file_search_cb.value = self.state.config.use_file_search
+
+        self.status_text.value = self.state.status_message
+        self.cost_text.value = self.state.cost_info
+        self.response_id_text.value = f"前回レスポンスID: {self.state.config.last_response_id or 'None'}"
 
         self.page.update()
 
@@ -413,8 +847,6 @@ class SyukatsuSupportApp:
 
         self.page.update()
 
-    # --- User Interactions ---
-
     async def _on_model_change(self, e: ft.ControlEvent) -> None:
         """モデル変更イベントを処理し、推論強度選択肢の動的切替および高額モデル選択時の警告を行います。"""
         selected_model = self.model_combo.value or AppConfigDefaults.DEFAULT_MODEL
@@ -483,9 +915,10 @@ class SyukatsuSupportApp:
             self.state.config.reasoning_effort = (
                 "medium" if raw_effort == "none" else AppConfigDefaults.DEFAULT_REASONING
             )
-        self.state.config.system_prompt_mode = self.mode_combo.value or "有価証券報告書 -財務分析-"
+        self.state.config.system_prompt_mode = self.mode_combo.value or MODE_FINANCIAL
         self.state.config.use_file_search = self.use_file_search_cb.value or False
         self.state.config.current_vector_store_id = self.vs_combo.value
+        self.state.save_config()
 
     async def _on_register_key(self, e: ft.ControlEvent) -> None:
         """APIキー登録ボタンイベントを処理します。"""

@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import structlog
@@ -19,7 +20,11 @@ from src.core.prompts import PromptManager
 from src.infrastructure.openai_client import OpenAIClient
 from src.infrastructure.security import ConfigManager
 from src.models import (
+    AnalysisMethod,
     FileSearchTool,
+    InputFileContent,
+    InputMessage,
+    InputTextContent,
     ReasoningOptions,
     ResponseRequestPayload,
     StreamError,
@@ -27,6 +32,7 @@ from src.models import (
     StreamTextDelta,
     StreamUsage,
     UserConfig,
+    ViewMode,
 )
 
 log = structlog.get_logger()
@@ -48,6 +54,7 @@ class AppState:
         self.is_processing: bool = False
         self.status_message: str = "待機中"
         self.cost_info: str = "Cost: $0.00000"
+        self._uploaded_file_cache: dict[str, str] = {}
 
         # --- Prompt Management ---
         self.prompt_manager: PromptManager = PromptManager()
@@ -150,6 +157,25 @@ class AppState:
         except Exception as e:
             log.error("Failed to fetch vector stores", error=str(e))
 
+    async def set_view_mode(self, mode: ViewMode) -> None:
+        """UI表示モードを切り替えて設定を保存します。"""
+        self.config.view_mode = mode
+        self.save_config()
+        await self._notify()
+
+    async def set_active_pdf(self, path: str | None) -> None:
+        """分析対象の有価証券報告書 (PDF) のパスを設定・保存します。"""
+        self.config.active_pdf_path = path
+        self.save_config()
+        await self._notify()
+
+    async def set_analysis_method(self, method: AnalysisMethod) -> None:
+        """分析方式（直接分析またはRAG）を切り替えて設定を保存します。"""
+        self.config.analysis_method = method
+        self.config.use_file_search = method == AnalysisMethod.RAG
+        self.save_config()
+        await self._notify()
+
     async def clear_context(self) -> None:
         """会話コンテキストIDおよびログ表示を消去して初期状態に復帰します。"""
         self.config.last_response_id = None
@@ -167,6 +193,26 @@ class AppState:
             self.cancel_event.set()
             await self._notify_text("\n[SYSTEM] ユーザーによって中断されました。\n", "error")
 
+    async def handle_preset_submit(self, mode_name: str) -> None:
+        """シンプルモードのプリセットボタンからワンクリックで定型分析を実行します。"""
+        if not self.config.active_pdf_path:
+            await self._notify_error(
+                "PDFファイル未選択",
+                "分析対象の有価証券報告書 (PDF) が選択されていません。\n先に「STEP 2」でPDFファイルを指定してください。",
+            )
+            return
+
+        sys_prompt = self.get_system_prompt(mode_name)
+        if not sys_prompt:
+            await self._notify_error("モードエラー", f"分析モード「{mode_name}」のプロンプトが見つかりません。")
+            return
+
+        user_query = (
+            f"添付された有価証券報告書 (PDF) を精読し、「{mode_name}」の分析観点に基づき、"
+            "事実と数値の証拠を引用しながら詳細な分析レポートを作成してください。"
+        )
+        await self.handle_submit(user_query, sys_prompt)
+
     async def handle_submit(self, user_input: str, system_prompt: str) -> None:
         """ユーザーリクエストを検証し、LLM分析ストリーミングを実行・監視します。"""
         if self.is_processing or not user_input.strip():
@@ -175,12 +221,15 @@ class AppState:
         if not self.config.api_key or not self.client:
             await self._notify_error(
                 "APIキーが未登録です",
-                "OpenAI APIキーが設定されていません。\n画面左側の「OpenAI APIキー」入力欄にAPIキーを入力し、「登録」ボタンを押してください。",
+                "OpenAI APIキーが設定されていません。\n画面の「OpenAI APIキー」設定よりAPIキーを入力・登録してください。",
             )
             return
 
+        # 1. ツール構成 (RAG または直接分析)
         tools: list[Any] | None = None
-        if self.config.use_file_search:
+        use_rag = self.config.analysis_method == AnalysisMethod.RAG or self.config.use_file_search
+
+        if use_rag:
             vs_val = self.config.current_vector_store_id
             if not vs_val:
                 await self._notify_error("RAGエラー", "Vector Storeが選択されていません。")
@@ -188,6 +237,47 @@ class AppState:
 
             vs_id = vs_val.split("(")[-1].strip(")") if "(" in vs_val else vs_val
             tools = [FileSearchTool(type="file_search", vector_store_ids=[vs_id])]
+
+        # 2. リクエスト入力の構築 (PDF直接添付またはテキスト)
+        req_input: list[InputMessage] | str = user_input
+
+        if not use_rag and self.config.active_pdf_path:
+            pdf_path = Path(self.config.active_pdf_path)
+            if not pdf_path.exists():
+                await self._notify_error(
+                    "ファイルエラー",
+                    f"指定された有価証券報告書PDFが存在しません:\n{self.config.active_pdf_path}",
+                )
+                return
+
+            # ファイルアップロードまたはキャッシュから file_id を取得
+            file_id = self._uploaded_file_cache.get(str(pdf_path))
+            if not file_id:
+                self.is_processing = True
+                self.status_message = "有報PDFをアップロード中..."
+                await self._notify()
+                try:
+                    file_obj = await self.client.upload_file(str(pdf_path), purpose="assistants")
+                    file_id = file_obj.id
+                    self._uploaded_file_cache[str(pdf_path)] = file_id
+                except Exception as e:
+                    await self._notify_error(
+                        "PDFアップロード失敗", f"OpenAIへのファイルアップロードに失敗しました:\n{e}"
+                    )
+                    self.is_processing = False
+                    self.status_message = "エラー発生"
+                    await self._notify()
+                    return
+
+            req_input = [
+                InputMessage(
+                    role="user",
+                    content=[
+                        InputFileContent(type="input_file", file_id=file_id),
+                        InputTextContent(type="input_text", text=user_input),
+                    ],
+                )
+            ]
 
         self.is_processing = True
         self.status_message = f"{self.config.model} ({self.config.reasoning_effort}) で分析中..."
@@ -202,7 +292,7 @@ class AppState:
         try:
             payload = ResponseRequestPayload(
                 model=self.config.model,
-                input=user_input,
+                input=req_input,
                 instructions=system_prompt,
                 reasoning=ReasoningOptions(effort=self.config.reasoning_effort),
                 previous_response_id=prev_id,

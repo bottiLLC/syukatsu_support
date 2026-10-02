@@ -81,3 +81,12 @@ def test_default_config_key_exists_in_prompts() -> None:
 
     manager = PromptManager()
     assert default_mode in manager.prompts, f"Default config mode '{default_mode}' is not defined in manager"
+
+
+def test_legacy_mode_mapping_backward_compatibility() -> None:
+    """[互換性] 旧分析モード名でリクエストした場合も同一のプロンプトが取得できることを検証します。"""
+    manager = PromptManager()
+    # 旧キーでも新キーでも同一のプロンプトが引けること
+    assert manager.get_prompt("有価証券報告書 -財務分析-") == manager.get_prompt(MODE_FINANCIAL)
+    assert manager.get_prompt("有価証券報告書 -人的資本分析-") == manager.get_prompt(MODE_HUMAN_CAPITAL)
+    assert len(manager.get_prompt("有価証券報告書 -財務分析-")) > 100

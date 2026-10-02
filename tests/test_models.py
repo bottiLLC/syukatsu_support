@@ -17,11 +17,14 @@ import pytest
 from pydantic import ValidationError
 
 from src.models import (
+    AnalysisMethod,
     FileSearchTool,
+    InputFileContent,
     InputMessage,
     ResponseRequestPayload,
     StreamTextDelta,
     UserConfig,
+    ViewMode,
 )
 
 
@@ -143,3 +146,27 @@ def test_structured_output_schema_serialization() -> None:
     assert schema["properties"]["markdown_content"]["type"] == "string"
     assert schema["required"] == ["markdown_content"]
     assert schema["additionalProperties"] is False
+
+
+def test_user_config_view_mode_and_analysis_method_defaults() -> None:
+    """UserConfig の view_mode, active_pdf_path, analysis_method のデフォルト値を検証します。"""
+    config = UserConfig()
+    assert config.view_mode == ViewMode.SIMPLE
+    assert config.analysis_method == AnalysisMethod.DIRECT
+    assert config.active_pdf_path is None
+    assert config.system_prompt_mode == "財務分析"
+
+
+def test_input_file_content_serialization() -> None:
+    """InputFileContent を含む InputMessage が正しくモデル検証・シリアライズされることを検証します。"""
+    msg = InputMessage(
+        role="user",
+        content=[
+            InputFileContent(file_id="file-test-12345"),
+        ],
+    )
+    assert msg.role == "user"
+    assert len(msg.content) == 1
+    assert isinstance(msg.content[0], InputFileContent)
+    assert msg.content[0].type == "input_file"
+    assert msg.content[0].file_id == "file-test-12345"
