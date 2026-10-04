@@ -8,7 +8,7 @@
   <Identity
     Name="BottiLLC.SyukatsuSupport"
     Publisher="CN=BottiLLC"
-    Version="1.0.0.0"
+    Version="2.3.0.0"
     ProcessorArchitecture="x64" />
 
   <Properties>

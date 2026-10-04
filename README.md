@@ -16,10 +16,11 @@ uv run python package_msix.py
 ```
 
 ## Architecture & Features
-- **GPT-6 次世代推論モデル対応**: フラッグシップ推論モデル `gpt-6-astra`、高精度・低コストの `gpt-6.1-sol`、および超高速・大量処理の `gpt-6-luna` の3モデルに完全対応。
-- **推論強度（Reasoning Effort）の動的制御**: 課題の難易度に応じて `max`, `xhigh`, `high`, `medium`, `low` を指定可能。非推論モード `none` は `gpt-6-luna` のみ選択可能とするモデル整合性インターロックを内蔵。
-- **OpenAI Responses API & RAG 連携**: OpenAI `/responses` エンドポイントをネイティブ採用し、企業の有価証券報告書（PDF）を対象とする Vector Store ファイル検索（`file_search`）とストリーミング分析を実行。
-- **Windows Store 申請準備完了**: UWP / Desktop Bridge 仕様の `AppxManifest.xml`、5種類のストアアイコンアセット、および自動 MSIX パッケージ生成スクリプト（`package_msix.py` / [WINDOWS_STORE_GUIDE.md](file:///e:/Python/syukatsu_Support/WINDOWS_STORE_GUIDE.md)）を完備。
+- **かんたんモードと定型3大分析**: 初心者向けのワンクリック分析（財務分析・人的資本分析・志望動機検討）を搭載し、分析ごとにコンテキストを完全初期化して独立したレポートを生成。
+- **GPT-6 次世代推論モデル & 動的インターロック**: フラッグシップ `gpt-6-astra`、標準モデル `gpt-6.1-sol`、超高速 `gpt-6-luna` に対応し、モデル特性に応じた推論強度（`none`〜`max`）の動的検証を実施。
+- **OpenAI Responses API & RAG 連携**: `/responses` エンドポイントをネイティブ採用し、企業の有価証券報告書（PDF）に対する Vector Store（`file_search`）検索とストリーミング分析を実行。
+- **全OpenAI APIエラーの日本語ガイダンス**: 401（認証）、429（クォータ超過・レート制限）、503（サーバー過負荷）等の全APIエラーを網羅し、原因と即時対処手順を日本語で明示。
+- **レポート出力 & Windows Store 申請準備**: 分析結果の Word (`.docx`) / テキスト (`.txt`) 出力、および UWP / Desktop Bridge 仕様の `AppxManifest.xml` と自動 MSIX 生成スクリプトを完備。
 
 ## Environment Variables
 | 環境変数名 | デフォルト / 設定例 | 説明 |
