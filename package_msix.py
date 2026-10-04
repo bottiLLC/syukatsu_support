@@ -129,6 +129,10 @@ def main() -> None:
     print(f"[SUCCESS] MSIX Package created: {target_msix}")
     print(f"[INFO] Package Size: {size_mb:.2f} MB")
     print(f"[INFO] Layout Staging Directory: {stage_dir}")
+    if not makeappx_exe:
+        print("[NOTICE] Windows SDK (MakeAppx.exe) が未検出のため、簡易コンテナとして生成されました。")
+        print("         ※ Windows の仕様上、未署名・非 SDK 生成の .msix はダブルクリック時に「解析エラー」となります。")
+        print("         ※ ローカルでの直接起動・動作確認には 'dist/syukatsu-support.exe' を実行してください。")
 
     print("\n" + "=" * 60)
     print("  Windows Store Packaging Ready!")

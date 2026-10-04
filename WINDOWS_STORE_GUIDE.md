@@ -56,6 +56,16 @@ uv run python package_msix.py
 - `dist/msix_stage/`: MSIX Packaging Tool や Windows SDK 手動ビルド用の完全なステージング構造
 - `dist/syukatsu-support.exe`: スタンドアロン実行可能バイナリ
 
+> [!WARNING]
+> **ローカルで `.msix` をダブルクリックした際に「アプリ パッケージの解析中にエラーが発生しました」と表示される原因**:
+> 1. **MakeAppx.exe（Windows SDK）の未検出**: Windows の App Installer は、内部に `AppxBlockMap.xml`（ブロック単位の SHA-256 ハッシュリスト）および正規の OPC メタデータが含まれていることを厳格に検査します。Windows SDK がインストールされていない環境では ZIP フォールバックで固められるため、App Installer が構造不適合として解析エラーを返します。
+> 2. **デジタル署名の未付与**: Windows のセキュリティ仕様により、未署名の MSIX パッケージはローカルで直接インストール（サイドローディング）できません。
+> 
+> **対処方法**:
+> - **今すぐローカルで動作確認する場合**: `dist/syukatsu-support.exe` を直接ダブルクリックして起動してください。
+> - **Microsoft Store への提出**: Partner Center に `dist/syukatsu-support.msix` を提出、または「Win32 アプリケーション」枠として `dist/syukatsu-support.exe` を提出してください（Store 審査通過時に Microsoft の公式証明書で自動署名されます）。
+> - **ローカルで MSIX インストールを検証したい場合**: Microsoft Store より無償の「**MSIX Packaging Tool**」を入手して `dist/msix_stage` をパッケージ化するか、Windows SDK を導入してテスト証明書で `SignTool.exe` による署名を行ってください。
+
 ---
 
 ## 4. ストア申請手順 (Partner Center)
