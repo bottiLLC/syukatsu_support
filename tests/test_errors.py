@@ -96,3 +96,149 @@ def test_unicode_encode_error_translation() -> None:
     msg = src_translate(err)
     assert "APIキー文字エラー" in msg
     assert "全角文字" in msg
+    assert "■ 原因:" in msg
+    assert "■ 対応方法:" in msg
+
+
+def test_authentication_ip_not_authorized() -> None:
+    """IPホワイトリスト制限エラーの翻訳を検証します。"""
+    err = openai.AuthenticationError(
+        message="Your IP address is not authorized",
+        response=MagicMock(status_code=401, headers={}),
+        body={"error": {"code": "ip_not_authorized"}},
+    )
+    msg = src_translate(err)
+    assert "アクセス拒否（IP制限）" in msg
+    assert "IPホワイトリスト" in msg
+    assert "■ 対応方法:" in msg
+
+
+def test_authentication_account_deactivated() -> None:
+    """アカウント無効化エラーの翻訳を検証します。"""
+    err = openai.AuthenticationError(
+        message="Account has been deactivated",
+        response=MagicMock(status_code=401, headers={}),
+        body={"error": {"code": "account_deactivated"}},
+    )
+    msg = src_translate(err)
+    assert "アカウント無効化エラー" in msg
+    assert "■ 対応方法:" in msg
+
+
+def test_permission_denied_error_translation() -> None:
+    """403 権限エラーの翻訳を検証します。"""
+    err = openai.PermissionDeniedError(
+        message="You do not have access to this resource",
+        response=MagicMock(status_code=403, headers={}),
+        body=None,
+    )
+    msg = src_translate(err)
+    assert "アクセス権限エラー" in msg
+    assert "■ 原因:" in msg
+    assert "■ 対応方法:" in msg
+
+
+def test_not_found_error_translation() -> None:
+    """404 Not Found エラーの翻訳を検証します。"""
+    err = openai.NotFoundError(
+        message="Model or vector store not found",
+        response=MagicMock(status_code=404, headers={}),
+        body=None,
+    )
+    msg = src_translate(err)
+    assert "リソースが見つかりません" in msg
+    assert "■ 対応方法:" in msg
+
+
+def test_conflict_error_translation() -> None:
+    """409 データ競合エラーの翻訳を検証します。"""
+    err = openai.ConflictError(
+        message="Resource is being modified",
+        response=MagicMock(status_code=409, headers={}),
+        body=None,
+    )
+    msg = src_translate(err)
+    assert "リソース競合エラー" in msg
+    assert "■ 対応方法:" in msg
+
+
+def test_unprocessable_entity_error_translation() -> None:
+    """422 処理不能エンティティエラーの翻訳を検証します。"""
+    err = openai.UnprocessableEntityError(
+        message="Failed to parse file",
+        response=MagicMock(status_code=422, headers={}),
+        body=None,
+    )
+    msg = src_translate(err)
+    assert "データ処理不可エラー" in msg
+    assert "■ 対応方法:" in msg
+
+
+def test_rate_limit_usage_limit_exceeded() -> None:
+    """429 月間利用上限超過エラーの翻訳を検証します。"""
+    err = openai.RateLimitError(
+        message="You have exceeded your monthly usage limit",
+        response=MagicMock(status_code=429, headers={}),
+        body={"error": {"code": "organization_usage_limit_exceeded"}},
+    )
+    msg = src_translate(err)
+    assert "月間利用上限到達" in msg
+    assert "■ 対応方法:" in msg
+
+
+def test_internal_server_error_translation() -> None:
+    """500 サーバー内部エラーの翻訳を検証します。"""
+    err = openai.InternalServerError(
+        message="An internal server error occurred",
+        response=MagicMock(status_code=500, headers={}),
+        body=None,
+    )
+    msg = src_translate(err)
+    assert "OpenAIサーバーエラー" in msg
+    assert "status.openai.com" in msg
+    assert "■ 対応方法:" in msg
+
+
+def test_gateway_and_service_unavailable_errors() -> None:
+    """502/503/504 ゲートウェイおよびサーバー過負荷エラーの翻訳を検証します。"""
+    err_502 = openai.APIStatusError(
+        message="Bad Gateway",
+        response=MagicMock(status_code=502, headers={}),
+        body=None,
+    )
+    msg_502 = src_translate(err_502)
+    assert "ゲートウェイ通信エラー" in msg_502
+
+    err_503 = openai.APIStatusError(
+        message="Service Unavailable / Overloaded",
+        response=MagicMock(status_code=503, headers={}),
+        body=None,
+    )
+    msg_503 = src_translate(err_503)
+    assert "サーバー過負荷・一時停止" in msg_503
+
+
+def test_bad_request_reasoning_effort() -> None:
+    """400 reasoning_effort ミスマッチエラーの翻訳を検証します。"""
+    err = openai.BadRequestError(
+        message="Invalid reasoning_effort value for model",
+        response=MagicMock(status_code=400, headers={}),
+        body=None,
+    )
+    msg = src_translate(err)
+    assert "モデル設定エラー" in msg
+    assert "推論強度" in msg
+    assert "■ 対応方法:" in msg
+
+
+def test_generic_openai_and_system_error_translation() -> None:
+    """汎用OpenAIErrorおよび未知のシステム例外の翻訳を検証します。"""
+    gen_oai = openai.OpenAIError("Some custom openai error")
+    msg_oai = src_translate(gen_oai)
+    assert "OpenAI APIエラー" in msg_oai
+    assert "■ 対応方法:" in msg_oai
+
+    gen_sys = RuntimeError("Unexpected system fault")
+    msg_sys = src_translate(gen_sys)
+    assert "システムエラー" in msg_sys
+    assert "■ 対応方法:" in msg_sys
