@@ -61,3 +61,35 @@ async def test_ui_segmented_button_serialization_integrity() -> None:
     )
     assert isinstance(packed_updated, bytes)
     assert len(packed_updated) > 0
+
+
+@pytest.mark.asyncio
+async def test_ui_step1_card_layout_two_rows() -> None:
+    """STEP 1 カードが2行構成（1行目: ラベル/アイコン, 2行目: 設定変更ボタン）であることを検証します。"""
+    page = MagicMock(spec=ft.Page)
+    page.window = MagicMock()
+    page.overlay = []
+
+    state = AppState()
+    app = SyukatsuSupportApp(page, state)
+
+    # simple_panel の第1要素が step1_card
+    step1_card = app.simple_panel.controls[0]
+    assert isinstance(step1_card, ft.Card)
+    container = step1_card.content
+    assert isinstance(container, ft.Container)
+    column = container.content
+    assert isinstance(column, ft.Column)
+    assert len(column.controls) == 2
+
+    # 1行目: Row (STEP 1, Icon, Label)
+    row1 = column.controls[0]
+    assert isinstance(row1, ft.Row)
+    assert app.simple_api_icon in row1.controls
+    assert app.simple_api_label in row1.controls
+
+    # 2行目: Row (設定 / 変更 ボタン)
+    row2 = column.controls[1]
+    assert isinstance(row2, ft.Row)
+    assert app.simple_api_btn in row2.controls
+    assert row2.alignment == ft.MainAxisAlignment.END

@@ -142,7 +142,8 @@ class ConfigManager:
         if env_key:
             config_data["api_key"] = env_key
 
-        # 環境のリセット（高コストモデル防止）
+        # 環境のリセット（初期表示モード・高コストモデル防止）
+        config_data["view_mode"] = AppConfigDefaults.DEFAULT_VIEW_MODE
         config_data["model"] = AppConfigDefaults.DEFAULT_MODEL
         config_data["reasoning_effort"] = AppConfigDefaults.DEFAULT_REASONING
         config_data["system_prompt_mode"] = "有価証券報告書 -財務分析-"

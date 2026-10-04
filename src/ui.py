@@ -168,16 +168,24 @@ class SyukatsuSupportApp:
 
         step1_card = ft.Card(
             content=ft.Container(
-                content=ft.Row(
+                content=ft.Column(
                     [
-                        ft.Text("STEP 1", weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
-                        self.simple_api_icon,
-                        self.simple_api_label,
-                        ft.Container(expand=True),
-                        self.simple_api_btn,
+                        ft.Row(
+                            [
+                                ft.Text("STEP 1", weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900),
+                                self.simple_api_icon,
+                                self.simple_api_label,
+                            ],
+                            alignment=ft.MainAxisAlignment.START,
+                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                            spacing=8,
+                        ),
+                        ft.Row(
+                            [self.simple_api_btn],
+                            alignment=ft.MainAxisAlignment.END,
+                        ),
                     ],
-                    alignment=ft.MainAxisAlignment.START,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=8,
                 ),
                 padding=12,
             ),

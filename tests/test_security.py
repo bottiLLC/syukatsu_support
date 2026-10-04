@@ -18,7 +18,7 @@ from src.infrastructure.security import (
     SecurityManager,
     ensure_storage_initialized,
 )
-from src.models import AppConfigDefaults, UserConfig
+from src.models import AppConfigDefaults, UserConfig, ViewMode
 
 
 def test_ensure_storage_initialized_creates_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -81,6 +81,7 @@ def test_config_manager_save_and_load(tmp_path: Path, monkeypatch: pytest.Monkey
 
     test_config = UserConfig(
         api_key="sk-proj-saved-key-abc",
+        view_mode=ViewMode.ADVANCED,
         current_vector_store_id="vs_123456",
         use_file_search=True,
     )
@@ -94,5 +95,6 @@ def test_config_manager_save_and_load(tmp_path: Path, monkeypatch: pytest.Monkey
     assert loaded.current_vector_store_id == "vs_123456"
     assert loaded.use_file_search is True
     # Invariant overrides
+    assert loaded.view_mode == AppConfigDefaults.DEFAULT_VIEW_MODE
     assert loaded.model == AppConfigDefaults.DEFAULT_MODEL
     assert loaded.reasoning_effort == AppConfigDefaults.DEFAULT_REASONING

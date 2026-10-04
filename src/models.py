@@ -52,6 +52,7 @@ class AppConfigDefaults:
 
     DEFAULT_MODEL: str = "gpt-6.1-sol"
     DEFAULT_REASONING: ReasoningEffort = "high"
+    DEFAULT_VIEW_MODE: ViewMode = ViewMode.SIMPLE
 
 
 # --- Application Configuration Models ---
@@ -63,7 +64,10 @@ class UserConfig(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="ignore")
 
     api_key: str | None = Field(default=None, description="復号化されたOpenAI APIキー。")
-    view_mode: ViewMode = Field(default=ViewMode.SIMPLE, description="UI表示モード（シンプル/詳細）。")
+    view_mode: ViewMode = Field(
+        default=AppConfigDefaults.DEFAULT_VIEW_MODE,
+        description="UI表示モード（シンプル/詳細）。",
+    )
     model: str = Field(default=AppConfigDefaults.DEFAULT_MODEL, description="選択されたOpenAIモデルのID。")
     reasoning_effort: ReasoningEffort = Field(
         default=AppConfigDefaults.DEFAULT_REASONING,
