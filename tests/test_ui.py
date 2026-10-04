@@ -120,6 +120,7 @@ async def test_ui_api_key_dialog_horizontal_and_compact() -> None:
     assert isinstance(col, ft.Column)
     assert col.tight is True
 
-    # key_input (TextField) が縦展開 (expand=True) されていないこと
+    # key_input (TextField) が縦展開 (expand=True) されておらず、横長 (width >= 600) であること
     key_input = next(c for c in col.controls if isinstance(c, ft.TextField))
     assert not key_input.expand
+    assert key_input.width is not None and key_input.width >= 600

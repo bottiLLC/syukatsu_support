@@ -54,7 +54,7 @@ class SyukatsuSupportApp:
         self.page = page
         self.state = state
         self.page.title = "SYUKATSU Support - 合同会社ぼっち (v2.3.0)"
-        self.page.padding = 15
+        self.page.padding = ft.Padding(12, 8, 12, 8)
         self.page.theme_mode = ft.ThemeMode.LIGHT
 
         # Set default window size to fit layout without scrolling
@@ -164,6 +164,9 @@ class SyukatsuSupportApp:
             "設定 / 変更",
             icon=ft.Icons.KEY,
             on_click=self._on_open_api_key_dialog,
+            style=ft.ButtonStyle(
+                padding=ft.Padding(12, 6, 12, 6),
+            ),
         )
 
         step1_card = ft.Card(
@@ -185,9 +188,9 @@ class SyukatsuSupportApp:
                             alignment=ft.MainAxisAlignment.END,
                         ),
                     ],
-                    spacing=8,
+                    spacing=4,
                 ),
-                padding=12,
+                padding=ft.Padding(12, 8, 12, 8),
             ),
             elevation=1,
         )
@@ -214,17 +217,17 @@ class SyukatsuSupportApp:
             on_click=self._on_pick_pdf,
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=8),
-                padding=ft.Padding(16, 12, 16, 12),
+                padding=ft.Padding(14, 8, 14, 8),
             ),
         )
 
         step2_drop_zone = ft.Container(
             content=ft.Column(
                 [
-                    ft.Icon(ft.Icons.PICTURE_AS_PDF, size=42, color=ft.Colors.BLUE_600),
+                    ft.Icon(ft.Icons.PICTURE_AS_PDF, size=32, color=ft.Colors.BLUE_600),
                     ft.Text(
                         "EDINETからダウンロードした\n有価証券報告書 (PDF) を指定",
-                        size=14,
+                        size=13,
                         weight=ft.FontWeight.BOLD,
                         text_align=ft.TextAlign.CENTER,
                     ),
@@ -235,11 +238,11 @@ class SyukatsuSupportApp:
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 alignment=ft.MainAxisAlignment.CENTER,
-                spacing=6,
+                spacing=4,
             ),
             border=ft.border.all(1.5, ft.Colors.BLUE_300),
             border_radius=10,
-            padding=16,
+            padding=ft.Padding(12, 8, 12, 8),
             bgcolor=ft.Colors.BLUE_50,
         )
 
@@ -252,9 +255,9 @@ class SyukatsuSupportApp:
                         ),
                         step2_drop_zone,
                     ],
-                    spacing=8,
+                    spacing=6,
                 ),
-                padding=12,
+                padding=ft.Padding(12, 8, 12, 8),
             ),
             elevation=1,
         )
@@ -265,7 +268,7 @@ class SyukatsuSupportApp:
             icon=ft.Icons.ANALYTICS,
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=8),
-                padding=ft.Padding(16, 14, 16, 14),
+                padding=ft.Padding(14, 9, 14, 9),
             ),
             on_click=lambda _: self.page.run_task(self._on_preset_click, MODE_FINANCIAL),
             expand=True,
@@ -275,7 +278,7 @@ class SyukatsuSupportApp:
             icon=ft.Icons.PEOPLE_ALT,
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=8),
-                padding=ft.Padding(16, 14, 16, 14),
+                padding=ft.Padding(14, 9, 14, 9),
                 bgcolor=ft.Colors.TEAL_700,
             ),
             on_click=lambda _: self.page.run_task(self._on_preset_click, MODE_HUMAN_CAPITAL),
@@ -286,7 +289,7 @@ class SyukatsuSupportApp:
             icon=ft.Icons.LIGHTBULB,
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=8),
-                padding=ft.Padding(16, 14, 16, 14),
+                padding=ft.Padding(14, 9, 14, 9),
                 bgcolor=ft.Colors.AMBER_800,
             ),
             on_click=lambda _: self.page.run_task(self._on_preset_click, MODE_ENTRY_SHEET),
@@ -311,9 +314,9 @@ class SyukatsuSupportApp:
                         self.btn_preset_human_capital,
                         self.btn_preset_entry_sheet,
                     ],
-                    spacing=10,
+                    spacing=6,
                 ),
-                padding=14,
+                padding=ft.Padding(12, 8, 12, 8),
             ),
             elevation=1,
         )
@@ -324,7 +327,7 @@ class SyukatsuSupportApp:
                 step2_card,
                 step3_card,
             ],
-            spacing=10,
+            spacing=8,
             scroll=ft.ScrollMode.ADAPTIVE,
             expand=True,
         )
@@ -589,6 +592,7 @@ class SyukatsuSupportApp:
             value=self.state.config.api_key or "",
             autofocus=True,
             text_size=13,
+            width=680,
         )
 
         def close_dialog(ev: ft.ControlEvent) -> None:
