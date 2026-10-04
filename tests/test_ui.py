@@ -93,3 +93,33 @@ async def test_ui_step1_card_layout_two_rows() -> None:
     assert isinstance(row2, ft.Row)
     assert app.simple_api_btn in row2.controls
     assert row2.alignment == ft.MainAxisAlignment.END
+
+
+@pytest.mark.asyncio
+async def test_ui_api_key_dialog_horizontal_and_compact() -> None:
+    """APIキー設定ダイアログが横長（width指定あり）かつ縦方向展開（expand）無しのコンパクト構成であることを検証します。"""
+    page = MagicMock(spec=ft.Page)
+    page.window = MagicMock()
+    page.overlay = []
+
+    state = AppState()
+    app = SyukatsuSupportApp(page, state)
+
+    await app._on_open_api_key_dialog(MagicMock())
+    assert len(page.overlay) == 1
+    dlg = page.overlay[0]
+    assert isinstance(dlg, ft.AlertDialog)
+
+    # content は横幅指定された Container であること
+    assert isinstance(dlg.content, ft.Container)
+    assert dlg.content.width is not None
+    assert dlg.content.width >= 600
+
+    # 中身の Column が tight であること
+    col = dlg.content.content
+    assert isinstance(col, ft.Column)
+    assert col.tight is True
+
+    # key_input (TextField) が縦展開 (expand=True) されていないこと
+    key_input = next(c for c in col.controls if isinstance(c, ft.TextField))
+    assert not key_input.expand

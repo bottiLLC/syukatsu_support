@@ -587,7 +587,8 @@ class SyukatsuSupportApp:
             password=True,
             can_reveal_password=True,
             value=self.state.config.api_key or "",
-            expand=True,
+            autofocus=True,
+            text_size=13,
         )
 
         def close_dialog(ev: ft.ControlEvent) -> None:
@@ -602,18 +603,21 @@ class SyukatsuSupportApp:
         dlg = ft.AlertDialog(
             modal=True,
             title=ft.Text("OpenAI APIキーの設定", weight=ft.FontWeight.BOLD),
-            content=ft.Column(
-                [
-                    ft.Text("お持ちの OpenAI APIキー (sk-...) を入力してください。"),
-                    key_input,
-                    ft.Text(
-                        "※APIキーは本PC内（./data）に暗号化保存され、外部送信されません。",
-                        size=11,
-                        color=ft.Colors.GREY_600,
-                    ),
-                ],
-                tight=True,
-                spacing=10,
+            content=ft.Container(
+                content=ft.Column(
+                    [
+                        ft.Text("お持ちの OpenAI APIキー (sk-...) を入力してください。"),
+                        key_input,
+                        ft.Text(
+                            "※APIキーは本PC内（./data）に暗号化保存され、外部送信されません。",
+                            size=11,
+                            color=ft.Colors.GREY_600,
+                        ),
+                    ],
+                    tight=True,
+                    spacing=12,
+                ),
+                width=720,
             ),
             actions=[
                 ft.ElevatedButton("保存", on_click=lambda _: self.page.run_task(save_key)),
