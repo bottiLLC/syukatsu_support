@@ -204,12 +204,18 @@ class AppState:
 
     async def handle_preset_submit(self, mode_name: str) -> None:
         """シンプルモードのプリセットボタンからワンクリックで定型分析を実行します。"""
+        if self.is_processing:
+            return
+
         if not self.config.active_pdf_path:
             await self._notify_error(
                 "PDFファイル未選択",
                 "分析対象の有価証券報告書 (PDF) が選択されていません。\n先に「STEP 2」でPDFファイルを指定してください。",
             )
             return
+
+        # かんたんモードではボタン押下ごとに新規チャット（過去のコンテキストおよびログ表示の消去）を開始
+        await self.clear_context()
 
         # シンプルモード初期値の適用
         if self.config.view_mode == ViewMode.SIMPLE:
@@ -225,9 +231,14 @@ class AppState:
             f"添付された有価証券報告書 (PDF) を精読し、「{mode_name}」の分析観点に基づき、"
             "事実と数値の証拠を引用しながら詳細な分析レポートを作成してください。"
         )
-        await self.handle_submit(user_query, sys_prompt)
+        await self.handle_submit(user_query, sys_prompt, show_user_prompt=False)
 
-    async def handle_submit(self, user_input: str, system_prompt: str) -> None:
+    async def handle_submit(
+        self,
+        user_input: str,
+        system_prompt: str,
+        show_user_prompt: bool = True,
+    ) -> None:
         """ユーザーリクエストを検証し、LLM分析ストリーミングを実行・監視します。"""
         if self.is_processing or not user_input.strip():
             return
@@ -298,8 +309,9 @@ class AppState:
         self.cancel_event.clear()
         await self._notify()
 
-        timestamp = datetime.now(UTC).astimezone().strftime("%H:%M")
-        await self._notify_text(f"\n[USER] {timestamp}\n{user_input}\n", "user")
+        if show_user_prompt:
+            timestamp = datetime.now(UTC).astimezone().strftime("%H:%M")
+            await self._notify_text(f"\n[USER] {timestamp}\n{user_input}\n", "user")
 
         prev_id = self.config.last_response_id if self.config.last_response_id != "None" else None
 

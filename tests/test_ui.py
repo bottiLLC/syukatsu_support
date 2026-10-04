@@ -153,3 +153,58 @@ async def test_ui_api_key_sync_status() -> None:
     assert app.simple_api_label.color == ft.Colors.GREEN_700
     assert app.simple_api_icon.icon == ft.Icons.CHECK_CIRCLE
     assert app.simple_api_icon.color == ft.Colors.GREEN_600
+
+
+@pytest.mark.asyncio
+async def test_preset_submit_resets_context_and_suppresses_user_prompt(tmp_path: object) -> None:
+    """かんたんモードのプリセット実行時にコンテキストがリセットされユーザープロンプト表示が抑制されることを検証します。"""
+    page = MagicMock(spec=ft.Page)
+    page.window = MagicMock()
+    page.overlay = []
+
+    # テスト用ダミーPDF作成
+    pdf_file = tmp_path / "dummy.pdf"  # type: ignore[operator]
+    pdf_file.write_bytes(b"%PDF-1.4 dummy content")
+
+    state = AppState()
+    state.config.api_key = "sk-test123456789"
+    state.config.active_pdf_path = str(pdf_file)
+    state.config.last_response_id = "resp_previous_chain_999"
+
+    app = SyukatsuSupportApp(page, state)
+
+    # 既存のチャット表示を追加
+    app.chat_list.controls.append(ft.Text("過去のチャット結果"))
+
+    received_tags: list[str] = []
+
+    async def mock_text_delta(text: str, tag: str) -> None:
+        received_tags.append(tag)
+
+    state.on_text_delta = mock_text_delta
+
+    # handle_submit をモックして呼び出し引数を検証
+    recorded_calls: list[dict[str, object]] = []
+
+    async def mock_handle_submit(user_input: str, system_prompt: str, show_user_prompt: bool = True) -> None:
+        recorded_calls.append(
+            {
+                "user_input": user_input,
+                "system_prompt": system_prompt,
+                "show_user_prompt": show_user_prompt,
+            }
+        )
+
+    state.handle_submit = mock_handle_submit  # type: ignore[assignment]
+
+    from src.core.prompts import MODE_FINANCIAL
+
+    await state.handle_preset_submit(MODE_FINANCIAL)
+
+    # 1. 過去のレスポンスIDがクリア（新規チャット化）されていること
+    assert state.config.last_response_id is None
+    # 2. チャットログがクリアされていること
+    assert len(app.chat_list.controls) == 0
+    # 3. show_user_prompt=False で実行されたこと
+    assert len(recorded_calls) == 1
+    assert recorded_calls[0]["show_user_prompt"] is False

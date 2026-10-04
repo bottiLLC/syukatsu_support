@@ -819,6 +819,7 @@ class SyukatsuSupportApp:
         """チャットログの表示をクリアします。"""
         self.chat_list.controls.clear()
         self.current_ai_message = None
+        self.current_ai_text = ""
         self.page.update()
 
     async def _show_error(self, title: str, msg: str) -> None:
