@@ -127,3 +127,29 @@ async def test_ui_api_key_dialog_horizontal_and_compact() -> None:
     key_input = next(c for c in col.controls if isinstance(c, ft.TextField))
     assert not key_input.expand
     assert key_input.width is not None and key_input.width >= 600
+
+
+@pytest.mark.asyncio
+async def test_ui_api_key_sync_status() -> None:
+    """APIキー設定状態の反映と『登録完了』緑色表示への同期を検証します。"""
+    page = MagicMock(spec=ft.Page)
+    page.window = MagicMock()
+    page.overlay = []
+
+    state = AppState()
+    state.config.api_key = None
+
+    app = SyukatsuSupportApp(page, state)
+    await app._sync_from_state()
+
+    # 未設定時
+    assert app.simple_api_label.value == "APIキー: 未設定 (要登録)"
+    assert app.simple_api_label.color == ft.Colors.RED_800
+    assert app.simple_api_icon.icon == ft.Icons.WARNING
+
+    # APIキー登録時
+    await state.update_api_key("sk-test1234567890abcdef", silent=True)
+    assert app.simple_api_label.value == "登録完了"
+    assert app.simple_api_label.color == ft.Colors.GREEN_700
+    assert app.simple_api_icon.icon == ft.Icons.CHECK_CIRCLE
+    assert app.simple_api_icon.color == ft.Colors.GREEN_600

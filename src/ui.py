@@ -162,8 +162,18 @@ class SyukatsuSupportApp:
     def _build_simple_panel(self) -> None:
         """シンプルモード: 直感的な3ステップ動線パネルを構築します。"""
         # [STEP 1] APIキー状態コンポーネント
-        self.simple_api_icon = ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.GREEN_600, size=20)
-        self.simple_api_label = ft.Text("APIキー設定", size=13, weight=ft.FontWeight.W_500)
+        has_key = bool(self.state.config.api_key)
+        self.simple_api_icon = ft.Icon(
+            ft.Icons.CHECK_CIRCLE if has_key else ft.Icons.WARNING,
+            color=ft.Colors.GREEN_600 if has_key else ft.Colors.ORANGE_800,
+            size=20,
+        )
+        self.simple_api_label = ft.Text(
+            "登録完了" if has_key else "APIキー: 未設定 (要登録)",
+            size=13,
+            weight=ft.FontWeight.W_500,
+            color=ft.Colors.GREEN_700 if has_key else ft.Colors.RED_800,
+        )
         self.simple_api_btn = ft.OutlinedButton(
             "設定 / 変更",
             icon=ft.Icons.KEY,
@@ -597,6 +607,7 @@ class SyukatsuSupportApp:
             autofocus=True,
             text_size=13,
             width=680,
+            on_submit=lambda _: self.page.run_task(save_key),
         )
 
         def close_dialog(ev: ft.ControlEvent) -> None:
@@ -604,9 +615,14 @@ class SyukatsuSupportApp:
             self.page.update()
 
         async def save_key() -> None:
+            val = key_input.value.strip() if key_input.value else ""
+            if not val:
+                await self._show_error("入力エラー", "APIキーを入力してください。")
+                return
             dlg.open = False
             self.page.update()
-            await self.state.update_api_key(key_input.value.strip())
+            await self.state.update_api_key(val)
+            await self._sync_from_state()
 
         dlg = ft.AlertDialog(
             modal=True,
@@ -676,11 +692,10 @@ class SyukatsuSupportApp:
         # 2. APIキー状態の同期
         key_val = self.state.config.api_key
         if key_val:
-            masked_key = f"{key_val[:7]}...{key_val[-4:]}" if len(key_val) > 15 else "設定済み"
             self.simple_api_icon.icon = ft.Icons.CHECK_CIRCLE
             self.simple_api_icon.color = ft.Colors.GREEN_600
-            self.simple_api_label.value = f"APIキー: 設定完了 ({masked_key})"
-            self.simple_api_label.color = ft.Colors.GREEN_900
+            self.simple_api_label.value = "登録完了"
+            self.simple_api_label.color = ft.Colors.GREEN_700
         else:
             self.simple_api_icon.icon = ft.Icons.WARNING
             self.simple_api_icon.color = ft.Colors.ORANGE_800

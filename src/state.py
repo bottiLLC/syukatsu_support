@@ -123,22 +123,30 @@ class AppState:
 
     async def update_api_key(self, api_key: str, silent: bool = False) -> None:
         """OpenAI APIキーを検証・保存し、クライアントを再初期化します。"""
-        if api_key:
-            cleaned_key = api_key.strip().replace("　", "")
-            try:
-                cleaned_key.encode("ascii")
-            except UnicodeEncodeError:
+        cleaned_key = api_key.strip().replace("　", "")
+        if not cleaned_key:
+            if not silent:
                 await self._notify_error(
                     "APIキー入力エラー",
-                    "入力されたAPIキーに全角文字が含まれています。\nAPIキーはすべて半角英数字・記号で入力してください。",
+                    "APIキーが入力されていません。有効なOpenAI APIキーを入力してください。",
                 )
-                return
+            return
 
-            self.config.api_key = cleaned_key
-            self.save_config()
-            self.init_client()
-            if not silent:
-                await self._notify_info("設定完了", "APIキーを登録し保存しました。")
+        try:
+            cleaned_key.encode("ascii")
+        except UnicodeEncodeError:
+            await self._notify_error(
+                "APIキー入力エラー",
+                "入力されたAPIキーに全角文字が含まれています。\nAPIキーはすべて半角英数字・記号で入力してください。",
+            )
+            return
+
+        self.config.api_key = cleaned_key
+        self.save_config()
+        self.init_client()
+        await self._notify()
+        if not silent:
+            await self._notify_info("設定完了", "APIキーを登録し保存しました。")
 
     def get_system_prompt(self, mode_name: str) -> str:
         """指定された分析モードのシステムプロンプトを取得します。"""
