@@ -33,7 +33,5 @@ UI_COLORS: Final[MappingProxyType[str, str]] = MappingProxyType(
         "USER_FG": "#0d47a1",
         "AI_FG": "#000000",
         "ERROR_FG": "red",
-        "ID_FG": "blue",
-        "LABEL_FG": "gray",
     }
 )

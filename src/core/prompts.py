@@ -19,14 +19,12 @@ log = structlog.get_logger()
 MODE_FINANCIAL: Final[str] = "財務分析"
 MODE_HUMAN_CAPITAL: Final[str] = "人的資本分析"
 MODE_ENTRY_SHEET: Final[str] = "志望動機検討"
-MODE_COMPETITOR_ANALYSIS: Final[str] = "企業・経年比較分析"
 MODE_NO_PROMPT: Final[str] = "システムプロンプトなし"
 
 # 旧分析モード名との後方互換マッピング
 LEGACY_MODE_MAPPING: Final[dict[str, str]] = {
     "有価証券報告書 -財務分析-": MODE_FINANCIAL,
     "有価証券報告書 -人的資本分析-": MODE_HUMAN_CAPITAL,
-    "有価証券報告書 -企業・経年比較分析-": MODE_COMPETITOR_ANALYSIS,
 }
 
 
@@ -74,15 +72,6 @@ class PromptManager:
             MODE_FINANCIAL: "設定ファイルが見つかりません。",
             MODE_NO_PROMPT: "",
         }
-
-    def save(self) -> None:
-        """現在のプロンプトを設定ファイルに永続化します。"""
-        try:
-            self.filepath.parent.mkdir(parents=True, exist_ok=True)
-            with self.filepath.open("w", encoding="utf-8") as f:
-                json.dump(self._prompts, f, ensure_ascii=False, indent=2)
-        except OSError as e:
-            log.error("Failed to save prompt JSON", error=str(e), path=str(self.filepath))
 
     def get_prompt(self, mode_name: str) -> str:
         """指定された分析モードのプロンプト文字列を返します。旧名称キーにも自動対応します。

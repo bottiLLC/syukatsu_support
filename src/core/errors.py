@@ -191,7 +191,7 @@ def translate_api_error(e: Exception) -> str:
                 "■ 原因: 組織アカウントに設定されている月間の利用上限額（Usage Limit / Spend Limit）に到達しました。\n"
                 "■ 対応方法: OpenAI管理画面のLimits設定で月間上限額を引き上げるか、翌月1日の上限リセットをお待ちください。"
             )
-        # 短期レートリミット (TPM / RPM)
+        # 短期レート制限（TPMおよびRPM）
         return (
             "【一時的な利用制限】 (RateLimitError: 429)\n"
             "■ 原因: 短時間でのリクエスト回数（RPM）またはトークン消費量（TPM）の上限に達しました。\n"

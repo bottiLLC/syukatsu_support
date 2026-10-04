@@ -27,7 +27,6 @@ from typing import Any, Final, Literal, Self
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 ReasoningEffort = Literal["none", "low", "medium", "high", "xhigh", "max"]
-AvailableModel = Literal["gpt-6-astra", "gpt-6.1-sol", "gpt-6-luna"]
 
 
 class ViewMode(StrEnum):
@@ -133,14 +132,6 @@ class FileSearchTool(BaseModel):
     vector_store_ids: list[str] = Field(default_factory=list)
 
 
-class WebSearchTool(BaseModel):
-    """Web Search プレビューツール設定スキーマ。"""
-
-    model_config = ConfigDict(extra="forbid")
-    type: Literal["web_search_preview"] = "web_search_preview"
-    search_context_size: Literal["low", "medium", "high"] | None = "medium"
-
-
 class ReasoningOptions(BaseModel):
     """推論強度オプションスキーマ。"""
 
@@ -189,7 +180,7 @@ class ResponseRequestPayload(BaseModel):
     input: list[InputMessage] | str
     instructions: str | None = None
     reasoning: ReasoningOptions | None = None
-    tools: list[FileSearchTool | WebSearchTool] | None = None
+    tools: list[FileSearchTool] | None = None
     previous_response_id: str | None = None
     stream: bool = True
     text: ResponseTextConfig | None = Field(default_factory=ResponseTextConfig)

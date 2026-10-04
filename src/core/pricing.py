@@ -59,12 +59,6 @@ PRICING_TABLE: Final[MappingProxyType[str, ModelPricing]] = MappingProxyType(
         "gpt-5.6-luna": ModelPricing(input_price=0.20, output_price=1.20, cached_input_price=0.02),
         "gpt-5.4-pro": ModelPricing(input_price=30.00, output_price=180.00, cached_input_price=0.0),
         "gpt-5.4": ModelPricing(input_price=2.50, output_price=15.00, cached_input_price=0.25),
-        "gpt-4o": ModelPricing(input_price=2.50, output_price=10.00, cached_input_price=1.25),
-        "gpt-4o-mini": ModelPricing(
-            input_price=0.150,
-            output_price=0.600,
-            cached_input_price=0.075,
-        ),
     }
 )
 
