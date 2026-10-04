@@ -18,6 +18,7 @@ from pydantic import ValidationError
 
 from src.models import (
     AnalysisMethod,
+    AppConfigDefaults,
     FileSearchTool,
     InputFileContent,
     InputMessage,
@@ -170,3 +171,17 @@ def test_input_file_content_serialization() -> None:
     assert isinstance(msg.content[0], InputFileContent)
     assert msg.content[0].type == "input_file"
     assert msg.content[0].file_id == "file-test-12345"
+
+
+def test_max_output_tokens_default_and_serialization() -> None:
+    """ResponseRequestPayload の max_output_tokens デフォルト値（約300円換算: 200,000）およびシリアライズを検証します。"""
+    payload = ResponseRequestPayload(
+        model="gpt-6.1-sol",
+        input="トークン数制限テスト",
+    )
+    assert payload.max_output_tokens == AppConfigDefaults.DEFAULT_MAX_OUTPUT_TOKENS
+    assert payload.max_output_tokens == 200_000
+
+    dumped = payload.model_dump(exclude_none=True, by_alias=True)
+    assert "max_output_tokens" in dumped
+    assert dumped["max_output_tokens"] == 200_000

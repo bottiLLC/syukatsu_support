@@ -38,6 +38,9 @@ async def test_ui_segmented_button_serialization_integrity() -> None:
     state = AppState()
     app = SyukatsuSupportApp(page, state)
 
+    # AppBar タイトルの検証
+    assert page.appbar.title.value == "就職活動サポートAI（Powerd by gpt-6.1-sol）"
+
     # 1. 初期構築時の selected が list[str] であることの検証
     assert isinstance(app.mode_segment.selected, list)
     assert app.mode_segment.selected == [ViewMode.SIMPLE.value]

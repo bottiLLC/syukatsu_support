@@ -21,6 +21,7 @@ from src.infrastructure.openai_client import OpenAIClient
 from src.infrastructure.security import ConfigManager
 from src.models import (
     AnalysisMethod,
+    AppConfigDefaults,
     FileSearchTool,
     InputFileContent,
     InputMessage,
@@ -202,6 +203,11 @@ class AppState:
             )
             return
 
+        # シンプルモード初期値の適用
+        if self.config.view_mode == ViewMode.SIMPLE:
+            self.config.model = AppConfigDefaults.DEFAULT_MODEL
+            self.config.reasoning_effort = AppConfigDefaults.DEFAULT_REASONING
+
         sys_prompt = self.get_system_prompt(mode_name)
         if not sys_prompt:
             await self._notify_error("モードエラー", f"分析モード「{mode_name}」のプロンプトが見つかりません。")
@@ -298,6 +304,7 @@ class AppState:
                 previous_response_id=prev_id,
                 tools=tools,
                 stream=True,
+                max_output_tokens=AppConfigDefaults.DEFAULT_MAX_OUTPUT_TOKENS,
             )
         except Exception as e:
             await self._notify_error("設定エラー", f"不正な設定値です: {e}")

@@ -53,6 +53,7 @@ class AppConfigDefaults:
     DEFAULT_MODEL: str = "gpt-6.1-sol"
     DEFAULT_REASONING: ReasoningEffort = "high"
     DEFAULT_VIEW_MODE: ViewMode = ViewMode.SIMPLE
+    DEFAULT_MAX_OUTPUT_TOKENS: int = 200_000
 
 
 # --- Application Configuration Models ---
@@ -192,6 +193,10 @@ class ResponseRequestPayload(BaseModel):
     previous_response_id: str | None = None
     stream: bool = True
     text: ResponseTextConfig | None = Field(default_factory=ResponseTextConfig)
+    max_output_tokens: int | None = Field(
+        default=AppConfigDefaults.DEFAULT_MAX_OUTPUT_TOKENS,
+        description="最大出力トークン数（1回あたり約300円＝$2.00換算: 200,000トークン上限）。",
+    )
 
     @field_validator("input", mode="before")
     @classmethod

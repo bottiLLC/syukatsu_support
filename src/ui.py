@@ -144,7 +144,11 @@ class SyukatsuSupportApp:
 
         self.page.appbar = ft.AppBar(
             leading=ft.Icon(ft.Icons.AUTO_AWESOME, color=ft.Colors.BLUE_600, size=26),
-            title=ft.Text("就職活動サポート AI (SYUKATSU Support)", weight=ft.FontWeight.BOLD, size=18),
+            title=ft.Text(
+                f"就職活動サポートAI（Powerd by {AppConfigDefaults.DEFAULT_MODEL}）",
+                weight=ft.FontWeight.BOLD,
+                size=18,
+            ),
             center_title=False,
             bgcolor=ft.Colors.SURFACE_CONTAINER_HIGHEST,
             actions=[
