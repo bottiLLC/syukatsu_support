@@ -127,17 +127,17 @@ class SyukatsuSupportApp:
         self.mode_segment = ft.SegmentedButton(
             segments=[
                 ft.Segment(
-                    value=ViewMode.SIMPLE,
+                    value=ViewMode.SIMPLE.value,
                     label=ft.Text("🔰 かんたん (シンプル)"),
                     icon=ft.Icon(ft.Icons.LIGHTBULB_OUTLINE),
                 ),
                 ft.Segment(
-                    value=ViewMode.ADVANCED,
+                    value=ViewMode.ADVANCED.value,
                     label=ft.Text("⚙️ 詳細 (カスタム)"),
                     icon=ft.Icon(ft.Icons.TUNE),
                 ),
             ],
-            selected={self.state.config.view_mode},
+            selected=[self.state.config.view_mode.value],
             allow_multiple_selection=False,
             on_change=self._on_mode_change,
         )
@@ -552,8 +552,10 @@ class SyukatsuSupportApp:
 
     async def _on_mode_change(self, e: ft.ControlEvent) -> None:
         """AppBarのセグメントボタンによるモード切り替えを処理します。"""
+        if not self.mode_segment.selected:
+            return
         new_mode = next(iter(self.mode_segment.selected))
-        await self.state.set_view_mode(new_mode)
+        await self.state.set_view_mode(ViewMode(new_mode))
 
     async def _on_pick_pdf(self, e: ft.ControlEvent) -> None:
         """ファイルピッカーを起動し、有価証券報告書 (PDF) を指定します。"""
@@ -641,7 +643,7 @@ class SyukatsuSupportApp:
         current_mode = self.state.config.view_mode
 
         # 1. AppBar & パネル表示の同期
-        self.mode_segment.selected = {current_mode}
+        self.mode_segment.selected = [current_mode.value]
         if current_mode == ViewMode.SIMPLE:
             self.left_panel_container.content = self.simple_panel
             self.simple_actions_row.visible = True
